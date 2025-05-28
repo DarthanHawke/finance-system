@@ -1,6 +1,6 @@
-[submodule "payment-service"]
-	path = payment-service
+[submodule "payment"]
+	path = services/payment
 	url = https://github.com/DarthanHawke/payment-service.git
-[submodule "notification-service"]
-	path = notification-service
-	url = https://github.com/DarthanHawke/notification-service
+[submodule "notification"]
+	path = services/notification
+	url = https://github.com/DarthanHawke/notification-service.git
