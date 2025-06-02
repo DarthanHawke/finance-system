@@ -46,6 +46,8 @@ payment-system/
 ├── docker-compose.yml      # Общий композ  
 └── README.md
 ```
+## Запуск
+docker compose up
 ## Модель базы данных
 Добавлю позже
 ## А ещё...

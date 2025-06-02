@@ -2,8 +2,8 @@ version: "3.8"
 services:
   payment-service:
     build:
-      context: .
-      dockerfile: services/payment/Dockerfile
+      context: services/payment/
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
     depends_on:
@@ -16,10 +16,10 @@ services:
 
   notification-service:
     build:
-      context: .
-      dockerfile: services/notification/Dockerfile
+      context: services/notification/
+      dockerfile: Dockerfile
     ports:
-      - "5672:5672"
+      - "8081:8081"
     volumes:
       - ./:/app
 
