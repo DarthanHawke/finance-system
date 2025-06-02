@@ -3,13 +3,23 @@ services:
   payment-service:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: services/payment/Dockerfile
     ports:
       - "8080:8080"
     depends_on:
+      - notification-service
       - postgres
       - redis
       - rabbitmq
+    volumes:
+      - ./:/app
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification/Dockerfile
+    ports:
+      - "5672:5672"
     volumes:
       - ./:/app
 
