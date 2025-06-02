@@ -7,3 +7,6 @@
 [submodule "sso"]
 	path = services/sso
 	url = https://github.com/DarthanHawke/sso-service.git
+[submodule "protos"]
+	path = protos
+	url = https://github.com/DarthanHawke/protos-payment-system.git	
