@@ -1,18 +1,26 @@
-version: "3.8"
 services:
   payment-service:
+    environment:
+    - PORT=8080
     build:
       context: services/payment/
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
     depends_on:
-      - notification-service
-      - postgres
-      - redis
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     volumes:
       - ./:/app
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'payment-service' || exit 1"]
+      interval: 20s
+      timeout: 3s
+      retries: 15
 
   notification-service:
     build:
@@ -20,19 +28,29 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8081:8081"
+    depends_on:
+      payment-service:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     volumes:
       - ./:/app
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'notification-service' || exit 1"]
+      interval: 20s
+      timeout: 3s
+      retries: 15
 
   postgres:
     image: postgres:17.5
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: payment_db
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
