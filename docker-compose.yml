@@ -22,6 +22,27 @@ services:
       timeout: 3s
       retries: 15
 
+  sso-service:
+    environment:
+    - PORT=50051
+    build:
+      context: services/sso/
+      dockerfile: Dockerfile
+    ports:
+      - "50051:50051"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'sso' || exit 1"]
+      interval: 20s
+      timeout: 3s
+      retries: 15
+
   notification-service:
     build:
       context: services/notification/

@@ -1,0 +1,23 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# env file
+.env
+.env.development
+.env.production
+
+# logs
+.log
+logs
+
+ca.key
+ca.crt
+server.csr
+server.example.csr
+root.example.key
+root.example.srl
+root.example.csr
