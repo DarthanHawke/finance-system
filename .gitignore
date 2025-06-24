@@ -14,10 +14,3 @@
 .log
 logs
 
-ca.key
-ca.crt
-server.csr
-server.example.csr
-root.example.key
-root.example.srl
-root.example.csr

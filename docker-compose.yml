@@ -15,6 +15,7 @@ services:
       rabbitmq:
         condition: service_healthy
     volumes:
+      - postgres_certs:/etc/ssl/postgres
       - ./:/app
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'payment-service' || exit 1"]
@@ -36,6 +37,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
+      - postgres_certs:/etc/ssl/postgres
       - ./:/app
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'sso' || exit 1"]
@@ -71,13 +73,23 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - postgres_certs:/var/lib/postgresql/certs
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./scripts/postgres/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - ./scripts/postgres/init-ssl.sh:/var/lib/postgresql/certs/init-ssl.sh
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
-
+    command: >
+      bash -c "
+        if [ ! -f /var/lib/postgresql/certs/server.crt ]; then
+          bash /var/lib/postgresql/certs/init-ssl.sh
+        fi
+        exec docker-entrypoint.sh -c config_file=/etc/postgresql/postgresql.conf
+      "
   redis:
     image: redis:8
     ports:
@@ -105,5 +117,6 @@ services:
 
 volumes:
   postgres_data:
+  postgres_certs:
   redis_data:
   rabbitmq_data:
