@@ -7,6 +7,9 @@
 [submodule "sso"]
 	path = services/sso
 	url = https://github.com/DarthanHawke/sso-service.git
+[submodule "client"]
+	path = services/client
+	url = https://github.com/DarthanHawke/client-service.git	
 [submodule "protos"]
 	path = protos
 	url = https://github.com/DarthanHawke/protos-payment-system.git	
