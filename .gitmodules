@@ -16,3 +16,6 @@
 [submodule "protos"]
 	path = protos
 	url = https://github.com/DarthanHawke/protos-payment-system.git	
+[submodule "services/billing"]
+	path = services/billing
+	url = https://github.com/DarthanHawke/billing-service.git
