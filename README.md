@@ -42,13 +42,28 @@
 ## Схема взаимодействия сервисов
 ```mermaid
 flowchart LR
-    Client["Client (REST)"] --> Billing["Billing (gRPC)"]
-    Client --> Chatbot["Chatbot (WebSocket)"]
-    Chatbot --> Client
-    Chatbot --> Billing["Billing (gRPC)"]
-    Billing --> SSO["SSO (gRPC)"]
-    Billing --> Payment["Payment (REST)"]
-    Payment --> Notification["Notification (RabbitMQ)"]
+
+    Client["Client (REST)"] --> Billing["Billing (gRPC)"]
+
+    Client --> Chatbot["Chatbot (WebSocket)"]
+
+    Billing --> Client
+
+    Chatbot --> Client
+
+    Chatbot --> Billing["Billing (gRPC)"]
+
+    Billing --> Chatbot
+
+    Billing --> SSO["SSO (gRPC)"]
+
+    SSO --> Billing
+
+    Billing --> Payment["Payment (REST)"]
+
+    Payment --> Billing
+
+    Payment --> Notification["Notification (RabbitMQ)"]
 ``` 
 ## Структура проекта
 ```
