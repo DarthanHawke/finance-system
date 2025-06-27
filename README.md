@@ -40,6 +40,7 @@
 #### 5. Notification Service
 - какой-то он пока худенький совсем, ничего не может, прям наносервис, но что-нибудь придумаю, может перейду на Kafka, для опыта)
 ## Схема взаимодействия сервисов
+```mermaid
 flowchart LR
     Client["Client (REST)"] --> Billing["Billing (gRPC)"]
     Client --> Chatbot["Chatbot (WebSocket)"]
@@ -48,6 +49,7 @@ flowchart LR
     Billing --> SSO["SSO (gRPC)"]
     Billing --> Payment["Payment (REST)"]
     Payment --> Notification["Notification (RabbitMQ)"]
+``` 
 ## Структура проекта
 ```
 payment-system/  
