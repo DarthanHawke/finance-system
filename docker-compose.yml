@@ -45,6 +45,30 @@ services:
       timeout: 3s
       retries: 15
 
+  billing-service:
+    environment:
+    - PORT=50052
+    build:
+      context: services/billing/
+      dockerfile: Dockerfile
+    ports:
+      - "50052:50052"
+    depends_on:
+      payment-service:
+        condition: service_healthy
+      sso-service:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - postgres_certs:/etc/ssl/postgres
+      - ./:/app
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'billing' || exit 1"]
+      interval: 20s
+      timeout: 3s
+      retries: 15
+
   notification-service:
     build:
       context: services/notification/
