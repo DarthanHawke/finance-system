@@ -10,7 +10,16 @@
 .env.development
 .env.production
 
+# pem
+*.pem
+
 # logs
 .log
 logs
 
+# TLS
+*.key
+*.crt
+*.csr
+*.srl
+*.pfx
