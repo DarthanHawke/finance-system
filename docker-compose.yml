@@ -1,12 +1,12 @@
 services:
   payment-service:
     environment:
-    - PORT=8081
+    - PORT=50058
     build:
       context: services/payment/
       dockerfile: Dockerfile
     ports:
-      - "8081:8081"
+      - "50058:50058"
     depends_on:
       postgres:
         condition: service_healthy
