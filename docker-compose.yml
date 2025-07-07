@@ -88,6 +88,39 @@ services:
       timeout: 3s
       retries: 15
 
+  client-service:
+    build:
+      context: services/client/
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      billing-service:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'client-service' || exit 1"]
+      interval: 20s
+      timeout: 3s
+      retries: 15
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./security:/etc/nginx/certs
+    depends_on:
+      - client-service    
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'nginx' || exit 1"]
+      interval: 20s
+      timeout: 3s
+      retries: 15          
+  
   postgres:
     image: postgres:17.5
     environment:
@@ -98,10 +131,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - postgres_certs:/var/lib/postgresql/certs
-      - ./postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf
       - ./scripts/postgres/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
       - ./scripts/postgres/init-ssl.sh:/var/lib/postgresql/certs/init-ssl.sh
-
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s

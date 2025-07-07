@@ -23,3 +23,6 @@ logs
 *.csr
 *.srl
 *.pfx
+
+# all
+*.txt

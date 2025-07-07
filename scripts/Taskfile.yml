@@ -116,6 +116,11 @@ tasks:
     cmds:
       - openssl pkcs12 -export -out "{{.ROOT_DIR}}/security/postman.pfx" -inkey "{{.ROOT_DIR}}/services/client/security/client.key" -in "{{.ROOT_DIR}}/services/client/security/client.crt" -certfile "{{.ROOT_DIR}}/security/ca.crt" -password pass:{{.CA_PASS}}
   
+  password-for-nginx:
+    desc: "Copy password to file for nginx"
+    cmds:
+      - echo {{.CA_PASS}} > "{{.ROOT_DIR}}/security/passphrase.txt"
+
   all:
     desc: "Выполнить всю цепочку генерации сертификатов"
     cmds:
@@ -123,8 +128,7 @@ tasks:
       - task: copy-ca-to-services
       - task: generate-service-certs
       - task: gen-jwt-keys
-      - task: gen-postman
-
+      - task: password-for-nginx
 
   check-certs:
     desc: "Check certificate details"
