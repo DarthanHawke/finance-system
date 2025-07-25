@@ -74,12 +74,16 @@ payment-system/
 └── README.md
 ```
 ## Запуск
+0. Клонировать проект(Важно клонировать именно рекурсивно, чтобы подгрузить модули(При загрузке Zip архивом из GitHub модули так же не загружаются)):
+```
+git clone --recurse-submodules https://github.com/DarthanHawke/payment-system.git
+```
 1. Сгенерировать сертификаты(Требуется установленый пакет go-task): 
 ```
 cd scripts 
 task all
 ```
-2. Запустить docker compose:
+2. Запустить docker compose(Конечно же требуется Docker):
 ```
 docker compose up
 ```
