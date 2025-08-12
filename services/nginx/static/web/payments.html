@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Платежи</title>
+    <link rel="icon" href="../favicon.ico">
+    <link rel="stylesheet" href="../static/css/style.css">
+    <script src="/static/js/token.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="user-info">
+                <div class="avatar"></div>
+                <h3 id="username">Пользователь</h3>
+            </div>
+            <nav class="menu">
+                <ul>
+                    <li><a href="accounts"><i class="icon-account"></i> Счета</a></li>
+                    <li class="active"><a href="payments"><i class="icon-payment"></i> Платежи</a></li>
+                    <li><a href="profile"><i class="icon-profile"></i> Профиль</a></li>
+                    <li><a href="#" id="logout-btn"><i class="icon-logout"></i> Выйти</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="content">
+            <h1>Платежи</h1>
+            
+            <div class="payment-tabs">
+                <button class="tab-btn active" data-tab="transfer">Перевод</button>
+                <button class="tab-btn" data-tab="deposit">Пополнение</button>
+                <button class="tab-btn" data-tab="convert">Конвертация</button>
+            </div>
+            
+            <div class="tab-content active" id="transfer-tab">
+                <form id="transfer-form">
+                    <div class="form-group">
+                        <label for="transfer-from">Счёт отправителя</label>
+                        <select id="transfer-from" required>
+                            <option value="">Выберите счёт</option>
+                            <!-- Счета будут загружены через JS -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="transfer-to">Счёт получателя</label>
+                        <input type="text" id="transfer-to" placeholder="Номер счёта получателя" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="transfer-amount">Сумма</label>
+                        <input type="number" step="0.01" min="0.01" id="transfer-amount" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="transfer-description">Описание</label>
+                        <input type="text" id="transfer-description" placeholder="Необязательно">
+                    </div>
+                    <button type="submit">Перевести</button>
+                </form>
+            </div>
+            
+            <div class="tab-content" id="deposit-tab">
+                <form id="deposit-form">
+                    <div class="form-group">
+                        <label for="deposit-account">Счёт для пополнения</label>
+                        <select id="deposit-account" required>
+                            <option value="">Выберите счёт</option>
+                            <!-- Счета будут загружены через JS -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="deposit-amount">Сумма</label>
+                        <input type="number" step="0.01" min="0.01" id="deposit-amount" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="deposit-description">Описание</label>
+                        <input type="text" id="deposit-description" placeholder="Необязательно">
+                    </div>
+                    <button type="submit">Пополнить</button>
+                </form>
+            </div>
+            
+            <div class="tab-content" id="convert-tab">
+                <form id="convert-form">
+                    <div class="form-group">
+                        <label for="convert-from">Счёт для списания</label>
+                        <select id="convert-from" required>
+                            <option value="">Выберите счёт</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="convert-to">Счёт для зачисления</label>
+                        <select id="convert-to" required>
+                            <option value="">Выберите счёт</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="convert-amount">Сумма списания</label>
+                            <div class="input-with-currency">
+                                <input type="number" step="0.01" min="0.01" id="convert-amount" required disabled>
+                                <span class="currency-symbol" id="from-currency-symbol"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="convert-amount-to">Сумма зачисления</label>
+                            <div class="input-with-currency">
+                                <input type="number" step="0.01" min="0.01" id="convert-amount-to" required disabled>
+                                <span class="currency-symbol" id="to-currency-symbol"></span>
+                            </div>
+                        </div>
+                        <div class="exchange-rate-display" id="exchange-rate-display">
+                            Курс: -
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="convert-description">Описание</label>
+                        <input type="text" id="convert-description" placeholder="Необязательно">
+                    </div>
+                    <button type="submit">Конвертировать</button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script src="../static/js/user.js"></script>
+    <script src="../static/js/payments.js"></script>
+</body>
+</html>

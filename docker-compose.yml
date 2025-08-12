@@ -111,8 +111,9 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./services/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
       - ./security:/etc/nginx/certs
+      - ./services/nginx/static:/usr/share/nginx
     depends_on:
       - client-service    
     healthcheck:
@@ -131,9 +132,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - postgres_certs:/var/lib/postgresql/certs
-      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf
-      - ./scripts/postgres/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
-      - ./scripts/postgres/init-ssl.sh:/var/lib/postgresql/certs/init-ssl.sh
+      - ./services/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./services/postgres/scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - ./services/postgres/scripts/init-ssl.sh:/var/lib/postgresql/certs/init-ssl.sh
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s

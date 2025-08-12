@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поддержка</title>
+    <link rel="icon" href="favicon.ico">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/support.css">
+    <script src="/static/js/token.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="user-info">
+                <div class="avatar"></div>
+                <h3 id="username">Поддержка</h3>
+                <span class="role-badge">Support</span>
+            </div>
+            <nav class="menu">
+                <ul>
+                    <li class="active"><a href="#" data-section="dashboard"><i class="icon-dashboard"></i> Обзор</a></li>
+                    <li><a href="#" data-section="users"><i class="icon-users"></i> Пользователи</a></li>
+                    <li><a href="#" data-section="payments"><i class="icon-payments"></i> Платежи</a></li>
+                    <li><a href="#" id="logout-btn"><i class="icon-logout"></i> Выйти</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="content">
+            <h1>Панель поддержки</h1>
+            
+            <div class="support-section active" id="dashboard-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Всего пользователей</h3>
+                        <div class="stat-value" id="total-users">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Всего счетов</h3>
+                        <div class="stat-value" id="total-accounts">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Всего транзакций</h3>
+                        <div class="stat-value" id="total-transactions">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <button id="refresh-stats-btn" class="refresh-btn">Обновить данные</button>
+                        <div id="refresh-timer" class="refresh-timer"></div>
+                     </div>
+                </div>
+                
+                <h2>Последние действия</h2>
+                <div class="activity-log" id="activity-log">
+                    <div class="loading">Загрузка действий...</div>
+                </div>
+            </div>
+            
+            <div class="support-section" id="users-section">
+                <h2>Управление пользователями</h2>
+                <div class="support-actions">
+                    <button id="refresh-users-btn">Обновить список</button>
+                </div>
+                <div class="search-container">
+                    <input type="text" id="search-user-input" placeholder="Введите ID пользователя">
+                    <button id="search-user-btn">Найти</button>
+                    <button id="clear-search-btn">Очистить</button>
+                </div>
+                <div class="users-table-container">
+                    <table class="users-table" id="users-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Имя</th>
+                                <th>Email</th>
+                                <th>Роли</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" class="loading">Загрузка пользователей...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="table-pagination">
+                        <button id="prev-page-btn" class="pagination-btn" disabled>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                            Назад
+                        </button>
+                        <span id="page-info">Страница 1</span>
+                        <button id="next-page-btn" class="pagination-btn">
+                            Вперед
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="support-section" id="payments-section">
+                <h2>Платежи</h2>
+                
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="payment-status">Статус:</label>
+                        <select id="payment-status">
+                            <option value="all">Все</option>
+                            <option value="pending">В ожидании</option>
+                            <option value="completed">Завершённые</option>
+                            <option value="failed">Ошибки</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="payment-date">Дата:</label>
+                        <select id="payment-date">
+                            <option value="today">Сегодня</option>
+                            <option value="week">Неделя</option>
+                            <option value="month">Месяц</option>
+                            <option value="all">Все</option>
+                        </select>
+                    </div>
+                    <button id="apply-filters">Применить</button>
+                </div>
+                
+                <div class="payments-table-container">
+                    <table class="payments-table" id="payments-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Отправитель</th>
+                                <th>Получатель</th>
+                                <th>Сумма</th>
+                                <th>Статус</th>
+                                <th>Дата</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="7" class="loading">Загрузка платежей...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+        <div class="accounts-modal" id="accounts-modal">
+    <div class="accounts-modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="accounts-modal-title">Счета пользователя</h2>
+            
+            <div class="accounts-list-container" id="accounts-list-container">
+                <!-- Здесь будет список счетов -->
+            </div>
+            
+            <div class="operations-list-container" id="operations-list-container" style="display: none;">
+                <button class="back-to-accounts-btn" id="back-to-accounts-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                    Назад к счетам
+                </button>
+                <h3 id="operations-title">Операции по счету</h3>
+                <div class="operations-list" id="operations-list">
+                    <!-- Здесь будет список операций -->
+                </div>
+                <div class="operations-pagination">
+                    <button id="prev-operations-btn" class="pagination-btn" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                        Назад
+                    </button>
+                    <span id="operations-page-info">Страница 1</span>
+                    <button id="next-operations-btn" class="pagination-btn">
+                        Вперед
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/static/js/support.js"></script>
+</body>
+</html>
