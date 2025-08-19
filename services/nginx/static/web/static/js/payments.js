@@ -280,6 +280,14 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Не удалось загрузить счета: ' + error.message);
         });
     }
+
+    function updateAvatarLetter() {
+        const username = document.getElementById('username').textContent;
+        const avatar = document.getElementById('userAvatar');
+        if (username && avatar) {
+            avatar.textContent = username.charAt(0).toUpperCase();
+        }
+    }
     
     function loadProfile() {
         fetch('/user/profile', {
@@ -292,6 +300,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(profile => {
             document.getElementById('username').textContent = profile.full_name;
+            updateAvatarLetter();
         })
         .catch(error => {
             console.error('Error loading profile:', error);

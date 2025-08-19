@@ -48,6 +48,9 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 2rem;
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
 }
 
 .menu ul {

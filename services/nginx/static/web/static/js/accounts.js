@@ -182,6 +182,13 @@ document.getElementById('next-page').addEventListener('click', function() {
         nextBtn.disabled = itemsCount < limit;
     }
 
+    function updateAvatarLetter() {
+        const username = document.getElementById('username').textContent;
+        const avatar = document.getElementById('userAvatar');
+        if (username && avatar) {
+            avatar.textContent = username.charAt(0).toUpperCase();
+        }
+    }
 
     function loadProfile() {
         fetch('/user/profile', {
@@ -194,6 +201,7 @@ document.getElementById('next-page').addEventListener('click', function() {
         })
         .then(profile => {
             document.getElementById('username').textContent = profile.full_name;
+            updateAvatarLetter();
         })
         .catch(error => {
             console.error('Error loading profile:', error);

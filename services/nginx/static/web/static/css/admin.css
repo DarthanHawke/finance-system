@@ -731,6 +731,304 @@
     min-height: 1.2rem;
 }
 
+.sessions-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.sessions-modal.active {
+    display: flex;
+}
+
+.sessions-modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    width: 800px;
+    max-width: 90%;
+    max-height: 80vh;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow-y: auto;
+}
+
+.sessions-actions {
+    margin-bottom: 1rem;
+}
+
+.session-item {
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.session-item:last-child {
+    border-bottom: none;
+}
+
+.session-info {
+    flex-grow: 1;
+}
+
+.session-ip {
+    font-weight: bold;
+}
+
+.session-user-agent {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+
+.session-date {
+    color: #666;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.session-expires {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.session-expires.active {
+    color: #27ae60;
+}
+
+.session-expires.expired {
+    color: #e74c3c;
+}
+
+.session-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.session-details-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1001;
+}
+
+.session-details-modal.active {
+    display: flex;
+}
+
+.session-details-modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    width: 600px;
+    max-width: 90%;
+    max-height: 80vh;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow-y: auto;
+}
+
+.session-detail {
+    margin-bottom: 0.5rem;
+}
+
+.session-detail-label {
+    font-weight: bold;
+    display: inline-block;
+    width: 120px;
+}
+
+.session-detail-value {
+    word-break: break-all;
+}
+
+.payment-details-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1002;
+}
+
+.payment-details-modal.active {
+    display: flex;
+}
+
+.payment-details-modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    width: 600px;
+    max-width: 90%;
+    max-height: 80vh;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow-y: auto;
+}
+
+.payment-detail {
+    margin-bottom: 0.75rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.payment-detail-label {
+    font-weight: bold;
+    display: inline-block;
+    width: 120px;
+    color: #555;
+}
+
+.payment-detail-value {
+    word-break: break-all;
+}
+
+.payment-actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.update-status-form {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.update-status-form h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+}
+
+#status-select {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-right: 0.5rem;
+}
+
+.payment-details-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1002;
+}
+
+.payment-details-modal.active {
+    display: flex;
+}
+
+.payment-details-modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    width: 600px;
+    max-width: 90%;
+    max-height: 80vh;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow-y: auto;
+}
+
+.payment-detail {
+    margin-bottom: 0.75rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.payment-detail-label {
+    font-weight: bold;
+    display: inline-block;
+    width: 120px;
+    color: #555;
+}
+
+.payment-detail-value {
+    word-break: break-all;
+}
+
+.payment-actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.update-status-form {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.update-status-form h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+}
+
+#status-select {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-right: 0.5rem;
+}
+
+.status-completed {
+    color: #27ae60;
+    font-weight: bold;
+}
+
+.status-pending {
+    color: #f39c12;
+    font-weight: bold;
+}
+
+.status-cancelled {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+.status-refunded {
+    color: #9b59b6;
+    font-weight: bold;
+}
+
+.operation-actions {
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
 .icon-dashboard::before { content: "📊"; margin-right: 0.5rem; }
 .icon-users::before { content: "👥"; margin-right: 0.5rem; }
 .icon-roles::before { content: "🔑"; margin-right: 0.5rem; }

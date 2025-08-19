@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('profile-name').textContent = newName;
             editNameModal.classList.add('hidden');
             editNameForm.reset();
+            updateAvatarLetter();
             alert('Имя успешно изменено');
         })
         .catch(error => {
@@ -128,6 +129,14 @@ document.addEventListener('DOMContentLoaded', function() {
             alert(error.message);
         });
     });
+
+    function updateAvatarLetter() {
+        const username = document.getElementById('username').textContent;
+        const avatar = document.getElementById('userAvatar');
+        if (username && avatar) {
+            avatar.textContent = username.charAt(0).toUpperCase();
+        }
+    }
     
     // Функция загрузки данных профиля
     function loadProfile() {
@@ -147,6 +156,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Заполняем поля в формах редактирования
             document.getElementById('new-name').value = profile.full_name;
             document.getElementById('new-email').value = profile.email;
+
+            updateAvatarLetter();
         })
         .catch(error => {
             console.error('Error loading profile:', error);

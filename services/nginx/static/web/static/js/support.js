@@ -3,6 +3,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const supportSections = document.querySelectorAll('.support-section');
     let totalUsersCount = 0;
 
+    // Функция для отображения первой буквы имени в аватаре
+    function initAvatar() {
+        const username = document.getElementById('username');
+        const avatar = document.getElementById('userAvatar');
+        
+        if (username && avatar) {
+            const firstLetter = username.textContent.charAt(0).toUpperCase();
+            avatar.textContent = firstLetter;
+        }
+    }
+    
+    // Инициализируем аватар сразу при загрузке
+    initAvatar();
+
     // Переключение между разделами панели поддержки
     menuLinks.forEach(link => {
         link.addEventListener('click', function(e) {

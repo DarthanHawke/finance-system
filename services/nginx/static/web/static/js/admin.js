@@ -5,39 +5,52 @@ document.addEventListener('DOMContentLoaded', function() {
     const tabContents = document.querySelectorAll('.roles-tabs .tab-content');
     let totalUsersCount = 0;
     
-    // Переключение между разделами админ-панели
-menuLinks.forEach(link => {
-    link.addEventListener('click', function(e) {
-        e.preventDefault();
-        const sectionId = this.getAttribute('data-section');
+    // Функция для отображения первой буквы имени в аватаре
+    function initAvatar() {
+        const username = document.getElementById('username');
+        const avatar = document.getElementById('userAvatar');
         
-        // Убираем активный класс у всех ссылок и разделов
-        menuLinks.forEach(l => l.parentElement.classList.remove('active'));
-        adminSections.forEach(s => s.classList.remove('active'));
-        
-        // Добавляем активный класс текущей ссылке и разделу
-        this.parentElement.classList.add('active');
-        document.getElementById(`${sectionId}-section`).classList.add('active');
-        
-        // Загружаем данные для активного раздела
-        loadSectionData(sectionId);
-        
-        // Если открываем раздел пользователей и общее количество еще не известно
-        if (sectionId === 'users' && totalUsersCount === 0) {
-            // Сначала загружаем данные для дашборда, чтобы получить общее количество
-            fetch('/user/all', {
-                method: 'GET',
-                credentials: 'include'
-            })
-            .then(response => response.json())
-            .then(users => {
-                totalUsersCount = users.length;
-                // Теперь загружаем пользователей с пагинацией
-                loadUsersData();
-            });
+        if (username && avatar) {
+            const firstLetter = username.textContent.charAt(0).toUpperCase();
+            avatar.textContent = firstLetter;
         }
+    }
+    
+    // Инициализируем аватар сразу при загрузке
+    initAvatar();
+    // Переключение между разделами админ-панели
+    menuLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const sectionId = this.getAttribute('data-section');
+            
+            // Убираем активный класс у всех ссылок и разделов
+            menuLinks.forEach(l => l.parentElement.classList.remove('active'));
+            adminSections.forEach(s => s.classList.remove('active'));
+            
+            // Добавляем активный класс текущей ссылке и разделу
+            this.parentElement.classList.add('active');
+            document.getElementById(`${sectionId}-section`).classList.add('active');
+            
+            // Загружаем данные для активного раздела
+            loadSectionData(sectionId);
+            
+            // Если открываем раздел пользователей и общее количество еще не известно
+            if (sectionId === 'users' && totalUsersCount === 0) {
+                // Сначала загружаем данные для дашборда, чтобы получить общее количество
+                fetch('/user/all', {
+                    method: 'GET',
+                    credentials: 'include'
+                })
+                .then(response => response.json())
+                .then(users => {
+                    totalUsersCount = users.length;
+                    // Теперь загружаем пользователей с пагинацией
+                    loadUsersData();
+                });
+            }
+        });
     });
-});
     
     // Переключение между вкладками в разделе ролей
     tabBtns.forEach(btn => {
@@ -508,50 +521,65 @@ menuLinks.forEach(link => {
     }
 
     function loadUsersData() {
-    const usersTable = document.getElementById('users-table');
-    const refreshBtn = document.getElementById('refresh-users-btn');
-    const tbody = usersTable.querySelector('tbody');
-    if (searchInput) searchInput.value = '';
-    // Показываем состояние загрузки
-    tbody.innerHTML = '<tr><td colspan="5" class="loading">Загрузка пользователей...</td></tr>';
-    
-    // Отключаем все кнопки управления
-    if (refreshBtn) refreshBtn.disabled = true;
-    if (prevPageBtn) prevPageBtn.disabled = true;
-    if (nextPageBtn) nextPageBtn.disabled = true;
-    
-    if (refreshBtn) {
-        refreshBtn.textContent = 'Загрузка...';
-        refreshBtn.classList.add('loading');
-    }
-    
-    // Рассчитываем offset для пагинации
-    const offset = (currentPage - 1) * usersPerPage;
-    
-    // Загружаем пользователей с пагинацией
-    fetch(`/user/all?limit=${usersPerPage}&offset=${offset}`, {
-        method: 'GET',
-        credentials: 'include'
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Ошибка загрузки пользователей');
-        return response.json();
-    })
-    .then(users => {
-        tbody.innerHTML = '';
+        const usersTable = document.getElementById('users-table');
+        const refreshBtn = document.getElementById('refresh-users-btn');
+        const tbody = usersTable.querySelector('tbody');
+        if (searchInput) searchInput.value = '';
         
-        if (users.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="empty">Нет пользователей</td></tr>';
-            if (currentPage > 1) {
-                currentPage--;
-                loadUsersData();
-            }
-            return;
+        // Показываем состояние загрузки
+        tbody.innerHTML = '<tr><td colspan="5" class="loading">Загрузка пользователей...</td></tr>';
+        
+        // Отключаем все кнопки управления
+        if (refreshBtn) refreshBtn.disabled = true;
+        if (prevPageBtn) prevPageBtn.disabled = true;
+        if (nextPageBtn) nextPageBtn.disabled = true;
+        
+        if (refreshBtn) {
+            refreshBtn.textContent = 'Загрузка...';
+            refreshBtn.classList.add('loading');
         }
         
-        // Обновляем пагинацию с сохраненным общим количеством
-        updatePaginationControls(totalUsersCount);
+        // Рассчитываем offset для пагинации
+        const offset = (currentPage - 1) * usersPerPage;
+        
+        // Загружаем пользователей с пагинацией
+        fetch(`/user/all?limit=${usersPerPage}&offset=${offset}`, {
+            method: 'GET',
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Ошибка загрузки пользователей');
+            return response.json();
+        })
+        .then(users => {
+            tbody.innerHTML = '';
             
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty">Нет пользователей</td></tr>';
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadUsersData();
+                }
+                return;
+            }
+            
+            // Обновляем пагинацию с сохраненным общим количеством
+            updatePaginationControls(totalUsersCount);
+            
+            // Получаем ID текущего пользователя для сравнения
+            return fetch('/user/profile', {
+                method: 'GET',
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка загрузки профиля');
+                return response.json();
+            })
+            .then(currentUser => {
+                return { users, currentUserId: currentUser.id };
+            });
+        })
+        .then(({ users, currentUserId }) => {
             // Для каждого пользователя загружаем его роли
             const userPromises = users.map(async user => {
                 try {
@@ -573,10 +601,10 @@ menuLinks.forEach(link => {
                     if (roles.length === 0) {
                         roles.push('Заблокирован');
                     }
-                    return { ...user, roles, relationTypes };
+                    return { ...user, roles, relationTypes, isCurrentUser: user.id === currentUserId };
                 } catch (error) {
                     console.error(`Ошибка загрузки ролей для пользователя ${user.id}:`, error);
-                    return { ...user, roles: ['Ошибка загрузки ролей'], relationTypes: [] };
+                    return { ...user, roles: ['Ошибка загрузки ролей'], relationTypes: [], isCurrentUser: user.id === currentUserId };
                 }
             });
             
@@ -621,7 +649,15 @@ menuLinks.forEach(link => {
                     editBtn.addEventListener('click', () => showEditUserModal(user));
                     actionsTd.appendChild(editBtn);
                 }
-                // Для админа не добавляем никаких кнопок
+                
+                // Добавляем кнопку "Сессии" для всех пользователей, кроме текущего
+                if (!user.isCurrentUser) {
+                    const sessionsBtn = document.createElement('button');
+                    sessionsBtn.className = 'action-btn sessions-user';
+                    sessionsBtn.dataset.userId = user.id;
+                    sessionsBtn.textContent = 'Сессии';
+                    actionsTd.appendChild(sessionsBtn);
+                }
                 
                 tr.innerHTML = `
                     <td>${user.id}</td>
@@ -635,21 +671,20 @@ menuLinks.forEach(link => {
             });
         })
         .catch(error => {
-        console.error('Ошибка загрузки пользователей:', error);
-        tbody.innerHTML = `<tr><td colspan="5" class="error">${error.message}</td></tr>`;
-        currentPage = 1;
-        updatePaginationControls();
-    })
-    .finally(() => {
-        if (refreshBtn) {
-            refreshBtn.disabled = false;
-            refreshBtn.textContent = 'Обновить список';
-            refreshBtn.classList.remove('loading');
-        }
-        updatePaginationControls(totalUsersCount);
-    });
-}
-
+            console.error('Ошибка загрузки пользователей:', error);
+            tbody.innerHTML = `<tr><td colspan="5" class="error">${error.message}</td></tr>`;
+            currentPage = 1;
+            updatePaginationControls();
+        })
+        .finally(() => {
+            if (refreshBtn) {
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = 'Обновить список';
+                refreshBtn.classList.remove('loading');
+            }
+            updatePaginationControls(totalUsersCount);
+        });
+    }
 
     function handleNameChange(userId, modal) {
         return function() {
@@ -902,8 +937,171 @@ menuLinks.forEach(link => {
             showAccountOperations(currentAccountId, currentOperationsPage);
         });
     }
+    
+    // Глобальная переменная для хранения текущего ID платежа
+    let currentPaymentId = null;
 
-    // Функция для показа операций по счету
+    // Функция для показа деталей платежа
+    function showPaymentDetails(paymentId) {
+        const modal = document.getElementById('payment-details-modal');
+        const content = document.getElementById('payment-details-content');
+        const actionsContainer = document.getElementById('payment-actions');
+        const updateForm = document.getElementById('update-status-form');
+        
+        // Очищаем предыдущие данные
+        currentPaymentId = paymentId;
+        content.innerHTML = '<div class="loading">Загрузка деталей платежа...</div>';
+        actionsContainer.innerHTML = '';
+        updateForm.style.display = 'none';
+        
+        // Показываем модальное окно
+        modal.classList.add('active');
+        
+        // Загружаем детали платежа
+        fetch(`/payments/${paymentId}`, {
+            method: 'GET',
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Ошибка загрузки деталей платежа');
+            return response.json();
+        })
+        .then(payment => {
+            // Отображаем детали платежа
+            content.innerHTML = `
+                <div class="payment-detail">
+                    <span class="payment-detail-label">ID:</span>
+                    <span class="payment-detail-value">${payment.id}</span>
+                </div>
+                <div class="payment-detail">
+                    <span class="payment-detail-label">Отправитель:</span>
+                    <span class="payment-detail-value">${payment.sender}</span>
+                </div>
+                <div class="payment-detail">
+                    <span class="payment-detail-label">Получатель:</span>
+                    <span class="payment-detail-value">${payment.receiver}</span>
+                </div>
+                <div class="payment-detail">
+                    <span class="payment-detail-label">Сумма:</span>
+                    <span class="payment-detail-value">${payment.amount.toFixed(2)} ${payment.currency}</span>
+                </div>
+                <div class="payment-detail">
+                    <span class="payment-detail-label">Статус:</span>
+                    <span class="payment-detail-value status-${payment.status.toLowerCase()}">${payment.status}</span>
+                </div>
+                <div class="payment-detail">
+                    <span class="payment-detail-label">Описание:</span>
+                    <span class="payment-detail-value">${payment.description || 'Нет описания'}</span>
+                </div>
+                <div class="payment-detail">
+                    <span class="payment-detail-label">Создан:</span>
+                    <span class="payment-detail-value">${new Date(payment.createdAt).toLocaleString()}</span>
+                </div>
+                <div class="payment-detail">
+                    <span class="payment-detail-label">Обновлен:</span>
+                    <span class="payment-detail-value">${payment.updatedAt ? new Date(payment.updatedAt).toLocaleString() : 'Не обновлялся'}</span>
+                </div>
+            `;
+            
+            // Добавляем кнопки действий в зависимости от статуса
+            if (payment.status.toLowerCase() !== 'cancelled') {
+                if (payment.status.toLowerCase() !== 'completed') {
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.className = 'action-btn danger';
+                    cancelBtn.textContent = 'Отменить';
+                    cancelBtn.onclick = () => cancelPayment(paymentId);
+                    actionsContainer.appendChild(cancelBtn);
+                }
+                
+                if (payment.status.toLowerCase() !== 'completed') {
+                    const updateBtn = document.createElement('button');
+                    updateBtn.className = 'action-btn';
+                    updateBtn.textContent = 'Обновить статус';
+                    updateBtn.onclick = () => {
+                        updateForm.style.display = updateForm.style.display === 'none' ? 'block' : 'none';
+                    };
+                    actionsContainer.appendChild(updateBtn);
+                    
+                    // Обработчик для кнопки обновления статуса
+                    document.getElementById('update-status-btn').onclick = () => {
+                        const status = document.getElementById('status-select').value;
+                        updatePaymentStatus(paymentId, status);
+                    };
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки деталей платежа:', error);
+            content.innerHTML = `<div class="error">${error.message}</div>`;
+        });
+        
+        // Обработчик закрытия модального окна
+        const closeBtn = modal.querySelector('.close-btn');
+        closeBtn.onclick = () => {
+            modal.classList.remove('active');
+        };
+        
+        // Закрытие при клике вне модального окна
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        };
+    }
+
+    // Функция для отмены платежа
+    function cancelPayment(paymentId) {
+        if (!confirm('Вы уверены, что хотите отменить этот платеж?')) return;
+        
+        fetch(`/payments/${paymentId}/cancel`, {
+            method: 'PATCH',
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Ошибка отмены платежа');
+            return response.text(); // Может быть пустой ответ
+        })
+        .then(() => {
+            alert('Платеж успешно отменен');
+            // Перезагружаем детали платежа
+            showPaymentDetails(paymentId);
+        })
+        .catch(error => {
+            console.error('Ошибка отмены платежа:', error);
+            alert(error.message);
+        });
+    }
+
+    // Функция для обновления статуса платежа
+    function updatePaymentStatus(paymentId, status) {
+        const formData = new URLSearchParams();
+        formData.append('status', status);
+        
+        fetch(`/payments/${paymentId}/update`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formData,
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Ошибка обновления статуса платежа');
+            return response.text(); // Может быть пустой ответ
+        })
+        .then(() => {
+            alert('Статус платежа успешно обновлен');
+            // Перезагружаем детали платежа
+            showPaymentDetails(paymentId);
+            // Скрываем форму обновления
+            document.getElementById('update-status-form').style.display = 'none';
+        })
+        .catch(error => {
+            console.error('Ошибка обновления статуса платежа:', error);
+            alert(error.message);
+        });
+    }
+
     function showAccountOperations(accountId, page = 1) {
         const operationsContainer = document.getElementById('operations-list');
         const operationsTitle = document.getElementById('operations-title');
@@ -956,20 +1154,35 @@ menuLinks.forEach(link => {
                 const amountSign = operation.amount >= 0 ? '+' : '';
                 const processedAt = operation.processed_at ? new Date(operation.processed_at).toLocaleString() : 'Не обработано';
                 
+                // Добавляем кнопку "Детали платежа" только если есть PaymentID
+                const paymentDetailsBtn = operation.payment_id ? 
+                    `<button class="action-btn view-payment-details" data-payment-id="${operation.payment_id}">Детали платежа</button>` : 
+                    '';
+                
                 html += `
                     <div class="operation-item">
                         <div class="operation-amount ${amountClass}">${amountSign}${operation.amount.toFixed(2)} ${operation.currency}</div>
                         <div class="operation-details">
                             <span class="operation-type">${operation.operation_type}</span>
-                            <span class="operation-status ${operation.status.toLowerCase()}">${operation.status}</span>
                             ${operation.description ? `<div>${operation.description}</div>` : ''}
                         </div>
                         <div class="operation-date">${new Date(operation.created_at).toLocaleString()} (обработано: ${processedAt})</div>
+                        <div class="operation-actions">
+                            ${paymentDetailsBtn}
+                        </div>
                     </div>
                 `;
             });
             
             operationsContainer.innerHTML = html;
+            
+            // Добавляем обработчики для кнопок "Детали платежа"
+            document.querySelectorAll('.view-payment-details').forEach(btn => {
+                btn.onclick = function() {
+                    const paymentId = this.dataset.paymentId;
+                    showPaymentDetails(paymentId);
+                };
+            });
             
             // Переключаемся на список операций
             document.getElementById('accounts-list-container').style.display = 'none';
@@ -983,8 +1196,247 @@ menuLinks.forEach(link => {
             document.getElementById('accounts-list-container').style.display = 'block';
             document.getElementById('operations-list-container').style.display = 'none';
         });
-    }    
+    }
+
+    // Функция для показа модального окна сессий
+    function showUserSessionsModal(userId) {
+        const modal = document.getElementById('sessions-modal');
+        const title = document.getElementById('sessions-modal-title');
+        const sessionsList = document.getElementById('sessions-list');
+        const logoutAllBtn = document.getElementById('logout-all-btn');
+
+        const closeBtn = modal.querySelector('.close-btn');
+        closeBtn.onclick = null;
+        modal.onclick = null;
+        logoutAllBtn.onclick = null;
+
+        // Затем показываем модальное окно
+        modal.classList.add('active');
+        
+        // Устанавливаем заголовок и загружаем данные
+        title.textContent = `Сессии пользователя #${userId}`;
+        sessionsList.innerHTML = '<div class="loading">Загрузка сессий...</div>';
+        
+        // Сохраняем ID пользователя
+        currentSessionsUserId = userId;
+
+        // Загружаем сессии пользователя
+        loadUserSessions(userId);
+        
+
+        // Показываем модальное окно
+        modal.classList.add('active');
+        
+        // Обработчик закрытия модального окна
+        closeBtn.onclick = () => {
+            modal.classList.remove('active');
+        };
+        
+        // Закрытие при клике вне модального окна
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        };
+        
+        // Обработчик кнопки "Завершить все сессии"
+        logoutAllBtn.onclick = () => {
+            if (confirm('Вы уверены, что хотите завершить все сессии этого пользователя?')) {
+                logoutAllSessions(userId);
+            }
+        };
+    }
+
+    // Функция загрузки сессий пользователя
+    function loadUserSessions(userId) {
+        const sessionsList = document.getElementById('sessions-list');
+        
+        fetch(`/auth/sessions?userID=${userId}`, {
+            method: 'GET',
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Ошибка загрузки сессий');
+            return response.json();
+        })
+        .then(sessions => {
+            sessionsList.innerHTML = '';
             
+            if (!sessions || sessions.length === 0) {
+                sessionsList.innerHTML = '<div class="empty">Нет активных сессий</div>';
+                return;
+            }
+            
+            sessions.forEach(session => {
+                const sessionItem = document.createElement('div');
+                sessionItem.className = 'session-item';
+                
+                const isExpired = new Date(session.expires_at) < new Date();
+                
+                sessionItem.innerHTML = `
+                    <div class="session-info">
+                        <div class="session-ip">${session.user_ip || 'IP не указан'}</div>
+                        <div class="session-user-agent">${session.user_agent || 'User Agent не указан'}</div>
+                        <div class="session-date">Создана: ${new Date(session.created_at).toLocaleString()}</div>
+                        <div class="session-expires ${isExpired ? 'expired' : 'active'}">
+                            ${isExpired ? 'Истекла' : 'Действует до'}: ${new Date(session.expires_at).toLocaleString()}
+                        </div>
+                    </div>
+                    <div class="session-actions">
+                        <button class="action-btn view-session-details" data-session-id="${session.id}">Детали</button>
+                        <button class="action-btn danger logout-session" data-session-id="${session.id}">Завершить</button>
+                    </div>
+                `;
+                
+                sessionsList.appendChild(sessionItem);
+            });
+            
+            // Добавляем обработчики для кнопок в сессиях
+            document.querySelectorAll('.view-session-details').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const sessionId = this.dataset.sessionId;
+                    showSessionDetails(sessionId, sessions);
+                });
+            });
+            
+            document.querySelectorAll('.logout-session').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const sessionId = this.dataset.sessionId;
+                    if (confirm('Вы уверены, что хотите завершить эту сессию?')) {
+                        logoutSession(sessionId, sessions);
+                    }
+                });
+            });
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки сессий:', error);
+            sessionsList.innerHTML = `<div class="error">${error.message}</div>`;
+        });
+    }
+
+    // Функция для завершения всех сессий пользователя
+    function logoutAllSessions(userId) {
+        const logoutAllBtn = document.getElementById('logout-all-btn');
+        const originalText = logoutAllBtn.textContent;
+        
+        logoutAllBtn.disabled = true;
+        logoutAllBtn.textContent = 'Завершить все сессии';
+        
+        fetch(`/auth/logout-all?userID=${userId}`, {
+            method: 'POST',
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Ошибка завершения всех сессий');
+            return response.json();
+        })
+        .then(() => {
+            alert('Все сессии пользователя успешно завершены');
+            loadUserSessions(userId);
+        })
+        .catch(error => {
+            console.error('Ошибка завершения всех сессий:', error);
+            alert(error.message);
+        })
+        .finally(() => {
+            logoutAllBtn.disabled = false;
+            logoutAllBtn.textContent = originalText;
+        });
+    }
+
+    // Функция для завершения конкретной сессии
+    function logoutSession(sessionId, sessions) {
+         // Находим сессию по ID
+        const session = sessions.find(s => s.id === sessionId);
+        if (!session) {
+            alert('Сессия не найдена');
+            return;
+        }
+        fetch(`/auth/logout?userID=${session.user_id}&sessionID=${session.id}`, {
+            method: 'POST',
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Ошибка завершения сессии');
+            return response.json();
+        })
+        .then(() => {
+            alert('Сессия успешно завершена');
+            loadUserSessions(session.user_id);
+        })
+        .catch(error => {
+            console.error('Ошибка завершения сессии:', error);
+            alert(error.message);
+        });
+    }
+
+    // Функция для показа деталей сессии
+    function showSessionDetails(sessionId, sessions) {
+        const modal = document.getElementById('session-details-modal');
+        const content = document.getElementById('session-details-content');
+        
+        // Находим сессию по ID
+        const session = sessions.find(s => s.id === sessionId);
+        if (!session) {
+            alert('Сессия не найдена');
+            return;
+        }
+        
+        const isExpired = new Date(session.expires_at) < new Date();
+        
+        content.innerHTML = `
+            <div class="session-detail">
+                <span class="session-detail-label">ID сессии:</span>
+                <span class="session-detail-value">${session.id}</span>
+            </div>
+            <div class="session-detail">
+                <span class="session-detail-label">ID пользователя:</span>
+                <span class="session-detail-value">${session.user_id}</span>
+            </div>
+            <div class="session-detail">
+                <span class="session-detail-label">IP адрес:</span>
+                <span class="session-detail-value">${session.user_ip || 'Не указан'}</span>
+            </div>
+            <div class="session-detail">
+                <span class="session-detail-label">User Agent:</span>
+                <span class="session-detail-value">${session.user_agent || 'Не указан'}</span>
+            </div>
+            <div class="session-detail">
+                <span class="session-detail-label">Создана:</span>
+                <span class="session-detail-value">${new Date(session.created_at).toLocaleString()}</span>
+            </div>
+            <div class="session-detail">
+                <span class="session-detail-label">Истекает:</span>
+                <span class="session-detail-value ${isExpired ? 'expired' : 'active'}">
+                    ${new Date(session.expires_at).toLocaleString()} (${isExpired ? 'истекла' : 'активна'})
+                </span>
+            </div>
+        `;
+        
+        modal.classList.add('active');
+        
+        // Обработчик закрытия модального окна
+        const closeBtn = modal.querySelector('.close-btn');
+        closeBtn.addEventListener('click', () => {
+            modal.classList.remove('active');
+        });
+        
+        // Закрытие при клике вне модального окна
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+    }
+
+    // Добавляем обработчик для кнопок "Сессии" в таблице пользователей
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('sessions-user')) {
+            const userId = e.target.dataset.userId;
+            showUserSessionsModal(userId);
+        }
+    });
+
     // Глобальные переменные для хранения обработчиков
     const rolesHandlers = {
         createRelation: null,
@@ -1368,7 +1820,7 @@ menuLinks.forEach(link => {
                 entities.forEach(entity => {
                     const option = document.createElement('option');
                     option.value = entity.ID;
-                    option.textContent = entity.Type;
+                    option.textContent = entity.Type + entity.ID;
                     sourceSelect.appendChild(option.cloneNode(true));
                     targetSelect.appendChild(option.cloneNode(true));
                 });

@@ -13,7 +13,7 @@
     <div class="container">
         <aside class="sidebar">
             <div class="user-info">
-                <div class="avatar"></div>
+                <div class="avatar" id="userAvatar"></div>
                 <h3 id="username">Администратор</h3>
                 <span class="role-badge">Admin</span>
             </div>
@@ -234,6 +234,73 @@
                         </svg>
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+    <div class="sessions-modal" id="sessions-modal">
+        <div class="sessions-modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="sessions-modal-title">Сессии пользователя</h2>
+            
+            <div class="sessions-actions">
+                <button id="logout-all-btn" class="action-btn danger">Завершить все сессии</button>
+            </div>
+            
+            <div class="sessions-list" id="sessions-list">
+                <div class="loading">Загрузка сессий...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="session-details-modal" id="session-details-modal">
+        <div class="session-details-modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Детали сессии</h2>
+            <div id="session-details-content"></div>
+        </div>
+    </div><div class="sessions-modal" id="sessions-modal">
+        <div class="sessions-modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="sessions-modal-title">Сессии пользователя</h2>
+            
+            <div class="sessions-actions">
+                <button id="logout-all-btn" class="action-btn danger">Завершить все сессии</button>
+            </div>
+            
+            <div class="sessions-list" id="sessions-list">
+                <div class="loading">Загрузка сессий...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="session-details-modal" id="session-details-modal">
+        <div class="session-details-modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Детали сессии</h2>
+            <div id="session-details-content"></div>
+        </div>
+    </div>
+    
+    <div class="payment-details-modal" id="payment-details-modal">
+        <div class="payment-details-modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Детали платежа</h2>
+            
+            <div class="payment-details-content" id="payment-details-content">
+                <div class="loading">Загрузка деталей платежа...</div>
+            </div>
+            
+            <div class="payment-actions" id="payment-actions">
+                <!-- Кнопки будут добавляться динамически -->
+            </div>
+            
+            <div class="update-status-form" id="update-status-form" style="display: none; margin-top: 1rem;">
+                <h3>Обновить статус</h3>
+                <select id="status-select">
+                    <option value="completed">Завершен</option>
+                    <option value="refunded">Отозван</option>
+                </select>
+                <button id="update-status-btn" class="action-btn">Обновить</button>
             </div>
         </div>
     </div>

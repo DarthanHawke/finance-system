@@ -59,19 +59,29 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: `name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
         })
-        .then(response => {
-            if (!response.ok) throw new Error('Ошибка регистрации');
+        .then(async response => {
+            if (!response.ok) {
+                const errorData = await response.json();
+                // Парсим строку ошибки для поиска конкретных сообщений
+                const errorText = typeof errorData === 'string' ? errorData : JSON.stringify(errorData);
+                if (errorText.includes('invalid email format')) {
+                    throw new Error('Неверный формат email адреса');
+                } else if (errorText.includes('password must be at least 8 characters')) {
+                    throw new Error('Пароль должен содержать минимум 8 символов, включая заглавные и строчные буквы, цифры и специальные символы');
+                } else {
+                    throw new Error('Ошибка регистрации: ' + errorText);
+                }
+            }
             return response.json();
         })
         .then(data => {
-                // Перенаправляем на страницу пользователя
-                window.location.href = '/accounts';
-            })
-            .catch(error => {
-                alert(error.message);
-            });
+            window.location.href = '/accounts';
+        })
+        .catch(error => {
+            alert(error.message);
+        });
     });
-
+    
     // Функция проверки роли и перенаправления
     function checkUserRoleAndRedirect() {
         fetch('/role/role', {
