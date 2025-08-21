@@ -6,13 +6,13 @@
 Payment System - маштабируемый и безопасный сервис моделирующий платёжные системы, построенный на основе микросервисной архитектуры. Система предоставляет инструметы для аутентификации пользователей, управления счетами и проведения транзакций (как внутренних, так и внешних).
 Пользователям доступна работа с собственными счетами, внутренними и внешними транзакциями, конвертация валюты между счетами пользователей, история транзакций. Системные пользователи Support могут просматривать данные пользователей, отслеживать все проходящие транзакции и получать данные о необходимых пользователях и платежах. Администраторам доступна возможность завершать сессии пользователей, управлять правами пользователей, корректировать статусы транзакций, запрашивать возврат платежей.
 ## ⚙️ Стек технологий
--Golang, gRPC, REST, RabitMQ, WebSocket, PostgreSQL, Redis, Nginx, js
+- Golang, gRPC, REST, RabitMQ, WebSocket, PostgreSQL, Redis, Nginx, js
 ## 🛡️ Безопасность
--mTLS для шифрования трафика между всеми сервисами, включая соединения с базами данных
--ReBAC для управления доступом
--JWT для создания Access и Refresh токенов(планирую Refresh перевести на Opaque) 
--Blacklist tokens в Redis для отзыва токенов
--Argon2 для хэширования паролей
+- mTLS для шифрования трафика между всеми сервисами, включая соединения с базами данных
+- ReBAC для управления доступом
+- JWT для создания Access и Refresh токенов(планирую Refresh перевести на Opaque) 
+- Blacklist tokens в Redis для отзыва токенов
+- Argon2 для хэширования паролей
 ## 🧩 Что уже готово?
 #### 0. Payment Service(gRPC + RabbitMQ) - обрабатывает и хранит транзакции:
 - Создание транзакции, получение информации о транзакции, отмена транзакции
@@ -102,6 +102,19 @@ docker compose up
 4. Доступ к Swagger документации: https://localhost/swagger/index.html
 ## 🗄️ Модель базы данных
 Добавлю позже, но кратко(без картинок) - в payment только табличка платежей, в sso таблички сессий, пользователей и ролей, а в billing - id пользователей и id платежей(один ко многим)
+## 🖥️ Веб-Интерфейс
+[![Registration.png](https://i.postimg.cc/P5nrHMSG/Registration.png)](https://postimg.cc/jLvrQyVv)
+[![Accounts.png](https://i.postimg.cc/R09F7Tt1/Accounts.png)](https://postimg.cc/NKJBYmpL)
+[![Operation-Hystory.png](https://i.postimg.cc/3JvJzqCC/Operation-Hystory.png)](https://postimg.cc/crdSnXzr)
+[![Payments.png](https://i.postimg.cc/YCN2CmPv/Payments.png)](https://postimg.cc/pmTM0yRv)
+[![Admin-Panel.png](https://i.postimg.cc/DZwwDyB8/Admin-Panel.png)](https://postimg.cc/2qgYLmpD)
+[![Admin-Users.png](https://i.postimg.cc/qBYvbrnv/Admin-Users.png)](https://postimg.cc/JtN809Pf)
+[![Admin-Accounts.png](https://i.postimg.cc/d0B04TRb/Admin-Accounts.png)](https://postimg.cc/sBMy2xNm)
+[![Admin-Accounts-Operations.png](https://i.postimg.cc/zB2G1Zcp/Admin-Accounts-Operations.png)](https://postimg.cc/1n6QpTPN)
+[![Admin-Sessions.png](https://i.postimg.cc/90vXrPV7/Admin-Sessions.png)](https://postimg.cc/Lg3FW1J9)
+[![Admin-Roles.png](https://i.postimg.cc/PJLrXVGH/Admin-Roles.png)](https://postimg.cc/q6TdQLMD)
+[![Support-Panel.png](https://i.postimg.cc/rp8V0w6Q/Support-Panel.png)](https://postimg.cc/21KRgmSZ)
+[![Support-Payments.png](https://i.postimg.cc/s2wVpCsy/Support-Payments.png)](https://postimg.cc/t1nQjfsm)
 ## 🪝 А ещё...
 Планирую покрыть весь проект тестами, добавить мониторинг, наверное, когда-нибудь... Плюс по безопасности всякие ограничения на колличество попыток доступа и все такое на последок оставил. А ещё хочу попробовать обернуть Zap logger, что использую тут, в Slog, чтоб была возможность легко интегрировать любой другой логер без рефакторинга всех сервисов, ну просто чтобы было) Ну а если будет время и совсем нечего делать, то может ещё и мобильный клиент запилю(или освою front и на React веб), но скорее уж какие-нибудь более функциональные сервисы придумаю, вроде инвистиций или чего-нибудь этакого из финтеха.
 ## ⚖️ Сабмодули какие-то...
