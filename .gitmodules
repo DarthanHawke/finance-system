@@ -1,18 +1,9 @@
-[submodule "payment"]
-	path = services/payment
-	url = https://github.com/DarthanHawke/payment-service.git
-[submodule "notification"]
-	path = services/notification
-	url = https://github.com/DarthanHawke/notification-service.git
-[submodule "sso"]
-	path = services/sso
+[submodule "auth"]
+	path = services/auth
 	url = https://github.com/DarthanHawke/sso-service.git
-[submodule "billing"]
-	path = services/billing
-	url = https://github.com/DarthanHawke/billing-service.git	
-[submodule "client"]
-	path = services/client
-	url = https://github.com/DarthanHawke/client-service.git	
 [submodule "protos"]
 	path = protos
 	url = https://github.com/DarthanHawke/protos-payment-system.git	
+[submodule "rebac"]
+	path = services/rebac
+	url = https://github.com/DarthanHawke/rebac-authentication-service.git	
