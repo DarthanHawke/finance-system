@@ -1,0 +1,9 @@
+system_users:
+  - role: "admin"
+    full_name: "admin"
+    email: "admin@ps.ru"
+    password: "admin@123Ad"
+  - role: "support"
+    full_name: "support"
+    email: "support@ps.ru"
+    password: "support@123Sp"

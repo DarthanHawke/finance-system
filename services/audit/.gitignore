@@ -14,15 +14,11 @@
 *.pem
 
 # logs
-*.log
-*logs
+.log
+logs
 
 # TLS
 *.key
 *.crt
 *.csr
 *.srl
-*.pfx
-
-# all
-*.txt
