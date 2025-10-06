@@ -1,28 +1,28 @@
 # Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+*/*.exe
+*/*.exe~
+*/*.dll
+*/*.so
+*/*.dylib
 
 # env file
-.env
-.env.development
-.env.production
+*/.env
+*/.env.development
+*/.env.production
 
 # pem
-*.pem
+*/*.pem
 
 # logs
-*.log
-*logs
+*/*.log
+*/*logs
 
 # TLS
-*.key
-*.crt
-*.csr
-*.srl
-*.pfx
+*/*.key
+*/*.crt
+*/*.csr
+*/*.srl
+*/*.pfx
 
 # all
-*.txt
+*/*.txt

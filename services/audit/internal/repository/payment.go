@@ -36,7 +36,7 @@ func (r *PaymentRepository) Transfer(
 	paymentID uuid.UUID,
 	description string,
 ) error {
-	const op = "storage.PaymentRepository.Transfer"
+	const op = "repository.PaymentRepository.Transfer"
 
 	if amount <= 0 {
 		return fmt.Errorf("%s: %w", op, billingerr.ErrInvalidAmount)
@@ -146,7 +146,7 @@ func (r *PaymentRepository) Deposit(
 	paymentID uuid.UUID,
 	description string,
 ) error {
-	const op = "storage.PaymentRepository.Deposit"
+	const op = "repository.PaymentRepository.Deposit"
 
 	if amount <= 0 {
 		return fmt.Errorf("%s: %w", op, billingerr.ErrInvalidAmount)
@@ -221,7 +221,7 @@ func (r *PaymentRepository) Withdraw(
 	paymentID uuid.UUID,
 	description string,
 ) error {
-	const op = "storage.PaymentRepository.Withdraw"
+	const op = "repository.PaymentRepository.Withdraw"
 
 	if amount <= 0 {
 		return fmt.Errorf("%s: %w", op, billingerr.ErrInvalidAmount)
@@ -418,7 +418,7 @@ func (r *PaymentRepository) depositInTx(tx *sqlx.Tx,
 
 // GetByUser возвращает все payment_id для user_id из таблицы balance_operations
 func (r *PaymentRepository) GetPaymentsByUser(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error) {
-	const op = "storage.PaymentRepository.GetPaymentsByUser"
+	const op = "repository.PaymentRepository.GetPaymentsByUser"
 
 	stmt, err := r.db.Prepare(`
         SELECT DISTINCT payment_id
@@ -461,7 +461,7 @@ func (r *PaymentRepository) UpdateCurrencyRate(
 	fromCurrency, toCurrency string,
 	rate float64,
 ) error {
-	const op = "storage.PaymentRepository.UpdateCurrencyRate"
+	const op = "repository.PaymentRepository.UpdateCurrencyRate"
 
 	err := r.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		_, err := tx.ExecContext(ctx,
@@ -491,7 +491,7 @@ func (r *PaymentRepository) ConvertCurrency(
 	amount float64,
 	description string,
 ) error {
-	const op = "storage.PaymentRepository.ConvertCurrency"
+	const op = "repository.PaymentRepository.ConvertCurrency"
 
 	if amount <= 0 {
 		return fmt.Errorf("%s: %w", op, billingerr.ErrInvalidAmount)
@@ -587,7 +587,7 @@ func (r *PaymentRepository) GetPendingOperations(
 	ctx context.Context,
 	batchSize int,
 ) ([]models.BalanceOperation, error) {
-	const op = "storage.PaymentRepository.GetPendingOperations"
+	const op = "repository.PaymentRepository.GetPendingOperations"
 
 	var operations []models.BalanceOperation
 
@@ -615,7 +615,7 @@ func (r *PaymentRepository) GetOperationHistory(
 	accountCode string,
 	limit, offset int,
 ) ([]models.BalanceOperation, error) {
-	const op = "storage.PaymentRepository.GetOperationHistory"
+	const op = "repository.PaymentRepository.GetOperationHistory"
 
 	// Валидация параметров пагинации
 	if limit < 1 || limit > 100 {
@@ -711,7 +711,7 @@ func (r *PaymentRepository) invalidateUserAccountsCache(ctx context.Context, use
 
 // GetCurrencyRates возвращает курс обмена между валютами
 func (r *PaymentRepository) GetCurrencyRate(ctx context.Context, fromCurrency, toCurrency string) (float64, error) {
-	const op = "storage.PaymentRepository.GetCurrencyRate"
+	const op = "repository.PaymentRepository.GetCurrencyRate"
 
 	if fromCurrency == toCurrency {
 		return 1.0, nil
