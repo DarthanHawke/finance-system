@@ -1,0 +1,381 @@
+{"level":"info","timestamp":"2025-06-02T16:28:38.798+0300","caller":"sso-service/main.go:26","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-05T13:43:40.981+0300","caller":"sso-service/main.go:26","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-05T14:11:41.741+0300","caller":"sso-service/main.go:29","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-05T14:11:41.775+0300","caller":"grpc/grpcapp.go:40","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-05T14:11:41.777+0300","caller":"grpc/grpcapp.go:47","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-05T14:11:58.489+0300","caller":"grpc/grpcapp.go:57","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-05T14:11:58.489+0300","caller":"sso-service/main.go:53","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-05T16:08:23.646+0300","caller":"sso-service/main.go:29","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-05T16:20:42.402+0300","caller":"sso-service/main.go:29","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-05T16:36:46.386+0300","caller":"migrate/main.go:30","msg":"ENV applied","env":"example"}
+{"level":"error","timestamp":"2025-06-05T16:36:46.468+0300","caller":"migrate/main.go:42","msg":"migrate init failed:","error":"failed to open database: pq: database \"auth_db\" does not exist","stacktrace":"main.main\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/cmd/migrate/main.go:42\nruntime.main\n\tC:/Program Files/Go/src/runtime/proc.go:272"}
+{"level":"info","timestamp":"2025-06-05T16:43:51.960+0300","caller":"migrate/main.go:30","msg":"ENV applied","env":"example"}
+{"level":"error","timestamp":"2025-06-05T16:43:52.050+0300","caller":"migrate/main.go:42","msg":"migrate init failed:","error":"failed to open database: pq: database \"auth_db\" does not exist","stacktrace":"main.main\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/cmd/migrate/main.go:42\nruntime.main\n\tC:/Program Files/Go/src/runtime/proc.go:272"}
+{"level":"info","timestamp":"2025-06-05T18:07:19.771+0300","caller":"migrate/main.go:30","msg":"ENV applied","env":"example"}
+{"level":"error","timestamp":"2025-06-05T18:07:19.837+0300","caller":"migrate/main.go:42","msg":"migrate init failed:","error":"failed to open database: pq: database \"auth_db\" does not exist","stacktrace":"main.main\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/cmd/migrate/main.go:42\nruntime.main\n\tC:/Program Files/Go/src/runtime/proc.go:272"}
+{"level":"info","timestamp":"2025-06-05T18:23:23.983+0300","caller":"migrate/main.go:30","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-05T18:23:31.065+0300","caller":"sso-service/main.go:29","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-05T18:23:31.122+0300","caller":"grpc/grpcapp.go:40","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-05T18:23:31.122+0300","caller":"grpc/grpcapp.go:47","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-05T18:23:52.605+0300","caller":"grpc/grpcapp.go:57","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-05T18:23:52.605+0300","caller":"sso-service/main.go:53","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T14:27:29.918+0300","caller":"migrate/main.go:30","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T14:38:07.145+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T14:38:07.241+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T14:38:07.242+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T14:38:22.885+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-13T14:38:22.886+0300","caller":"sso-service/main.go:71","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T14:58:51.871+0300","caller":"migrate/main.go:30","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T14:59:30.119+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T14:59:30.224+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T14:59:30.226+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T15:19:49.192+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-13T15:19:49.196+0300","caller":"sso-service/main.go:71","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T16:16:14.657+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T16:16:14.736+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T16:16:14.737+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T16:17:26.743+0300","caller":"user/user.go:61","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T16:17:26.744+0300","caller":"user/user.go:65","msg":"invalide email","error":"invalid email format"}
+{"level":"info","timestamp":"2025-06-13T16:17:55.631+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-13T16:17:55.633+0300","caller":"sso-service/main.go:71","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T16:19:21.338+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T16:19:21.420+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T16:19:21.422+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T16:19:42.076+0300","caller":"user/user.go:60","msg":"registering new user"}
+{"level":"error","timestamp":"2025-06-13T16:19:42.344+0300","caller":"user/user.go:91","msg":"user exisits","error":"storage.user.CreateUser: pq: syntax error at or near \",\"","stacktrace":"sso-service/internal/service/user.(*UserService).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/user/user.go:91\nsso-service/internal/grpc/user.(*UserServerAPI).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/user/user-server.go:41\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._UserService_Register_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.2.6/gen/go/sso/user_grpc.pb.go:143\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-13T16:25:59.576+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-13T16:25:59.577+0300","caller":"sso-service/main.go:71","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T16:26:06.157+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T16:26:06.233+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T16:26:06.234+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T16:26:18.094+0300","caller":"user/user.go:60","msg":"registering new user"}
+{"level":"error","timestamp":"2025-06-13T16:26:18.451+0300","caller":"user/user.go:91","msg":"create error","error":"storage.user.CreateUser: LastInsertId is not supported by this driver","stacktrace":"sso-service/internal/service/user.(*UserService).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/user/user.go:91\nsso-service/internal/grpc/user.(*UserServerAPI).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/user/user-server.go:41\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._UserService_Register_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.2.6/gen/go/sso/user_grpc.pb.go:143\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-13T16:32:44.886+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-13T16:32:44.888+0300","caller":"sso-service/main.go:71","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T16:32:50.406+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T16:32:50.464+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T16:32:50.465+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T16:32:59.722+0300","caller":"user/user.go:60","msg":"registering new user"}
+{"level":"error","timestamp":"2025-06-13T16:33:00.009+0300","caller":"user/user.go:87","msg":"user exisits","error":"user already exists","stacktrace":"sso-service/internal/service/user.(*UserService).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/user/user.go:87\nsso-service/internal/grpc/user.(*UserServerAPI).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/user/user-server.go:41\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._UserService_Register_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.2.6/gen/go/sso/user_grpc.pb.go:143\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-13T16:33:19.366+0300","caller":"user/user.go:60","msg":"registering new user"}
+{"level":"error","timestamp":"2025-06-13T16:33:19.664+0300","caller":"user/user.go:91","msg":"create error","error":"storage.user.CreateUser: sql: Scan error on column index 0, name \"id\": converting driver.Value type []uint8 (\"68a4269b-be88-44f4-9206-e79734fd1ffc\") to a int64: invalid syntax","stacktrace":"sso-service/internal/service/user.(*UserService).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/user/user.go:91\nsso-service/internal/grpc/user.(*UserServerAPI).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/user/user-server.go:41\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._UserService_Register_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.2.6/gen/go/sso/user_grpc.pb.go:143\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-13T16:53:43.318+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-13T16:53:43.331+0300","caller":"sso-service/main.go:71","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T16:55:59.375+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T16:55:59.435+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T16:55:59.436+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T16:56:07.319+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:02:34.788+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-13T17:02:34.800+0300","caller":"sso-service/main.go:71","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T17:02:39.273+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T17:02:39.334+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T17:02:39.335+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T17:02:49.519+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:07:13.535+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-13T17:07:13.536+0300","caller":"sso-service/main.go:71","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T17:17:07.962+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T17:17:08.021+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T17:17:08.022+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T17:17:21.262+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:20:28.359+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:20:30.285+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"error","timestamp":"2025-06-13T17:20:30.548+0300","caller":"user/user.go:83","msg":"user exisits","error":"user already exists","stacktrace":"sso-service/internal/service/user.(*UserService).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/user/user.go:83\nsso-service/internal/grpc/user.(*UserServerAPI).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/user/user-server.go:41\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._UserService_Register_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.2.9/gen/go/sso/user_grpc.pb.go:143\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-13T17:20:34.490+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:20:39.545+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:20:44.682+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:20:54.363+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:21:00.254+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:21:10.367+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:21:20.070+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:21:36.520+0300","caller":"user/user.go:103","msg":"login user"}
+{"level":"warn","timestamp":"2025-06-13T17:21:36.534+0300","caller":"user/user.go:108","msg":"user not found","error":"user not found"}
+{"level":"info","timestamp":"2025-06-13T17:21:52.789+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:23:08.260+0300","caller":"user/user.go:103","msg":"login user"}
+{"level":"warn","timestamp":"2025-06-13T17:23:08.266+0300","caller":"user/user.go:112","msg":"cannot getting user","error":"storage.user.GetUserByEmail: sql: expected 6 destination arguments in Scan, not 3"}
+{"level":"info","timestamp":"2025-06-13T17:23:54.259+0300","caller":"user/user.go:134","msg":"getting user"}
+{"level":"warn","timestamp":"2025-06-13T17:23:54.265+0300","caller":"user/user.go:143","msg":"cannot getting user","error":"storage.user.GetUserByID: sql: expected 6 destination arguments in Scan, not 3"}
+{"level":"info","timestamp":"2025-06-13T17:26:43.105+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-13T17:26:43.111+0300","caller":"sso-service/main.go:71","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T17:26:48.713+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T17:26:48.782+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T17:26:48.784+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T17:26:58.633+0300","caller":"user/user.go:134","msg":"getting user"}
+{"level":"warn","timestamp":"2025-06-13T17:26:58.640+0300","caller":"user/user.go:143","msg":"cannot getting user","error":"storage.user.GetUserByID: sql: Scan error on column index 5, name \"updated_at\": unsupported Scan, storing driver.Value type <nil> into type *time.Time"}
+{"level":"info","timestamp":"2025-06-13T17:31:36.633+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-13T17:31:36.635+0300","caller":"sso-service/main.go:71","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T17:31:46.309+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T17:31:46.380+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T17:31:46.382+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T17:32:00.468+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:32:14.411+0300","caller":"user/user.go:134","msg":"getting user"}
+{"level":"warn","timestamp":"2025-06-13T17:32:14.416+0300","caller":"user/user.go:143","msg":"cannot getting user","error":"storage.user.GetUserByID: sql: Scan error on column index 5, name \"updated_at\": unsupported Scan, storing driver.Value type <nil> into type *time.Time"}
+{"level":"info","timestamp":"2025-06-13T17:32:45.677+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-13T17:32:45.678+0300","caller":"sso-service/main.go:71","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T17:32:59.447+0300","caller":"migrate/main.go:30","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T17:33:05.643+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T17:33:05.704+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T17:33:05.705+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T17:33:15.469+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:33:28.697+0300","caller":"user/user.go:134","msg":"getting user"}
+{"level":"warn","timestamp":"2025-06-13T17:33:28.701+0300","caller":"user/user.go:143","msg":"cannot getting user","error":"storage.user.GetUserByID: sql: Scan error on column index 5, name \"updated_at\": unsupported Scan, storing driver.Value type <nil> into type *time.Time"}
+{"level":"info","timestamp":"2025-06-13T17:33:42.781+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-13T17:33:42.782+0300","caller":"sso-service/main.go:71","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T17:33:49.632+0300","caller":"migrate/main.go:30","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T17:37:35.993+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T17:37:36.095+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T17:37:36.096+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T17:37:45.390+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"error","timestamp":"2025-06-13T17:37:45.683+0300","caller":"user/user.go:87","msg":"create error","error":"storage.user.CreateUser: pq: INSERT has more target columns than expressions","stacktrace":"sso-service/internal/service/user.(*UserService).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/user/user.go:87\nsso-service/internal/grpc/user.(*UserServerAPI).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/user/user-server.go:41\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._UserService_Register_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.2.9/gen/go/sso/user_grpc.pb.go:143\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-13T17:42:07.800+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-13T17:42:07.810+0300","caller":"sso-service/main.go:71","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T17:42:13.436+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T17:42:13.497+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T17:42:13.497+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T17:42:30.197+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:42:42.887+0300","caller":"user/user.go:134","msg":"getting user"}
+{"level":"warn","timestamp":"2025-06-13T17:42:42.891+0300","caller":"user/user.go:143","msg":"cannot getting user","error":"storage.user.GetUserByID: sql: Scan error on column index 5, name \"updated_at\": unsupported Scan, storing driver.Value type <nil> into type *time.Time"}
+{"level":"info","timestamp":"2025-06-13T17:43:00.664+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-13T17:43:00.666+0300","caller":"sso-service/main.go:71","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T17:43:26.374+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T17:43:26.450+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T17:43:26.451+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T17:43:37.165+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-13T17:43:48.915+0300","caller":"user/user.go:134","msg":"getting user"}
+{"level":"info","timestamp":"2025-06-13T17:44:14.695+0300","caller":"user/user.go:103","msg":"login user"}
+{"level":"warn","timestamp":"2025-06-13T17:44:14.699+0300","caller":"user/user.go:112","msg":"cannot getting user","error":"storage.user.GetUserByEmail: sql: expected 6 destination arguments in Scan, not 3"}
+{"level":"info","timestamp":"2025-06-13T17:44:42.525+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-13T17:44:42.548+0300","caller":"sso-service/main.go:71","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-13T17:45:05.593+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-13T17:45:05.653+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-13T17:45:05.653+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-13T17:45:13.853+0300","caller":"user/user.go:134","msg":"getting user"}
+{"level":"info","timestamp":"2025-06-13T17:45:19.630+0300","caller":"user/user.go:103","msg":"login user"}
+{"level":"info","timestamp":"2025-06-13T17:45:58.229+0300","caller":"session/session.go:67","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T12:47:15.244+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T12:47:15.424+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T12:47:15.426+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T12:51:50.371+0300","caller":"session/session.go:67","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T13:08:01.446+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"error","timestamp":"2025-06-16T13:08:01.511+0300","caller":"sso-service/main.go:53","msg":"Failed to init JWT","error":"failed to load keys: x509: failed to parse private key (use ParsePKCS8PrivateKey instead for this key format)","stacktrace":"main.main\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/cmd/sso-service/main.go:53\nruntime.main\n\tC:/Program Files/Go/src/runtime/proc.go:272"}
+{"level":"info","timestamp":"2025-06-16T13:14:47.189+0300","caller":"sso-service/main.go:35","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T13:14:47.260+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T13:14:47.261+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T13:15:16.104+0300","caller":"session/session.go:67","msg":"creating new session"}
+{"level":"error","timestamp":"2025-06-16T13:15:16.110+0300","caller":"session/session.go:86","msg":"hashing token","error":"password hashing failed","stacktrace":"sso-service/internal/service/session.(*SessionService).CreateSession\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/session/session.go:86\nsso-service/internal/grpc/session.(*SessionServerAPI).CreateSession\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/session/session-server.go:29\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._SessionService_CreateSession_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.2.9/gen/go/sso/session_grpc.pb.go:143\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-16T13:40:15.134+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T13:40:15.143+0300","caller":"sso-service/main.go:75","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T13:40:24.889+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T13:40:24.950+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T13:40:24.950+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T13:40:33.288+0300","caller":"session/session.go:67","msg":"creating new session"}
+{"level":"error","timestamp":"2025-06-16T13:40:33.407+0300","caller":"session/session.go:94","msg":"hashing token","error":"storage.user.CreateSession: pq: column \"refresh_token\" of relation \"sessions\" does not exist","stacktrace":"sso-service/internal/service/session.(*SessionService).CreateSession\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/session/session.go:94\nsso-service/internal/grpc/session.(*SessionServerAPI).CreateSession\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/session/session-server.go:29\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._SessionService_CreateSession_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.2.9/gen/go/sso/session_grpc.pb.go:143\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-16T13:53:38.906+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T13:53:38.907+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T13:53:43.835+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T13:53:43.952+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T13:53:43.953+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T13:53:54.795+0300","caller":"session/session.go:67","msg":"creating new session"}
+{"level":"error","timestamp":"2025-06-16T13:53:54.897+0300","caller":"session/session.go:94","msg":"hashing token","error":"storage.user.CreateSession: pq: column \"refresh_token\" of relation \"sessions\" does not exist","stacktrace":"sso-service/internal/service/session.(*SessionService).CreateSession\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/session/session.go:94\nsso-service/internal/grpc/session.(*SessionServerAPI).CreateSession\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/session/session-server.go:29\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._SessionService_CreateSession_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.2.9/gen/go/sso/session_grpc.pb.go:143\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-16T13:58:03.623+0300","caller":"grpc/grpcapp.go:62","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T13:58:03.634+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T13:58:09.204+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T13:58:09.263+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T13:58:09.264+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T13:58:19.203+0300","caller":"session/session.go:67","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T14:00:15.136+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T14:00:15.205+0300","caller":"grpc/grpcapp.go:45","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T14:00:15.205+0300","caller":"grpc/grpcapp.go:52","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T14:00:22.027+0300","caller":"session/session.go:67","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T14:17:53.332+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T14:17:53.396+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T14:17:53.397+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T14:18:01.327+0300","caller":"session/session.go:67","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T14:18:19.220+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T14:18:19.221+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T14:18:38.041+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T14:18:38.099+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T14:18:38.100+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T14:18:46.975+0300","caller":"session/session.go:67","msg":"creating new session"}
+{"level":"error","timestamp":"2025-06-16T14:18:47.115+0300","caller":"session/session.go:94","msg":"hashing token","error":"storage.user.CreateSession: ip not found in context","stacktrace":"sso-service/internal/service/session.(*SessionService).CreateSession\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/session/session.go:94\nsso-service/internal/grpc/session.(*SessionServerAPI).CreateSession\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/session/session-server.go:29\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._SessionService_CreateSession_Handler.func1\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.2.9/gen/go/sso/session_grpc.pb.go:150\nsso-service/internal/grpc/interceptor.IPUserAgentInterceptor\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/interceptor/user-interceptor.go:38\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._SessionService_CreateSession_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.2.9/gen/go/sso/session_grpc.pb.go:152\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-16T14:19:11.709+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T14:19:11.711+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T14:19:49.851+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T14:19:49.922+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T14:19:49.922+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T14:19:57.138+0300","caller":"session/session.go:67","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T14:20:25.906+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T14:20:25.973+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T14:20:25.973+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T14:20:37.635+0300","caller":"session/session.go:67","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T14:20:50.373+0300","caller":"session/session.go:67","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T14:22:15.056+0300","caller":"session/session.go:114","msg":"refreshing session"}
+{"level":"warn","timestamp":"2025-06-16T14:22:15.158+0300","caller":"session/session.go:135","msg":"refreshToken not actual"}
+{"level":"info","timestamp":"2025-06-16T14:23:13.703+0300","caller":"session/session.go:114","msg":"refreshing session"}
+{"level":"warn","timestamp":"2025-06-16T14:23:13.789+0300","caller":"session/session.go:135","msg":"refreshToken not actual"}
+{"level":"info","timestamp":"2025-06-16T14:24:35.047+0300","caller":"session/session.go:114","msg":"refreshing session"}
+{"level":"warn","timestamp":"2025-06-16T14:24:35.130+0300","caller":"session/session.go:135","msg":"refreshToken not actual"}
+{"level":"info","timestamp":"2025-06-16T14:26:14.258+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-16T14:26:27.840+0300","caller":"user/user.go:140","msg":"getting user"}
+{"level":"info","timestamp":"2025-06-16T14:27:03.524+0300","caller":"user/user.go:103","msg":"login user"}
+{"level":"info","timestamp":"2025-06-16T14:27:15.507+0300","caller":"session/session.go:67","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T14:27:44.666+0300","caller":"session/session.go:114","msg":"refreshing session"}
+{"level":"info","timestamp":"2025-06-16T14:27:44.804+0300","caller":"session/session.go:67","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T14:37:46.616+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T14:37:46.619+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T14:43:12.714+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T14:43:12.776+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T14:43:12.777+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T14:43:21.788+0300","caller":"session/session.go:113","msg":"refreshing session"}
+{"level":"warn","timestamp":"2025-06-16T14:43:22.024+0300","caller":"session/session.go:130","msg":"sessinon dont get","error":"storage.user.GetSessionByToken: pq: column \"refresh_token\" does not exist"}
+{"level":"info","timestamp":"2025-06-16T14:43:34.045+0300","caller":"session/session.go:66","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T14:43:51.064+0300","caller":"session/session.go:113","msg":"refreshing session"}
+{"level":"warn","timestamp":"2025-06-16T14:43:51.172+0300","caller":"session/session.go:130","msg":"sessinon dont get","error":"storage.user.GetSessionByToken: pq: column \"refresh_token\" does not exist"}
+{"level":"info","timestamp":"2025-06-16T14:46:37.789+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T14:46:37.805+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T14:46:47.669+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T14:46:47.731+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T14:46:47.732+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T14:46:56.621+0300","caller":"session/session.go:113","msg":"refreshing session"}
+{"level":"warn","timestamp":"2025-06-16T14:46:56.713+0300","caller":"session/session.go:126","msg":"sessinon dont get","error":"storage.user.GetSessionByToken: session not found"}
+{"level":"info","timestamp":"2025-06-16T14:47:22.620+0300","caller":"session/session.go:113","msg":"refreshing session"}
+{"level":"warn","timestamp":"2025-06-16T14:47:22.713+0300","caller":"session/session.go:126","msg":"sessinon dont get","error":"storage.user.GetSessionByToken: session not found"}
+{"level":"info","timestamp":"2025-06-16T14:51:17.694+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T14:51:17.696+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T14:51:25.713+0300","caller":"sso-service/main.go:42","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T14:51:25.910+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T14:51:25.910+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T14:51:39.479+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T14:51:39.480+0300","caller":"sso-service/main.go:85","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T14:52:18.407+0300","caller":"sso-service/main.go:42","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T14:52:18.601+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T14:52:18.603+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T14:52:31.607+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T14:52:31.608+0300","caller":"sso-service/main.go:86","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T15:03:24.541+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T15:03:24.605+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T15:03:24.607+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T15:03:41.677+0300","caller":"session/session.go:66","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T15:03:57.926+0300","caller":"session/session.go:108","msg":"refreshing session"}
+{"level":"info","timestamp":"2025-06-16T15:03:57.937+0300","caller":"session/session.go:66","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T15:05:24.684+0300","caller":"session/session.go:172","msg":"logout all session"}
+{"level":"info","timestamp":"2025-06-16T15:05:56.463+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T15:05:56.465+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T17:11:10.678+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T17:11:10.818+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T17:11:10.819+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T17:11:23.115+0300","caller":"user/user.go:56","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-16T17:11:34.885+0300","caller":"user/user.go:140","msg":"getting user"}
+{"level":"info","timestamp":"2025-06-16T17:12:50.635+0300","caller":"user/user.go:171","msg":"getting user"}
+{"level":"warn","timestamp":"2025-06-16T17:12:50.642+0300","caller":"user/user.go:179","msg":"cannot getting user","error":"storage.user.UpdateUser: pq: syntax error at or near \"updated_at\""}
+{"level":"info","timestamp":"2025-06-16T17:21:20.385+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T17:21:20.389+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T17:21:32.300+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T17:21:32.366+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T17:21:32.366+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T17:22:00.289+0300","caller":"user/user.go:172","msg":"getting user"}
+{"level":"info","timestamp":"2025-06-16T17:22:00.331+0300","caller":"user/user.go:141","msg":"getting user"}
+{"level":"info","timestamp":"2025-06-16T17:22:56.296+0300","caller":"user/user.go:104","msg":"login user"}
+{"level":"warn","timestamp":"2025-06-16T17:22:56.309+0300","caller":"user/user.go:121","msg":"error to compare passwords","error":"invalid hash format"}
+{"level":"info","timestamp":"2025-06-16T17:23:19.113+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T17:23:19.114+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T17:24:08.423+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T17:24:08.482+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T17:24:08.483+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T17:24:22.523+0300","caller":"user/user.go:57","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-16T17:24:31.437+0300","caller":"user/user.go:141","msg":"getting user"}
+{"level":"info","timestamp":"2025-06-16T17:24:41.652+0300","caller":"user/user.go:172","msg":"getting user"}
+{"level":"info","timestamp":"2025-06-16T17:24:41.761+0300","caller":"user/user.go:141","msg":"getting user"}
+{"level":"info","timestamp":"2025-06-16T17:24:58.688+0300","caller":"user/user.go:104","msg":"login user"}
+{"level":"info","timestamp":"2025-06-16T17:25:09.890+0300","caller":"session/session.go:66","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T17:25:42.553+0300","caller":"session/session.go:108","msg":"refreshing session"}
+{"level":"info","timestamp":"2025-06-16T17:25:42.566+0300","caller":"session/session.go:66","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T17:26:58.444+0300","caller":"session/session.go:149","msg":"logout session"}
+{"level":"info","timestamp":"2025-06-16T17:27:04.149+0300","caller":"session/session.go:66","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T17:27:13.183+0300","caller":"session/session.go:66","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T17:27:14.475+0300","caller":"session/session.go:66","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T17:27:15.642+0300","caller":"session/session.go:66","msg":"creating new session"}
+{"level":"info","timestamp":"2025-06-16T17:27:21.008+0300","caller":"session/session.go:192","msg":"logout all session"}
+{"level":"info","timestamp":"2025-06-16T17:28:08.100+0300","caller":"role/role.go:56","msg":"creating new role"}
+{"level":"error","timestamp":"2025-06-16T17:28:08.103+0300","caller":"role/role.go:68","msg":"creating role","error":"storage.user.CreateRole: pq: column \"permissions\" of relation \"roles\" does not exist","stacktrace":"sso-service/internal/service/role.(*RoleService).CreateRole\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/role/role.go:68\nsso-service/internal/grpc/role.(*RoleServerAPI).CreateRole\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/role/role-server.go:41\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._RoleService_CreateRole_Handler.func1\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.3.1/gen/go/sso/role_grpc.pb.go:166\nsso-service/internal/grpc/interceptor.IPUserAgentInterceptor\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/interceptor/user-interceptor.go:38\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._RoleService_CreateRole_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.3.1/gen/go/sso/role_grpc.pb.go:168\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-16T17:37:06.704+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T17:37:06.706+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T17:37:11.841+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T17:37:11.947+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T17:37:11.948+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T17:37:22.742+0300","caller":"role/role.go:56","msg":"creating new role"}
+{"level":"error","timestamp":"2025-06-16T17:37:22.744+0300","caller":"role/role.go:68","msg":"creating role","error":"storage.user.CreateRole: pq: column \"permissions\" of relation \"roles\" does not exist","stacktrace":"sso-service/internal/service/role.(*RoleService).CreateRole\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/role/role.go:68\nsso-service/internal/grpc/role.(*RoleServerAPI).CreateRole\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/role/role-server.go:41\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._RoleService_CreateRole_Handler.func1\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.3.1/gen/go/sso/role_grpc.pb.go:166\nsso-service/internal/grpc/interceptor.IPUserAgentInterceptor\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/interceptor/user-interceptor.go:38\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._RoleService_CreateRole_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.3.1/gen/go/sso/role_grpc.pb.go:168\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-16T17:40:07.747+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T17:40:07.750+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T17:40:40.474+0300","caller":"migrate/main.go:30","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T17:40:46.774+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T17:40:46.845+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T17:40:46.846+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T17:40:58.400+0300","caller":"role/role.go:56","msg":"creating new role"}
+{"level":"error","timestamp":"2025-06-16T17:40:58.425+0300","caller":"role/role.go:68","msg":"creating role","error":"storage.user.CreateRole: pq: column \"permissions\" of relation \"roles\" does not exist","stacktrace":"sso-service/internal/service/role.(*RoleService).CreateRole\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/role/role.go:68\nsso-service/internal/grpc/role.(*RoleServerAPI).CreateRole\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/role/role-server.go:41\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._RoleService_CreateRole_Handler.func1\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.3.1/gen/go/sso/role_grpc.pb.go:166\nsso-service/internal/grpc/interceptor.IPUserAgentInterceptor\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/interceptor/user-interceptor.go:38\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._RoleService_CreateRole_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.3.1/gen/go/sso/role_grpc.pb.go:168\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-16T17:58:07.114+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T17:58:07.116+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T17:58:13.136+0300","caller":"migrate/main.go:30","msg":"ENV applied","env":"example"}
+{"level":"error","timestamp":"2025-06-16T17:58:13.207+0300","caller":"migrate/main.go:42","msg":"migrate init failed:","error":"failed to open database: pq: database \"sso_db\" does not exist","stacktrace":"main.main\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/cmd/migrate/main.go:42\nruntime.main\n\tC:/Program Files/Go/src/runtime/proc.go:272"}
+{"level":"info","timestamp":"2025-06-16T18:00:21.007+0300","caller":"migrate/main.go:30","msg":"ENV applied","env":"example"}
+{"level":"error","timestamp":"2025-06-16T18:00:21.086+0300","caller":"migrate/main.go:42","msg":"migrate init failed:","error":"failed to open database: pq: database \"sso_db\" does not exist","stacktrace":"main.main\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/cmd/migrate/main.go:42\nruntime.main\n\tC:/Program Files/Go/src/runtime/proc.go:272"}
+{"level":"info","timestamp":"2025-06-16T18:06:08.818+0300","caller":"migrate/main.go:30","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T18:06:14.865+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T18:06:14.924+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T18:06:14.925+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T18:06:28.334+0300","caller":"role/role.go:56","msg":"creating new role"}
+{"level":"warn","timestamp":"2025-06-16T18:06:28.341+0300","caller":"role/role.go:76","msg":"getting role","error":"storage.user.GetRole: pq: column \"created_at\" does not exist"}
+{"level":"info","timestamp":"2025-06-16T18:06:49.990+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T18:06:49.991+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T18:07:31.996+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T18:07:32.061+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T18:07:32.062+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T18:08:39.720+0300","caller":"role/role.go:56","msg":"creating new role"}
+{"level":"error","timestamp":"2025-06-16T18:08:39.724+0300","caller":"role/role.go:68","msg":"creating role","error":"storage.user.CreateRole: user already exists","stacktrace":"sso-service/internal/service/role.(*RoleService).CreateRole\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/role/role.go:68\nsso-service/internal/grpc/role.(*RoleServerAPI).CreateRole\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/role/role-server.go:41\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._RoleService_CreateRole_Handler.func1\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.3.1/gen/go/sso/role_grpc.pb.go:166\nsso-service/internal/grpc/interceptor.IPUserAgentInterceptor\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/interceptor/user-interceptor.go:38\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._RoleService_CreateRole_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.3.1/gen/go/sso/role_grpc.pb.go:168\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-16T18:08:50.628+0300","caller":"role/role.go:56","msg":"creating new role"}
+{"level":"warn","timestamp":"2025-06-16T18:08:50.638+0300","caller":"role/role.go:76","msg":"getting role","error":"storage.user.GetRole: sql: Scan error on column index 2, name \"permissions\": unsupported Scan, storing driver.Value type []uint8 into type *[]string"}
+{"level":"info","timestamp":"2025-06-16T18:36:13.351+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T18:36:13.360+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T18:36:19.393+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T18:36:19.452+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T18:36:19.452+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T18:36:35.062+0300","caller":"role/role.go:56","msg":"creating new role"}
+{"level":"warn","timestamp":"2025-06-16T18:36:35.078+0300","caller":"role/role.go:76","msg":"getting role","error":"storage.user.GetRole: sql: Scan error on column index 2, name \"permissions\": unsupported Scan, storing driver.Value type []uint8 into type *[]string"}
+{"level":"info","timestamp":"2025-06-16T18:37:29.814+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T18:37:29.815+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T18:37:52.626+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T18:37:52.692+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T18:37:52.693+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T18:38:03.939+0300","caller":"role/role.go:56","msg":"creating new role"}
+{"level":"warn","timestamp":"2025-06-16T18:38:03.948+0300","caller":"role/role.go:76","msg":"getting role","error":"storage.user.GetRole: sql: Scan error on column index 3, name \"description\": converting NULL to string is unsupported"}
+{"level":"info","timestamp":"2025-06-16T18:39:53.955+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T18:39:53.956+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T18:39:58.601+0300","caller":"sso-service/main.go:41","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T18:39:58.665+0300","caller":"grpc/grpcapp.go:46","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T18:39:58.665+0300","caller":"grpc/grpcapp.go:53","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T18:40:07.365+0300","caller":"role/role.go:56","msg":"creating new role"}
+{"level":"info","timestamp":"2025-06-16T18:41:22.536+0300","caller":"role/role.go:56","msg":"creating new role"}
+{"level":"info","timestamp":"2025-06-16T18:41:36.266+0300","caller":"user/user.go:57","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-16T18:41:47.006+0300","caller":"role/role.go:96","msg":"assigning role"}
+{"level":"info","timestamp":"2025-06-16T18:42:31.074+0300","caller":"role/role.go:142","msg":"getting permissions user"}
+{"level":"info","timestamp":"2025-06-16T18:43:21.646+0300","caller":"role/role.go:142","msg":"getting permissions user"}
+{"level":"info","timestamp":"2025-06-16T18:43:31.687+0300","caller":"role/role.go:126","msg":"checking permission"}
+{"level":"info","timestamp":"2025-06-16T18:44:31.086+0300","caller":"role/role.go:159","msg":"revoking role user"}
+{"level":"info","timestamp":"2025-06-16T18:44:36.672+0300","caller":"role/role.go:126","msg":"checking permission"}
+{"level":"info","timestamp":"2025-06-16T18:44:42.568+0300","caller":"role/role.go:142","msg":"getting permissions user"}
+{"level":"info","timestamp":"2025-06-16T18:44:56.772+0300","caller":"grpc/grpcapp.go:63","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T18:44:56.775+0300","caller":"sso-service/main.go:81","msg":"Gracefully stopped"}
+{"level":"info","timestamp":"2025-06-16T19:08:53.536+0300","caller":"sso-service/main.go:42","msg":"ENV applied","env":"example"}
+{"level":"info","timestamp":"2025-06-16T19:08:53.607+0300","caller":"grpc/grpcapp.go:50","msg":"Starting gRPC server","port":50051}
+{"level":"info","timestamp":"2025-06-16T19:08:53.608+0300","caller":"grpc/grpcapp.go:57","msg":"gRPC server is running","addres":"[::]:50051"}
+{"level":"info","timestamp":"2025-06-16T19:16:39.823+0300","caller":"user/user.go:57","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-16T19:16:59.379+0300","caller":"user/user.go:57","msg":"registering new user"}
+{"level":"error","timestamp":"2025-06-16T19:16:59.453+0300","caller":"user/user.go:84","msg":"user exisits","error":"user already exists","stacktrace":"sso-service/internal/service/user.(*UserService).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/user/user.go:84\nsso-service/internal/grpc/user.(*UserServerAPI).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/user/user-server.go:41\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._UserService_Register_Handler.func1\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.3.1/gen/go/sso/user_grpc.pb.go:150\nsso-service/internal/grpc/interceptor.IPUserAgentInterceptor\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/interceptor/user-interceptor.go:38\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._UserService_Register_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.3.1/gen/go/sso/user_grpc.pb.go:152\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-16T19:17:04.892+0300","caller":"user/user.go:57","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-16T19:18:51.860+0300","caller":"user/user.go:57","msg":"registering new user"}
+{"level":"error","timestamp":"2025-06-16T19:18:51.957+0300","caller":"user/user.go:84","msg":"user exisits","error":"user already exists","stacktrace":"sso-service/internal/service/user.(*UserService).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/user/user.go:84\nsso-service/internal/grpc/user.(*UserServerAPI).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/user/user-server.go:41\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._UserService_Register_Handler.func1\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.3.1/gen/go/sso/user_grpc.pb.go:150\nsso-service/internal/grpc/interceptor.IPUserAgentInterceptor\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/interceptor/user-interceptor.go:38\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._UserService_Register_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.3.1/gen/go/sso/user_grpc.pb.go:152\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-16T19:18:55.117+0300","caller":"user/user.go:57","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-16T19:18:58.315+0300","caller":"user/user.go:57","msg":"registering new user"}
+{"level":"error","timestamp":"2025-06-16T19:18:58.388+0300","caller":"user/user.go:84","msg":"user exisits","error":"user already exists","stacktrace":"sso-service/internal/service/user.(*UserService).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/service/user/user.go:84\nsso-service/internal/grpc/user.(*UserServerAPI).Register\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/user/user-server.go:41\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._UserService_Register_Handler.func1\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.3.1/gen/go/sso/user_grpc.pb.go:150\nsso-service/internal/grpc/interceptor.IPUserAgentInterceptor\n\tC:/Users/drako/OneDrive/Документы/Golang/Golang Projects/payment-system/services/sso/internal/grpc/interceptor/user-interceptor.go:38\ngithub.com/DarthanHawke/protos-payment-system/gen/go/sso._UserService_Register_Handler\n\tC:/Users/drako/go/pkg/mod/github.com/!darthan!hawke/protos-payment-system@v0.3.1/gen/go/sso/user_grpc.pb.go:152\ngoogle.golang.org/grpc.(*Server).processUnaryRPC\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1405\ngoogle.golang.org/grpc.(*Server).handleStream\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1815\ngoogle.golang.org/grpc.(*Server).serveStreams.func2.1\n\tC:/Users/drako/go/pkg/mod/google.golang.org/grpc@v1.73.0/server.go:1035"}
+{"level":"info","timestamp":"2025-06-16T19:19:01.501+0300","caller":"user/user.go:57","msg":"registering new user"}
+{"level":"info","timestamp":"2025-06-16T19:20:55.021+0300","caller":"grpc/grpcapp.go:67","msg":"Stopping gRPC server"}
+{"level":"info","timestamp":"2025-06-16T19:20:55.026+0300","caller":"sso-service/main.go:94","msg":"Gracefully stopped"}
