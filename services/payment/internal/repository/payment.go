@@ -40,7 +40,11 @@ func NewPaymentRepository(db *Database, cache RedisCacheManager, logger *zap.Log
 }
 
 // CreatePayment создаёт новый платёж
-func (r *PaymentRepository) CreatePayment(ctx context.Context, req *models.CreatePaymentRequest) error {
+func (r *PaymentRepository) CreatePayment(
+	ctx context.Context,
+	req *models.CreatePaymentRequest,
+	event *models.CreateEventRequest,
+) error {
 	const op = "repository.payment.CreatePayment"
 
 	const queryPayments = `
@@ -58,7 +62,7 @@ func (r *PaymentRepository) CreatePayment(ctx context.Context, req *models.Creat
 
 	err := r.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		_, err := tx.ExecContext(ctx, queryPayments,
-			req.Payment.ID,
+			req.ID,
 			req.PaymentType,
 			req.Direction,
 			req.Amount,
@@ -75,7 +79,7 @@ func (r *PaymentRepository) CreatePayment(ctx context.Context, req *models.Creat
 			req.Stan,
 			req.AuthorizationCode,
 			req.Description,
-			req.Payment.Status,
+			req.Status,
 			time.Now(),
 			time.Now(),
 		)
@@ -88,13 +92,13 @@ func (r *PaymentRepository) CreatePayment(ctx context.Context, req *models.Creat
 		}
 
 		_, err = tx.ExecContext(ctx, queryEvents,
-			req.Event.ID,
-			req.PaymentID,
-			req.Type,
-			req.Event.Status,
-			req.Source,
-			req.Event.CreatedAt,
-			req.Payload,
+			event.ID,
+			event.PaymentID,
+			event.Type,
+			event.Status,
+			event.Source,
+			event.CreatedAt,
+			event.Payload,
 		)
 
 		if err != nil {

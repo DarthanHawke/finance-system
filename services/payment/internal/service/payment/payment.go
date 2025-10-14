@@ -16,7 +16,6 @@ import (
 type PaymentService struct {
 	paymentManager PaymentManager
 	eventManager   EventManager
-	producer       Producer
 	logger         *zap.Logger
 }
 
@@ -24,24 +23,18 @@ type PaymentService struct {
 func NewPaymentService(
 	paymentManager PaymentManager,
 	eventManager EventManager,
-	producer Producer,
 	logger *zap.Logger,
 ) *PaymentService {
 	return &PaymentService{
 		paymentManager: paymentManager,
 		eventManager:   eventManager,
-		producer:       producer,
 		logger:         logger.With(zap.String("component", "payment_service")),
 	}
 }
 
-type Producer interface {
-	ProduceMessage(ctx context.Context, topic string, key string, value any) error
-}
-
 // PaymentManager определяет методы управления платежами
 type PaymentManager interface {
-	CreatePayment(ctx context.Context, req *models.CreatePaymentRequest) error
+	CreatePayment(ctx context.Context, req *models.CreatePaymentRequest, event *models.CreateEventRequest) error
 	GetPayment(ctx context.Context, req *models.GetPaymentRequest) (models.GetPaymentResponse, error)
 	UpdatePaymentStatus(ctx context.Context, req *models.UpdatePaymentStatusRequest) error
 }
@@ -49,8 +42,6 @@ type PaymentManager interface {
 // EventManager определяет методы управления платежами
 type EventManager interface {
 	CreateEvent(ctx context.Context, req *models.CreateEventRequest) error
-	GetPendingEvents(ctx context.Context, req *models.GetEventRequest) (models.GetEventResponse, error)
-	UpdateEventStatus(ctx context.Context, req *models.UpdateEventStatusRequest) error
 }
 
 // HandlePaymentRequest
@@ -89,23 +80,25 @@ func (s *PaymentService) HandlePaymentRequest(ctx context.Context, req *models.C
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	req.Event = &models.Event{
-		ID:        uuid.New(),
-		PaymentID: req.Payment.ID,
-		Type:      eventType,
-		CreatedAt: time.Now(),
-		Source:    models.Source,
-		Payload:   payloadBytes,
+	event := &models.CreateEventRequest{
+		Event: &models.Event{
+			ID:        uuid.New(),
+			PaymentID: req.Payment.ID,
+			Type:      eventType,
+			CreatedAt: time.Now(),
+			Source:    models.Source,
+			Payload:   payloadBytes,
+		},
 	}
 
 	// TODO Stan, procesing code, auth code
 
-	if err := s.paymentManager.CreatePayment(ctx, req); err != nil {
+	if err := s.paymentManager.CreatePayment(ctx, req, event); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	logger.Info("payment wait account",
-		zap.String("event id:", req.Event.ID.String()),
+		zap.String("event id:", event.ID.String()),
 		zap.String("event type:", eventType),
 		zap.String("payment id:", req.Payment.ID.String()),
 		zap.String("account code:", req.SenderAccountCode),
@@ -115,11 +108,12 @@ func (s *PaymentService) HandlePaymentRequest(ctx context.Context, req *models.C
 }
 
 // HandleFreezeResult
-func (s *PaymentService) HandleFreezeResult(ctx context.Context, resp models.Event) error {
+func (s *PaymentService) HandleFreezeResult(ctx context.Context, resp *models.Event) error {
 	const op = "service.payment.HandleFreezeResult"
 
 	logger := s.logger.With(
 		zap.String("op:", op),
+		zap.String("payment ID:", resp.PaymentID.String()),
 	)
 
 	logger.Info("processing result of freeze balance")
@@ -188,11 +182,12 @@ func (s *PaymentService) HandleFreezeResult(ctx context.Context, resp models.Eve
 }
 
 // HandleUnfreezeResult
-func (s *PaymentService) HandleUnfreezeResult(ctx context.Context, resp models.Event) error {
+func (s *PaymentService) HandleUnfreezeResult(ctx context.Context, resp *models.Event) error {
 	const op = "service.payment.HandleUnfreezeResult"
 
 	logger := s.logger.With(
 		zap.String("op:", op),
+		zap.String("payment ID:", resp.PaymentID.String()),
 	)
 
 	logger.Info("processing result of unfreeze balance")
@@ -219,11 +214,12 @@ func (s *PaymentService) HandleUnfreezeResult(ctx context.Context, resp models.E
 }
 
 // HandleReserveResult
-func (s *PaymentService) HandleReserveResult(ctx context.Context, resp models.Event) error {
+func (s *PaymentService) HandleReserveResult(ctx context.Context, resp *models.Event) error {
 	const op = "service.payment.HandleReserveResult"
 
 	logger := s.logger.With(
 		zap.String("op:", op),
+		zap.String("payment ID:", resp.PaymentID.String()),
 	)
 
 	logger.Info("processing result of reserve balance")
@@ -292,11 +288,12 @@ func (s *PaymentService) HandleReserveResult(ctx context.Context, resp models.Ev
 }
 
 // HandleUnreserveResult
-func (s *PaymentService) HandleUnreserveResult(ctx context.Context, resp models.Event) error {
+func (s *PaymentService) HandleUnreserveResult(ctx context.Context, resp *models.Event) error {
 	const op = "service.payment.HandleUnreserveResult"
 
 	logger := s.logger.With(
 		zap.String("op:", op),
+		zap.String("payment ID:", resp.PaymentID.String()),
 	)
 
 	logger.Info("processing result of unreserve balance")
@@ -360,11 +357,12 @@ func (s *PaymentService) HandleUnreserveResult(ctx context.Context, resp models.
 	return nil
 }
 
-func (s *PaymentService) compensatingTryBalance(ctx context.Context, event models.Event) error {
+func (s *PaymentService) compensatingTryBalance(ctx context.Context, event *models.Event) error {
 	const op = "service.payment.compensatingTryBalance"
 
 	logger := s.logger.With(
 		zap.String("op:", op),
+		zap.String("payment ID:", event.PaymentID.String()),
 	)
 
 	logger.Info("result of freeze balance are failed, canceling paymant")
@@ -381,11 +379,12 @@ func (s *PaymentService) compensatingTryBalance(ctx context.Context, event model
 }
 
 // HandleExternalResult
-func (s *PaymentService) HandleExternalResult(ctx context.Context, resp models.Event) error {
+func (s *PaymentService) HandleExternalResult(ctx context.Context, resp *models.Event) error {
 	const op = "service.payment.HandleExternalResult"
 
 	logger := s.logger.With(
 		zap.String("op:", op),
+		zap.String("payment ID:", resp.PaymentID.String()),
 	)
 
 	logger.Info("processing result of external payment")
@@ -446,11 +445,12 @@ func (s *PaymentService) HandleExternalResult(ctx context.Context, resp models.E
 }
 
 // HandleExternalRollbackResult
-func (s *PaymentService) HandleExternalRollbackResult(ctx context.Context, resp models.Event) error {
+func (s *PaymentService) HandleExternalRollbackResult(ctx context.Context, resp *models.Event) error {
 	const op = "service.payment.HandleExternalRollbackResult"
 
 	logger := s.logger.With(
 		zap.String("op:", op),
+		zap.String("payment ID:", resp.PaymentID.String()),
 	)
 
 	logger.Info("processing result of external rollback")
@@ -511,11 +511,12 @@ func (s *PaymentService) HandleExternalRollbackResult(ctx context.Context, resp 
 }
 
 // HandleWithdrawResult
-func (s *PaymentService) HandleWithdrawResult(ctx context.Context, resp models.Event) error {
+func (s *PaymentService) HandleWithdrawResult(ctx context.Context, resp *models.Event) error {
 	const op = "service.payment.HandleWithdrawResult"
 
 	logger := s.logger.With(
 		zap.String("op:", op),
+		zap.String("payment ID:", resp.PaymentID.String()),
 	)
 
 	logger.Info("processing result of withdraw balance")
@@ -592,11 +593,12 @@ func (s *PaymentService) HandleWithdrawResult(ctx context.Context, resp models.E
 }
 
 // HandleDepositResult
-func (s *PaymentService) HandleDepositResult(ctx context.Context, resp models.Event) error {
+func (s *PaymentService) HandleDepositResult(ctx context.Context, resp *models.Event) error {
 	const op = "service.payment.HandleDepositResult"
 
 	logger := s.logger.With(
 		zap.String("op:", op),
+		zap.String("payment ID:", resp.PaymentID.String()),
 	)
 
 	logger.Info("processing result of deposit balance")

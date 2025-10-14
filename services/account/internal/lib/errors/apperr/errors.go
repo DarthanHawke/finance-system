@@ -26,3 +26,9 @@ var (
 	// ErrInvalidAmount - неккоректная сумма
 	ErrInvalidAmount = &AppError{Code: "INVALID_AMOUNT", Message: "invalid amount"}
 )
+
+// Ошибки событий
+var (
+	// ErrEventIDNotUnique - номер счета уже занят
+	ErrEventIDNotUnique = &AppError{Code: "EVENT_ID_NOT_UNIQUE", Message: "event code not unique"}
+)

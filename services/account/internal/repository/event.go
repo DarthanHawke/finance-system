@@ -2,10 +2,10 @@
 package repository
 
 import (
+	"account-service/internal/lib/errors/apperr"
+	"account-service/internal/models"
 	"context"
 	"fmt"
-	"payment-service/internal/lib/errors/apperr"
-	"payment-service/internal/models"
 	"strings"
 	"time"
 

@@ -9,8 +9,8 @@ import (
 
 // Топики для событий:
 const (
-	TopicAccount         = "account-commands"
-	TopicExternalPayment = "external-payment-commands"
+	TopicAccount = "account-commands"
+	TopicPayment = "payment-commands"
 )
 
 // Статусы событий:
@@ -39,11 +39,6 @@ const (
 
 	EventWithdrawRequest  = "withdraw.request"
 	EventWithdrawResponse = "withdraw.response"
-
-	EventExternalRequest  = "external.request"
-	EventExternalResponse = "external.response"
-	EventExternalCommit   = "external.commit"
-	EventExternalRollback = "external.rollback"
 )
 
 type Event struct {
@@ -65,10 +60,6 @@ type BalanceRequestPayload struct {
 type BalanceResponsePayload struct {
 	Success bool   `json:"success"`
 	Reason  string `json:"reason,omitempty"`
-}
-
-type ExternalRequestPayload struct {
-	ISOMessage string `json:"iso_message"`
 }
 
 type CreateEventRequest struct {

@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const Source = "account-service"
+
 // статусы счета:
 const (
 	// Active активный сччет

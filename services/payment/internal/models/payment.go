@@ -68,7 +68,6 @@ type Payment struct {
 
 type CreatePaymentRequest struct {
 	*Payment
-	*Event
 }
 
 type GetPaymentRequest struct {

@@ -200,8 +200,41 @@ func (r *AccountRepository) CloseAccount(ctx context.Context, req models.UpdateA
 	return nil
 }
 
+// createEvent создает событие
+func (r *AccountRepository) createEvent(ctx context.Context, tx *sqlx.Tx, req *models.CreateEventRequest) error {
+	const op = "repository.event.createEvent"
+
+	const query = `
+		INSERT INTO events (id, payment_id, type, status, source, created_at, payload)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`
+
+	_, err := tx.ExecContext(ctx, query,
+		req.ID,
+		req.PaymentID,
+		req.Type,
+		req.Status,
+		req.Source,
+		req.CreatedAt,
+		req.Payload,
+	)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "23505") {
+			return apperr.ErrEventIDNotUnique
+		}
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}
+
 // FreezeBalance замораживает запрашиваемую сумму для проведения различных транзакций
-func (r *AccountRepository) FreezeBalance(ctx context.Context, req models.BalanceRequest) error {
+func (r *AccountRepository) FreezeBalance(
+	ctx context.Context,
+	req *models.BalanceRequest,
+	event *models.CreateEventRequest,
+) error {
 	const op = "repository.account.FreezeBalance"
 
 	query := `
@@ -231,6 +264,10 @@ func (r *AccountRepository) FreezeBalance(ctx context.Context, req models.Balanc
 			return fmt.Errorf("expected 1 row affected, got %d", rowsAffected)
 		}
 
+		if err = r.createEvent(ctx, tx, event); err != nil {
+			return err
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -244,7 +281,11 @@ func (r *AccountRepository) FreezeBalance(ctx context.Context, req models.Balanc
 }
 
 // UnfreezeBalance размораживает заблокированную сумму при откате
-func (r *AccountRepository) UnfreezeBalance(ctx context.Context, req models.BalanceRequest) error {
+func (r *AccountRepository) UnfreezeBalance(
+	ctx context.Context,
+	req *models.BalanceRequest,
+	event *models.CreateEventRequest,
+) error {
 	const op = "repository.account.UnfreezeBalance"
 
 	query := `
@@ -271,6 +312,10 @@ func (r *AccountRepository) UnfreezeBalance(ctx context.Context, req models.Bala
 			return fmt.Errorf("expected 1 row affected, got %d", rowsAffected)
 		}
 
+		if err = r.createEvent(ctx, tx, event); err != nil {
+			return err
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -281,7 +326,11 @@ func (r *AccountRepository) UnfreezeBalance(ctx context.Context, req models.Bala
 }
 
 // ReserveDeposit резервирует сумму для пополнения
-func (r *AccountRepository) ReserveDeposit(ctx context.Context, req models.BalanceRequest) error {
+func (r *AccountRepository) ReserveDeposit(
+	ctx context.Context,
+	req *models.BalanceRequest,
+	event *models.CreateEventRequest,
+) error {
 	const op = "repository.account.ReserveDeposit"
 
 	query := `
@@ -306,6 +355,10 @@ func (r *AccountRepository) ReserveDeposit(ctx context.Context, req models.Balan
 			return fmt.Errorf("expected 1 row affected, got %d", rowsAffected)
 		}
 
+		if err = r.createEvent(ctx, tx, event); err != nil {
+			return err
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -316,7 +369,11 @@ func (r *AccountRepository) ReserveDeposit(ctx context.Context, req models.Balan
 }
 
 // UnreserveDeposit отменяет зарезервированное пополнение
-func (r *AccountRepository) UnreserveDeposit(ctx context.Context, req models.BalanceRequest) error {
+func (r *AccountRepository) UnreserveDeposit(
+	ctx context.Context,
+	req *models.BalanceRequest,
+	event *models.CreateEventRequest,
+) error {
 	const op = "repository.account.UnreserveDeposit"
 
 	query := `
@@ -342,6 +399,10 @@ func (r *AccountRepository) UnreserveDeposit(ctx context.Context, req models.Bal
 			return fmt.Errorf("expected 1 row affected, got %d", rowsAffected)
 		}
 
+		if err = r.createEvent(ctx, tx, event); err != nil {
+			return err
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -352,7 +413,11 @@ func (r *AccountRepository) UnreserveDeposit(ctx context.Context, req models.Bal
 }
 
 // WithdrawBalance списывает с замороженных средств требуемую сумму
-func (r *AccountRepository) WithdrawBalance(ctx context.Context, req models.BalanceRequest) error {
+func (r *AccountRepository) WithdrawBalance(
+	ctx context.Context,
+	req *models.BalanceRequest,
+	event *models.CreateEventRequest,
+) error {
 	const op = "repository.account.WithdrawBalance"
 
 	query := `
@@ -369,13 +434,16 @@ func (r *AccountRepository) WithdrawBalance(ctx context.Context, req models.Bala
 		if err != nil {
 			return err
 		}
-
 		rowsAffected, err := result.RowsAffected()
 		if err != nil {
 			return err
 		}
 		if rowsAffected != 1 {
 			return fmt.Errorf("expected 1 row affected, got %d", rowsAffected)
+		}
+
+		if err = r.createEvent(ctx, tx, event); err != nil {
+			return err
 		}
 
 		return nil
@@ -388,13 +456,17 @@ func (r *AccountRepository) WithdrawBalance(ctx context.Context, req models.Bala
 }
 
 // DepositBalance пополняет баланс счета на требуемую сумму
-func (r *AccountRepository) DepositBalance(ctx context.Context, req models.BalanceRequest) error {
+func (r *AccountRepository) DepositBalance(
+	ctx context.Context,
+	req *models.BalanceRequest,
+	event *models.CreateEventRequest,
+) error {
 	const op = "repository.account.DepositBalance"
 
 	query := `
 		UPDATE accounts 
 		SET reserve_balance = reserve_balance - $1,
-		SET balance = balance + $1,
+			balance = balance + $1,
 		    updated_at = $2
 		WHERE code = $3 
 			AND reserve_balance >= $1
@@ -413,6 +485,10 @@ func (r *AccountRepository) DepositBalance(ctx context.Context, req models.Balan
 		}
 		if rowsAffected != 1 {
 			return fmt.Errorf("expected 1 row affected, got %d", rowsAffected)
+		}
+
+		if err = r.createEvent(ctx, tx, event); err != nil {
+			return err
 		}
 
 		return nil
