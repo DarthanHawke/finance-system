@@ -1,5 +1,6 @@
 package transactionapp
 
+/*
 import (
 	"crypto/tls"
 	grpcapp "transaction-service/internal/app/grpc"
@@ -39,3 +40,4 @@ func New(
 		GRPCServer: gRPCApp,
 	}
 }
+*/

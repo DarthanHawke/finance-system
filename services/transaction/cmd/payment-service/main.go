@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"crypto/tls"
 	"crypto/x509"
@@ -102,3 +103,4 @@ func main() {
 	application.GRPCServer.Stop()
 	log.Info("Gracefully stopped")
 }
+*/

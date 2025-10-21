@@ -11,15 +11,19 @@ import (
 const (
 	TopicAccount             = "account-commands"
 	TopicExternalTransaction = "external-transaction-commands"
+	TopicTransaction         = "transaction-commands"
 )
 
 // Статусы событий:
 const (
-	// TransactionStatusPending - платеж в обработке
+	// EventStatusPending - событие в обработке
 	EventStatusPending string = "pending"
 
-	// TransactionStatusCompleted - платеж завершён
+	// EventStatusCompleted - событие завершено
 	EventStatusCompleted string = "completed"
+
+	// EventStatusFailed - событие не может быть отправлено(первышен max Retry)
+	EventStatusFailed string = "failed"
 )
 
 // Типы событий для Kafka
@@ -99,5 +103,33 @@ type UpdateAccountRequest struct {
 
 type UpdateEventStatusRequest struct {
 	ID     uuid.UUID `db:"id" json:"id"`
-	Status string    `json:"status" validate:"required,oneof=completed pending"`
+	Status string    `db:"status" json:"status" validate:"required,oneof=completed pending"`
+}
+
+var TopicMap = map[string]string{
+	EventFreezeRequest:    TopicAccount,
+	EventFreezeResponse:   TopicAccount,
+	EventUnfreezeRequest:  TopicAccount,
+	EventUnfreezeResponse: TopicAccount,
+
+	EventReserveRequest:    TopicAccount,
+	EventReserveResponse:   TopicAccount,
+	EventUnreserveRequest:  TopicAccount,
+	EventUnreserveResponse: TopicAccount,
+
+	EventDepositRequest:  TopicAccount,
+	EventDepositResponse: TopicAccount,
+
+	EventWithdrawRequest:  TopicAccount,
+	EventWithdrawResponse: TopicAccount,
+	EventRefundRequest:    TopicAccount,
+	EventRefundResponse:   TopicAccount,
+
+	EventBlockRequest:  TopicAccount,
+	EventBlockResponse: TopicAccount,
+
+	EventExternalRequest:  TopicExternalTransaction,
+	EventExternalResponse: TopicExternalTransaction,
+	EventExternalCommit:   TopicExternalTransaction,
+	EventExternalRollback: TopicExternalTransaction,
 }

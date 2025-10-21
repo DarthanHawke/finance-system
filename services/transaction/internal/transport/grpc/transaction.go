@@ -6,11 +6,6 @@ import (
 
 	//pmtgrpc "github.com/DarthanHawke/protos-finance-system/gen/go/transaction"
 	"github.com/google/uuid"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Transaction interface {
@@ -24,6 +19,7 @@ type Transaction interface {
 	Cancel(ctx context.Context, transactionID uuid.UUID) error
 }
 
+/*
 type TransactionServerAPI struct {
 	pmtgrpc.UnimplementedTransactionServiceServer
 	transaction Transaction
@@ -119,3 +115,4 @@ func (s *TransactionServerAPI) CancelTransaction(
 
 	return &emptypb.Empty{}, nil
 }
+*/

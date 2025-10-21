@@ -1,5 +1,6 @@
 package grpcapp
 
+/*
 import (
 	"crypto/tls"
 	"fmt"
@@ -60,3 +61,4 @@ func (a *App) Stop() {
 	a.logger.Info("Stopping gRPC server")
 	a.gRPCServer.GracefulStop()
 }
+*/

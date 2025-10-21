@@ -83,3 +83,26 @@ type UpdateEventStatusRequest struct {
 	ID     uuid.UUID `db:"id" json:"id"`
 	Status string    `json:"status" validate:"required,oneof=completed pending"`
 }
+
+var TopicMap = map[string]string{
+	EventFreezeRequest:    TopicTransaction,
+	EventFreezeResponse:   TopicTransaction,
+	EventUnfreezeRequest:  TopicTransaction,
+	EventUnfreezeResponse: TopicTransaction,
+
+	EventReserveRequest:    TopicTransaction,
+	EventReserveResponse:   TopicTransaction,
+	EventUnreserveRequest:  TopicTransaction,
+	EventUnreserveResponse: TopicTransaction,
+
+	EventDepositRequest:  TopicTransaction,
+	EventDepositResponse: TopicTransaction,
+
+	EventWithdrawRequest:  TopicTransaction,
+	EventWithdrawResponse: TopicTransaction,
+	EventRefundRequest:    TopicTransaction,
+	EventRefundResponse:   TopicTransaction,
+
+	EventBlockRequest:  TopicTransaction,
+	EventBlockResponse: TopicTransaction,
+}

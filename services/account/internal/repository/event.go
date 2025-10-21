@@ -59,19 +59,29 @@ func (r *EventRepository) CreateEvent(ctx context.Context, req *models.CreateEve
 func (r *EventRepository) GetPendingEvents(ctx context.Context, req *models.GetEventRequest) (models.GetEventResponse, error) {
 	const op = "repository.event.GetPendingEvents"
 
+	// Апдейтим processed_at, чтоб дргуие потоки не взяли эти же значения
+	// и возвращам события
 	const query = `
-		SELECT id, transaction_id, type, status, source, created_at, payload,
-		FROM events 
-		WHERE status = $1 
-		AND (processed_at IS NULL OR processed_at < $2)
-		ORDER BY created_at ASC 
-		LIMIT $3
+		UPDATE events 
+		SET processed_at = $1,
+		WHERE id IN (
+			SELECT id 
+			FROM events 
+			WHERE status = $2 
+			AND (processed_at IS NULL OR processed_at < $3)
+			ORDER BY created_at ASC 
+			LIMIT $4
+			FOR UPDATE SKIP LOCKED
+		)
+		RETURNING id, payment_id, type, status, source, 
+			created_at, processed_at, payload
 	`
 
 	fiveMinutesAgo := time.Now().Add(-5 * time.Minute)
 
 	var events []models.Event
 	err := r.db.SelectContext(ctx, &events, query,
+		time.Now(),
 		models.EventStatusPending,
 		fiveMinutesAgo,
 		req.Limit,

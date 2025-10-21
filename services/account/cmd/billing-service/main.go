@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	billingapp "billing-service/internal/app"
 	"billing-service/internal/config"
@@ -111,3 +112,4 @@ func main() {
 	application.GRPCServer.Stop()
 	log.Info("Gracefully stopped")
 }
+*/

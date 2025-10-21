@@ -1,8 +1,8 @@
 package main
 
 import (
-	"billing-service/internal/config"
-	"billing-service/internal/lib/logger"
+	"account-service/internal/config"
+	"account-service/internal/lib/logger"
 	"os"
 
 	"github.com/golang-migrate/migrate/v4"

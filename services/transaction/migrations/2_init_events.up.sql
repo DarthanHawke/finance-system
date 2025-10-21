@@ -26,7 +26,7 @@ CREATE TABLE events (
     processed_at    TIMESTAMP WITH TIME ZONE,
 
     -- Данные события
-    payload         TEXT NOT NULL
+    payload         JSONB NOT NULL,
 
     -- Для платежа выполнится не более 1 одинакового события
     UNIQUE(transaction_id, type)
