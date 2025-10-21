@@ -5,16 +5,16 @@ import (
 	"context"
 )
 
-// PaymentService реализует бизнес-логику работы с платежами
-type PaymentService struct {
+// TransactionService реализует бизнес-логику работы с платежами
+type TransactionService struct {
 	producer Producer
 }
 
-// NewPaymentService создает новый экземпляр PaymentService
-func NewPaymentService(
+// NewTransactionService создает новый экземпляр TransactionService
+func NewTransactionService(
 	producer Producer,
-) *PaymentService {
-	return &PaymentService{
+) *TransactionService {
+	return &TransactionService{
 		producer: producer,
 	}
 }
@@ -24,8 +24,8 @@ type Producer interface {
 }
 
 // HandleDepositeRequest
-func (s *PaymentService) HandleDepositeRequest(ctx context.Context) error {
-	const op = "service.payment.HandleDepositeRequest"
+func (s *TransactionService) HandleDepositeRequest(ctx context.Context) error {
+	const op = "service.transaction.HandleDepositeRequest"
 
 	// TODO Отпраляет запрос на пополнение
 

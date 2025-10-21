@@ -27,7 +27,7 @@ definitions:
         type: string
       operation_type:
         type: string
-      payment_id:
+      transaction_id:
         type: string
       processed_at:
         type: string
@@ -110,7 +110,7 @@ definitions:
     type: object
   models.DepositResponse:
     properties:
-      payment_id:
+      transaction_id:
         type: string
     type: object
   models.Entity:
@@ -132,7 +132,7 @@ definitions:
       balance:
         type: number
     type: object
-  models.Payment:
+  models.Transaction:
     properties:
       amount:
         type: number
@@ -239,7 +239,7 @@ host: localhost
 info:
   contact: {}
   description: API для платежной системы
-  title: Payment API
+  title: Transaction API
   version: "1.0"
 paths:
   /account/{account_id}:
@@ -607,13 +607,13 @@ paths:
       summary: Получить все сессии пользователя
       tags:
       - auth
-  /payments/{paymentID}:
+  /transactions/{transactionID}:
     get:
       description: Возвращает информацию о конкретном платеже
       parameters:
       - description: ID платежа
         in: path
-        name: paymentID
+        name: transactionID
         required: true
         type: string
       produces:
@@ -622,7 +622,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.Payment'
+            $ref: '#/definitions/models.Transaction'
         "400":
           description: Bad Request
           schema:
@@ -639,14 +639,14 @@ paths:
       - CookieAuth: []
       summary: Получить платеж
       tags:
-      - payments
-  /payments/{paymentID}/cancel:
+      - transactions
+  /transactions/{transactionID}/cancel:
     patch:
       description: Отменяет указанный платеж
       parameters:
       - description: ID платежа
         in: path
-        name: paymentID
+        name: transactionID
         required: true
         type: string
       responses:
@@ -668,8 +668,8 @@ paths:
       - CookieAuth: []
       summary: Отменить платеж
       tags:
-      - payments
-  /payments/{paymentID}/update:
+      - transactions
+  /transactions/{transactionID}/update:
     patch:
       consumes:
       - application/x-www-form-urlencoded
@@ -677,7 +677,7 @@ paths:
       parameters:
       - description: ID платежа
         in: path
-        name: paymentID
+        name: transactionID
         required: true
         type: string
       - description: Статус
@@ -709,8 +709,8 @@ paths:
       - CookieAuth: []
       summary: Обновить статус платежа
       tags:
-      - payments
-  /payments/convert:
+      - transactions
+  /transactions/convert:
     post:
       consumes:
       - application/x-www-form-urlencoded
@@ -754,8 +754,8 @@ paths:
       - CookieAuth: []
       summary: Конвертировать валюту
       tags:
-      - payments
-  /payments/currency-rate:
+      - transactions
+  /transactions/currency-rate:
     post:
       consumes:
       - application/json
@@ -784,8 +784,8 @@ paths:
       - CookieAuth: []
       summary: Обновить курс валют
       tags:
-      - payments
-  /payments/currency-rate/get:
+      - transactions
+  /transactions/currency-rate/get:
     get:
       description: Возвращает текущий курс обмена между указанными валютами
       parameters:
@@ -818,8 +818,8 @@ paths:
       - CookieAuth: []
       summary: Получить курс валют
       tags:
-      - payments
-  /payments/deposit:
+      - transactions
+  /transactions/deposit:
     post:
       consumes:
       - application/x-www-form-urlencoded
@@ -858,8 +858,8 @@ paths:
       - CookieAuth: []
       summary: Пополнить счет
       tags:
-      - payments
-  /payments/get:
+      - transactions
+  /transactions/get:
     get:
       description: Возвращает список всех платежей
       parameters:
@@ -874,7 +874,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/models.Payment'
+              $ref: '#/definitions/models.Transaction'
             type: array
         "500":
           description: Internal Server Error
@@ -884,8 +884,8 @@ paths:
       - CookieAuth: []
       summary: Получить все платежи
       tags:
-      - payments
-  /payments/history:
+      - transactions
+  /transactions/history:
     get:
       description: Возвращает историю операций по указанному счету
       parameters:
@@ -923,8 +923,8 @@ paths:
       - CookieAuth: []
       summary: Получить историю операций
       tags:
-      - payments
-  /payments/transfer:
+      - transactions
+  /transactions/transfer:
     post:
       consumes:
       - application/x-www-form-urlencoded
@@ -964,7 +964,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/models.Payment'
+            $ref: '#/definitions/models.Transaction'
         "400":
           description: Bad Request
           schema:
@@ -977,7 +977,7 @@ paths:
       - CookieAuth: []
       summary: Перевести на другой счет
       tags:
-      - payments
+      - transactions
   /role/entities:
     get:
       description: Возвращает список всех сущностей (Admin only)

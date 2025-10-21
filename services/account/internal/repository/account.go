@@ -31,7 +31,7 @@ func NewAccountRepository(db *Database, logger *zap.Logger) *AccountRepository {
 }
 
 // CreateAccount создает новый счет пользователя
-func (r *AccountRepository) CreateAccount(ctx context.Context, req models.CreateAccountRequest) error {
+func (r *AccountRepository) CreateAccount(ctx context.Context, req *models.CreateAccountRequest) error {
 	const op = "repository.account.CreateAccount"
 
 	query := `
@@ -62,7 +62,7 @@ func (r *AccountRepository) CreateAccount(ctx context.Context, req models.Create
 // GetAccount возвращает полную информацию о счете
 func (r *AccountRepository) GetAccount(
 	ctx context.Context,
-	req models.GetAccountRequest,
+	req *models.GetAccountRequest,
 ) (models.GetAccountResponse, error) {
 	const op = "repository.account.GetAccount"
 
@@ -87,7 +87,7 @@ func (r *AccountRepository) GetAccount(
 // GetAccounts возвращает все счета пользователя
 func (r *AccountRepository) GetAccounts(
 	ctx context.Context,
-	req models.GetAccountsRequest,
+	req *models.GetAccountsRequest,
 ) (models.GetAccountsResponse, error) {
 	const op = "repository.account.GetAccounts"
 
@@ -116,7 +116,7 @@ func (r *AccountRepository) GetAccounts(
 }
 
 // BlockAccount размораживает средства и блокирует счет для проведения любых операций
-func (r *AccountRepository) BlockAccount(ctx context.Context, req models.UpdateAccountRequest) error {
+func (r *AccountRepository) BlockAccount(ctx context.Context, req *models.UpdateAccountRequest) error {
 	const op = "repository.account.BlockAccount"
 
 	query := `
@@ -139,7 +139,7 @@ func (r *AccountRepository) BlockAccount(ctx context.Context, req models.UpdateA
 			return err
 		}
 		if rowsAffected == 0 {
-			return apperr.ErrInsufficientFunds
+			return apperr.ErrAccountUpdateFailed
 		}
 		if rowsAffected != 1 {
 			return fmt.Errorf("expected 1 row affected, got %d", rowsAffected)
@@ -148,7 +148,7 @@ func (r *AccountRepository) BlockAccount(ctx context.Context, req models.UpdateA
 		return nil
 	})
 	if err != nil {
-		if errors.Is(err, apperr.ErrInsufficientFunds) {
+		if errors.Is(err, apperr.ErrAccountUpdateFailed) {
 			return err
 		}
 		return fmt.Errorf("%s: %w", op, err)
@@ -158,7 +158,7 @@ func (r *AccountRepository) BlockAccount(ctx context.Context, req models.UpdateA
 }
 
 // CloseAccount закрывает счет если баланс нулевой
-func (r *AccountRepository) CloseAccount(ctx context.Context, req models.UpdateAccountRequest) error {
+func (r *AccountRepository) CloseAccount(ctx context.Context, req *models.UpdateAccountRequest) error {
 	const op = "repository.account.BlockAccount"
 
 	query := `
@@ -182,7 +182,7 @@ func (r *AccountRepository) CloseAccount(ctx context.Context, req models.UpdateA
 			return err
 		}
 		if rowsAffected == 0 {
-			return apperr.ErrInsufficientFunds
+			return apperr.ErrAccountUpdateFailed
 		}
 		if rowsAffected != 1 {
 			return fmt.Errorf("expected 1 row affected, got %d", rowsAffected)
@@ -191,7 +191,7 @@ func (r *AccountRepository) CloseAccount(ctx context.Context, req models.UpdateA
 		return nil
 	})
 	if err != nil {
-		if errors.Is(err, apperr.ErrInsufficientFunds) {
+		if errors.Is(err, apperr.ErrAccountUpdateFailed) {
 			return err
 		}
 		return fmt.Errorf("%s: %w", op, err)
@@ -205,13 +205,13 @@ func (r *AccountRepository) createEvent(ctx context.Context, tx *sqlx.Tx, req *m
 	const op = "repository.event.createEvent"
 
 	const query = `
-		INSERT INTO events (id, payment_id, type, status, source, created_at, payload)
+		INSERT INTO events (id, transaction_id, type, status, source, created_at, payload)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	_, err := tx.ExecContext(ctx, query,
 		req.ID,
-		req.PaymentID,
+		req.TransactionID,
 		req.Type,
 		req.Status,
 		req.Source,
@@ -258,7 +258,7 @@ func (r *AccountRepository) FreezeBalance(
 			return err
 		}
 		if rowsAffected == 0 {
-			return apperr.ErrInsufficientFunds
+			return apperr.ErrAccountUpdateFailed
 		}
 		if rowsAffected != 1 {
 			return fmt.Errorf("expected 1 row affected, got %d", rowsAffected)
@@ -271,7 +271,7 @@ func (r *AccountRepository) FreezeBalance(
 		return nil
 	})
 	if err != nil {
-		if errors.Is(err, apperr.ErrInsufficientFunds) {
+		if errors.Is(err, apperr.ErrAccountUpdateFailed) {
 			return err
 		}
 		return fmt.Errorf("%s: %w", op, err)
@@ -494,6 +494,56 @@ func (r *AccountRepository) DepositBalance(
 		return nil
 	})
 	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}
+
+// BlockAccountWithEvent размораживает средства и блокирует счет для проведения любых операций
+func (r *AccountRepository) BlockAccountWithEvent(
+	ctx context.Context,
+	req *models.UpdateAccountRequest,
+	event *models.CreateEventRequest,
+) error {
+	const op = "repository.account.BlockAccountWithEvent"
+
+	query := `
+		UPDATE accounts 
+		SET status = $1, 
+		    updated_at = $2,
+			balance = balance + frozen_balance,
+			frozen_balance = 0
+		WHERE code = $3 
+	`
+
+	err := r.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
+		result, err := tx.ExecContext(ctx, query, models.Blocked, time.Now(), req.Code)
+		if err != nil {
+			return err
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if rowsAffected == 0 {
+			return apperr.ErrAccountUpdateFailed
+		}
+		if rowsAffected != 1 {
+			return fmt.Errorf("expected 1 row affected, got %d", rowsAffected)
+		}
+
+		if err = r.createEvent(ctx, tx, event); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, apperr.ErrAccountUpdateFailed) {
+			return err
+		}
 		return fmt.Errorf("%s: %w", op, err)
 	}
 

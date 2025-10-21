@@ -6,7 +6,7 @@ import (
 	ssoerrors "rebac-service/internal/lib/errors"
 	"rebac-service/internal/models"
 
-	ssogrpc "github.com/DarthanHawke/protos-payment-system/gen/go/sso"
+	ssogrpc "github.com/DarthanHawke/protos-finance-system/gen/go/sso"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

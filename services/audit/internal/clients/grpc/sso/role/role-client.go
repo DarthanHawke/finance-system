@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	ssogrpc "github.com/DarthanHawke/protos-payment-system/gen/go/sso"
+	ssogrpc "github.com/DarthanHawke/protos-finance-system/gen/go/sso"
 	"github.com/google/uuid"
 	grpclog "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"

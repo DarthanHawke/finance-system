@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	blnggrpc "github.com/DarthanHawke/protos-payment-system/gen/go/billing"
+	blnggrpc "github.com/DarthanHawke/protos-finance-system/gen/go/billing"
 	"github.com/google/uuid"
 	grpclog "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"

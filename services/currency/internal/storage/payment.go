@@ -14,25 +14,25 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type PaymentRepository struct {
+type TransactionRepository struct {
 	db    *Database
 	cache RedisCacheManagment
 }
 
-func NewPaymentRepository(db *Database, cache RedisCacheManagment) *PaymentRepository {
-	return &PaymentRepository{
+func NewTransactionRepository(db *Database, cache RedisCacheManagment) *TransactionRepository {
+	return &TransactionRepository{
 		db:    db,
 		cache: cache,
 	}
 }
 
 // UpdateCurrencyRate обновляет курс валюты
-func (r *PaymentRepository) UpdateCurrencyRate(
+func (r *TransactionRepository) UpdateCurrencyRate(
 	ctx context.Context,
 	fromCurrency, toCurrency string,
 	rate float64,
 ) error {
-	const op = "storage.PaymentRepository.UpdateCurrencyRate"
+	const op = "storage.TransactionRepository.UpdateCurrencyRate"
 
 	err := r.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		_, err := tx.ExecContext(ctx,
@@ -55,14 +55,14 @@ func (r *PaymentRepository) UpdateCurrencyRate(
 }
 
 // ConvertCurrency конвертирует средства между валютами (сага-паттерн)
-func (r *PaymentRepository) ConvertCurrency(
+func (r *TransactionRepository) ConvertCurrency(
 	ctx context.Context,
 	operationID uuid.UUID,
 	fromAccount, toAccount *models.CurrencyAccount,
 	amount float64,
 	description string,
 ) error {
-	const op = "storage.PaymentRepository.ConvertCurrency"
+	const op = "storage.TransactionRepository.ConvertCurrency"
 
 	if amount <= 0 {
 		return fmt.Errorf("%s: %w", op, billingerr.ErrInvalidAmount)
@@ -154,18 +154,18 @@ func (r *PaymentRepository) ConvertCurrency(
 }
 
 // GetPendingOperations возвращает список необработанных операций
-func (r *PaymentRepository) GetPendingOperations(
+func (r *TransactionRepository) GetPendingOperations(
 	ctx context.Context,
 	batchSize int,
 ) ([]models.BalanceOperation, error) {
-	const op = "storage.PaymentRepository.GetPendingOperations"
+	const op = "storage.TransactionRepository.GetPendingOperations"
 
 	var operations []models.BalanceOperation
 
 	err := r.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		return tx.SelectContext(ctx, &operations,
 			`SELECT id, operation_id, account_code, user_id, currency, amount, 
-					new_balance, operation_type, status, payment_id, 
+					new_balance, operation_type, status, transaction_id, 
 					description, created_at, processed_at
 			 FROM balance_operations 
 			 WHERE status = 'PENDING'
@@ -181,8 +181,8 @@ func (r *PaymentRepository) GetPendingOperations(
 }
 
 // GetCurrencyRates возвращает курс обмена между валютами
-func (r *PaymentRepository) GetCurrencyRate(ctx context.Context, fromCurrency, toCurrency string) (float64, error) {
-	const op = "storage.PaymentRepository.GetCurrencyRate"
+func (r *TransactionRepository) GetCurrencyRate(ctx context.Context, fromCurrency, toCurrency string) (float64, error) {
+	const op = "storage.TransactionRepository.GetCurrencyRate"
 
 	if fromCurrency == toCurrency {
 		return 1.0, nil
@@ -219,11 +219,11 @@ func (r *PaymentRepository) GetCurrencyRate(ctx context.Context, fromCurrency, t
 }
 
 // Вспомогательные методы для работы внутри транзакции
-func (r *PaymentRepository) withdrawInTx(tx *sqlx.Tx,
+func (r *TransactionRepository) withdrawInTx(tx *sqlx.Tx,
 	operationID uuid.UUID,
 	accountCode string,
 	amount float64,
-	paymentID uuid.UUID,
+	transactionID uuid.UUID,
 	description string,
 ) error {
 	// Получаем информацию о счете
@@ -272,18 +272,18 @@ func (r *PaymentRepository) withdrawInTx(tx *sqlx.Tx,
 		`INSERT INTO balance_operations (
             operation_id, account_code, user_id, currency, amount, 
             new_balance, operation_type, status, 
-            payment_id, description, processed_at
+            transaction_id, description, processed_at
          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
 		operationID, accountCode, userID, currency, amount, newBalance,
-		"WITHDRAWAL", "COMPLETED", paymentID, description)
+		"WITHDRAWAL", "COMPLETED", transactionID, description)
 	return err
 }
 
-func (r *PaymentRepository) depositInTx(tx *sqlx.Tx,
+func (r *TransactionRepository) depositInTx(tx *sqlx.Tx,
 	operationID uuid.UUID,
 	accountCode string,
 	amount float64,
-	paymentID uuid.UUID,
+	transactionID uuid.UUID,
 	description string,
 ) error {
 	// Получаем информацию о счете
@@ -318,14 +318,14 @@ func (r *PaymentRepository) depositInTx(tx *sqlx.Tx,
 		`INSERT INTO balance_operations (
             operation_id, account_code, user_id, currency, amount, 
             new_balance, operation_type, status, 
-            payment_id, description, processed_at
+            transaction_id, description, processed_at
          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
 		operationID, accountCode, userID, currency, amount, newBalance,
-		"DEPOSIT", "COMPLETED", paymentID, description)
+		"DEPOSIT", "COMPLETED", transactionID, description)
 	return err
 }
 
-func (r *PaymentRepository) invalidateAccountCache(ctx context.Context, accountCode string) {
+func (r *TransactionRepository) invalidateAccountCache(ctx context.Context, accountCode string) {
 	cacheKeys := []string{
 		fmt.Sprintf("account:%v", accountCode),
 		fmt.Sprintf("account_balance:%v", accountCode),
@@ -336,7 +336,7 @@ func (r *PaymentRepository) invalidateAccountCache(ctx context.Context, accountC
 	_ = r.cache.DeleteByPrefix(ctx, fmt.Sprintf("operations:%v:", accountCode))
 }
 
-func (r *PaymentRepository) invalidateUserAccountsCache(ctx context.Context, userID string) {
+func (r *TransactionRepository) invalidateUserAccountsCache(ctx context.Context, userID string) {
 	cacheKeys := []string{
 		fmt.Sprintf("user_accounts:%v", userID),
 	}

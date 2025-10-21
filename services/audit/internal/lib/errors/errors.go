@@ -21,9 +21,9 @@ var (
 
 // billing errors
 var (
-	ErrUserNotFound    = errors.New("user not found")
-	ErrPaymentNotFound = errors.New("payment not found")
-	ErrLinkExist       = errors.New("link exist")
+	ErrUserNotFound        = errors.New("user not found")
+	ErrTransactionNotFound = errors.New("transaction not found")
+	ErrLinkExist           = errors.New("link exist")
 )
 
 // token errors
@@ -47,14 +47,14 @@ var (
 	ErrGetProfile = errors.New("cant get profile, pls try again")
 )
 
-// payment errors
+// transaction errors
 var (
-	ErrTransfer      = errors.New("tranfer cant be made, pls try again")
-	ErrSameCurrency  = errors.New("currency cant be same")
-	ErrPaymentCancel = errors.New("payment cant be made, pls try again")
-	ErrGetPayment    = errors.New("payment cant be get, pls try again")
-	ErrUpdatePayment = errors.New("payment cant be update")
-	ErrCancelPayment = errors.New("payment cant be cancel")
+	ErrTransfer          = errors.New("tranfer cant be made, pls try again")
+	ErrSameCurrency      = errors.New("currency cant be same")
+	ErrTransactionCancel = errors.New("transaction cant be made, pls try again")
+	ErrGetTransaction    = errors.New("transaction cant be get, pls try again")
+	ErrUpdateTransaction = errors.New("transaction cant be update")
+	ErrCancelTransaction = errors.New("transaction cant be cancel")
 )
 
 // role errors

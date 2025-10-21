@@ -45,8 +45,8 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'users':
                 loadUsersData();
                 break;
-            case 'payments':
-                loadPaymentsData();
+            case 'transactions':
+                loadTransactionsData();
                 break;
         }
     }
@@ -174,24 +174,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
             document.getElementById('total-accounts').textContent = accounts_1.length;
 
-            const allUserPayments = await Promise.all(
-                Object.keys(usersMap_1).map(userId => fetch(`/payments/get?userID=${userId}`, {
+            const allUserTransactions = await Promise.all(
+                Object.keys(usersMap_1).map(userId => fetch(`/transactions/get?userID=${userId}`, {
                     method: 'GET',
                     credentials: 'include'
                 })
                     .then(response_2 => response_2.json())
-                    .then(payments => {
+                    .then(transactions => {
                         const user_2 = usersMap_1[userId];
-                        return payments.map(payment => {
-                            const senderAccount = accountsMap[payment.sender];
-                            const receiverAccount = accountsMap[payment.receiver];
+                        return transactions.map(transaction => {
+                            const senderAccount = accountsMap[transaction.sender];
+                            const receiverAccount = accountsMap[transaction.receiver];
                             const account_2 = senderAccount || receiverAccount;
                             const userFromAccount = account_2 ? usersMap_1[account_2.user_id] : null;
 
                             return {
-                                ...payment,
+                                ...transaction,
                                 userName: userFromAccount ? userFromAccount.full_name : user_2.full_name,
-                                type: 'payment'
+                                type: 'transaction'
                             };
                         });
                     })
@@ -209,11 +209,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
             });
 
-            const allPayments = [].concat(...allUserPayments);
-            const allActivities = [...allPayments, ...accountCreations];
+            const allTransactions = [].concat(...allUserTransactions);
+            const allActivities = [...allTransactions, ...accountCreations];
             allActivities.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-            document.getElementById('total-transactions').textContent = allPayments.length;
+            document.getElementById('total-transactions').textContent = allTransactions.length;
             displayRecentActivities(allActivities.slice(0, 10));
         } catch (error) {
             console.error('Error loading dashboard data:', error);
@@ -742,7 +742,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const offset = (page - 1) * operationsPerPage;
         
         // Загружаем операции
-        fetch(`/payments/history?account_id=${accountId}&limit=${operationsPerPage}&offset=${offset}`, {
+        fetch(`/transactions/history?account_id=${accountId}&limit=${operationsPerPage}&offset=${offset}`, {
             method: 'GET',
             credentials: 'include'
         })
@@ -824,14 +824,14 @@ function getStatusClass(status) {
 }
 
 // Функция для добавления пагинации
-function addPaymentsPagination(paymentsTable, currentPage, totalPages) {
+function addTransactionsPagination(transactionsTable, currentPage, totalPages) {
     const paginationContainer = document.createElement('div');
     paginationContainer.className = 'table-pagination';
     
     // Кнопка "Назад"
     const prevBtn = document.createElement('button');
     prevBtn.className = 'pagination-btn';
-    prevBtn.id = 'prev-payments-btn';
+    prevBtn.id = 'prev-transactions-btn';
     prevBtn.disabled = currentPage <= 1;
     prevBtn.innerHTML = `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -841,19 +841,19 @@ function addPaymentsPagination(paymentsTable, currentPage, totalPages) {
     `;
     prevBtn.addEventListener('click', () => {
         if (currentPage > 1) {
-            displayPaymentsPage(currentPage - 1);
+            displayTransactionsPage(currentPage - 1);
         }
     });
     
     // Информация о странице
     const pageInfo = document.createElement('span');
-    pageInfo.id = 'payments-page-info';
+    pageInfo.id = 'transactions-page-info';
     pageInfo.textContent = `Страница ${currentPage} из ${totalPages}`;
     
     // Кнопка "Вперед"
     const nextBtn = document.createElement('button');
     nextBtn.className = 'pagination-btn';
-    nextBtn.id = 'next-payments-btn';
+    nextBtn.id = 'next-transactions-btn';
     nextBtn.disabled = currentPage >= totalPages;
     nextBtn.innerHTML = `
         Вперед
@@ -863,7 +863,7 @@ function addPaymentsPagination(paymentsTable, currentPage, totalPages) {
     `;
     nextBtn.addEventListener('click', () => {
         if (currentPage < totalPages) {
-            displayPaymentsPage(currentPage + 1);
+            displayTransactionsPage(currentPage + 1);
         }
     });
     
@@ -873,22 +873,22 @@ function addPaymentsPagination(paymentsTable, currentPage, totalPages) {
     paginationContainer.appendChild(nextBtn);
     
     // Удаляем старую пагинацию, если есть
-    const oldPagination = paymentsTable.parentNode.querySelector('.table-pagination');
+    const oldPagination = transactionsTable.parentNode.querySelector('.table-pagination');
     if (oldPagination) oldPagination.remove();
     
     // Добавляем пагинацию после таблицы
-    paymentsTable.parentNode.appendChild(paginationContainer);
+    transactionsTable.parentNode.appendChild(paginationContainer);
 }
 
 // Функция для показа деталей платежа из кеша
-function showPaymentDetailsFromCache(paymentId) {
-    if (!window.filteredPayments) {
+function showTransactionDetailsFromCache(transactionId) {
+    if (!window.filteredTransactions) {
         alert('Данные о платежах не загружены');
         return;
     }
     
-    const payment = window.filteredPayments.find(p => p.id === paymentId);
-    if (!payment) {
+    const transaction = window.filteredTransactions.find(p => p.id === transactionId);
+    if (!transaction) {
         alert('Платеж не найден в загруженных данных');
         return;
     }
@@ -899,36 +899,36 @@ function showPaymentDetailsFromCache(paymentId) {
     modal.innerHTML = `
         <div class="modal-content">
             <span class="close-btn">&times;</span>
-            <h2>Детали платежа #${payment.id}</h2>
+            <h2>Детали платежа #${transaction.id}</h2>
             
-            <div class="payment-details">
+            <div class="transaction-details">
                 <div class="detail-row">
                     <span class="detail-label">Отправитель:</span>
-                    <span class="detail-value">${payment.sender || 'Не указан'}</span>
+                    <span class="detail-value">${transaction.sender || 'Не указан'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Получатель:</span>
-                    <span class="detail-value">${payment.receiver || 'Не указан'}</span>
+                    <span class="detail-value">${transaction.receiver || 'Не указан'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Сумма:</span>
-                    <span class="detail-value">${payment.amount.toFixed(2)} ${payment.currency}</span>
+                    <span class="detail-value">${transaction.amount.toFixed(2)} ${transaction.currency}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Статус:</span>
-                    <span class="detail-value status-badge ${payment.statusClass}">${payment.status}</span>
+                    <span class="detail-value status-badge ${transaction.statusClass}">${transaction.status}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Дата:</span>
-                    <span class="detail-value">${payment.formattedDate}</span>
+                    <span class="detail-value">${transaction.formattedDate}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Описание:</span>
-                    <span class="detail-value">${payment.description || 'Нет описания'}</span>
+                    <span class="detail-value">${transaction.description || 'Нет описания'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Пользователь:</span>
-                    <span class="detail-value">${payment.user?.full_name || payment.user?.email || 'Неизвестный пользователь'}</span>
+                    <span class="detail-value">${transaction.user?.full_name || transaction.user?.email || 'Неизвестный пользователь'}</span>
                 </div>
             </div>
         </div>
@@ -951,112 +951,112 @@ function showPaymentDetailsFromCache(paymentId) {
     });
 }
 
-const paymentsSection = document.getElementById('payments-section');
-paymentsSection.insertAdjacentHTML('afterbegin', `
+const transactionsSection = document.getElementById('transactions-section');
+transactionsSection.insertAdjacentHTML('afterbegin', `
     <div class="search-container">
-        <input type="text" id="search-payment-input" placeholder="Поиск по ID платежа или пользователя">
-        <button id="search-payment-btn">Найти</button>
-        <button id="clear-payment-search">Сбросить</button>
+        <input type="text" id="search-transaction-input" placeholder="Поиск по ID платежа или пользователя">
+        <button id="search-transaction-btn">Найти</button>
+        <button id="clear-transaction-search">Сбросить</button>
     </div>
 `);
 
 // Функция поиска платежей
-function searchPayments(query) {
-    if (!query || !window.filteredPayments) return window.filteredPayments || [];
+function searchTransactions(query) {
+    if (!query || !window.filteredTransactions) return window.filteredTransactions || [];
     
     const lowerQuery = query.toLowerCase();
-    return window.filteredPayments.filter(payment => {
+    return window.filteredTransactions.filter(transaction => {
         return (
-            payment.id.toLowerCase().includes(lowerQuery) ||
-            (payment.user?.id.toLowerCase().includes(lowerQuery)) ||
-            (payment.user?.email?.toLowerCase().includes(lowerQuery)) ||
-            (payment.user?.full_name?.toLowerCase().includes(lowerQuery))
+            transaction.id.toLowerCase().includes(lowerQuery) ||
+            (transaction.user?.id.toLowerCase().includes(lowerQuery)) ||
+            (transaction.user?.email?.toLowerCase().includes(lowerQuery)) ||
+            (transaction.user?.full_name?.toLowerCase().includes(lowerQuery))
         );
     });
 }
 
 // Обработчики поиска
-document.getElementById('search-payment-btn').addEventListener('click', () => {
-    const query = document.getElementById('search-payment-input').value.trim();
+document.getElementById('search-transaction-btn').addEventListener('click', () => {
+    const query = document.getElementById('search-transaction-input').value.trim();
     if (!query) return;
     
-    const results = searchPayments(query);
+    const results = searchTransactions(query);
     if (results.length === 0) {
         alert('Платежи не найдены');
         return;
     }
     
-    window.filteredPayments = results;
-    displayPaymentsPage(1);
+    window.filteredTransactions = results;
+    displayTransactionsPage(1);
 });
 
-document.getElementById('clear-payment-search').addEventListener('click', () => {
-    document.getElementById('search-payment-input').value = '';
-    loadPaymentsData(); // Перезагружаем исходные данные
+document.getElementById('clear-transaction-search').addEventListener('click', () => {
+    document.getElementById('search-transaction-input').value = '';
+    loadTransactionsData(); // Перезагружаем исходные данные
 });
 
 // Модифицированная функция отображения страницы
-function displayPaymentsPage(page) {
-    const paymentsTable = document.getElementById('payments-table');
-    const tbody = paymentsTable.querySelector('tbody');
-    const paymentsPerPage = 10;
+function displayTransactionsPage(page) {
+    const transactionsTable = document.getElementById('transactions-table');
+    const tbody = transactionsTable.querySelector('tbody');
+    const transactionsPerPage = 10;
     
-    if (!window.filteredPayments || window.filteredPayments.length === 0) {
+    if (!window.filteredTransactions || window.filteredTransactions.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="empty">Нет платежей</td></tr>';
         
         // Удаляем пагинацию если нет данных
-        const oldPagination = paymentsTable.parentNode.querySelector('.table-pagination');
+        const oldPagination = transactionsTable.parentNode.querySelector('.table-pagination');
         if (oldPagination) oldPagination.remove();
         return;
     }
     
     // Рассчитываем индексы для текущей страницы
-    const startIndex = (page - 1) * paymentsPerPage;
-    const endIndex = startIndex + paymentsPerPage;
-    const pagePayments = window.filteredPayments.slice(startIndex, endIndex);
+    const startIndex = (page - 1) * transactionsPerPage;
+    const endIndex = startIndex + transactionsPerPage;
+    const pageTransactions = window.filteredTransactions.slice(startIndex, endIndex);
     
     // Очищаем таблицу
     tbody.innerHTML = '';
     
     // Заполняем таблицу платежами текущей страницы
-    pagePayments.forEach(payment => {
+    pageTransactions.forEach(transaction => {
         const tr = document.createElement('tr');
         
         tr.innerHTML = `
-            <td>${payment.id}</td>
-            <td>${payment.sender || 'Не указан'}</td>
-            <td>${payment.receiver || 'Не указан'}</td>
-            <td>${payment.amount.toFixed(2)} ${payment.currency}</td>
-            <td><span class="status-badge ${payment.statusClass}">${payment.status}</span></td>
-            <td>${payment.formattedDate}</td>
+            <td>${transaction.id}</td>
+            <td>${transaction.sender || 'Не указан'}</td>
+            <td>${transaction.receiver || 'Не указан'}</td>
+            <td>${transaction.amount.toFixed(2)} ${transaction.currency}</td>
+            <td><span class="status-badge ${transaction.statusClass}">${transaction.status}</span></td>
+            <td>${transaction.formattedDate}</td>
             <td class="actions-cell">
-                <button class="action-btn info-btn" data-payment-id="${payment.id}">Детали</button>
+                <button class="action-btn info-btn" data-transaction-id="${transaction.id}">Детали</button>
             </td>
         `;
         tbody.appendChild(tr);
     });
     
     // Добавляем пагинацию
-    addPaymentsPagination(paymentsTable, page, Math.ceil(window.filteredPayments.length / paymentsPerPage));
+    addTransactionsPagination(transactionsTable, page, Math.ceil(window.filteredTransactions.length / transactionsPerPage));
     
     // Добавляем обработчики для кнопок деталей
-    document.querySelectorAll('.action-btn[data-payment-id]').forEach(btn => {
+    document.querySelectorAll('.action-btn[data-transaction-id]').forEach(btn => {
         btn.addEventListener('click', function() {
-            const paymentId = this.getAttribute('data-payment-id');
-            showPaymentDetailsFromCache(paymentId);
+            const transactionId = this.getAttribute('data-transaction-id');
+            showTransactionDetailsFromCache(transactionId);
         });
     });
 }
 
 // Основная функция загрузки платежей
-function loadPaymentsData() {
-    const paymentsTable = document.getElementById('payments-table');
-    const tbody = paymentsTable.querySelector('tbody');
+function loadTransactionsData() {
+    const transactionsTable = document.getElementById('transactions-table');
+    const tbody = transactionsTable.querySelector('tbody');
     tbody.innerHTML = '<tr><td colspan="7" class="loading">Загрузка платежей...</td></tr>';
     
     // Получаем значения фильтров
-    const status = document.getElementById('payment-status').value;
-    const dateRange = document.getElementById('payment-date').value;
+    const status = document.getElementById('transaction-status').value;
+    const dateRange = document.getElementById('transaction-date').value;
     
     // Сначала загружаем всех пользователей
     fetch('/user/all', {
@@ -1069,8 +1069,8 @@ function loadPaymentsData() {
     })
     .then(users => {
         // Для каждого пользователя загружаем его платежи
-        const paymentPromises = users.map(user => {
-            return fetch(`/payments/get?userID=${user.id}`, {
+        const transactionPromises = users.map(user => {
+            return fetch(`/transactions/get?userID=${user.id}`, {
                 method: 'GET',
                 credentials: 'include'
             })
@@ -1078,8 +1078,8 @@ function loadPaymentsData() {
                 if (!response.ok) return [];
                 return response.json();
             })
-            .then(payments => {
-                return payments.map(p => ({ 
+            .then(transactions => {
+                return transactions.map(p => ({ 
                     ...p, 
                     user,
                     formattedDate: new Date(p.created_at || p.timestamp).toLocaleString(),
@@ -1089,53 +1089,53 @@ function loadPaymentsData() {
             .catch(() => []); // Игнорируем ошибки для отдельных пользователей
         });
         
-        return Promise.all(paymentPromises);
+        return Promise.all(transactionPromises);
     })
-    .then(allUserPayments => {
+    .then(allUserTransactions => {
         // Объединяем все платежи в один массив
-        const allPayments = [].concat(...allUserPayments);
+        const allTransactions = [].concat(...allUserTransactions);
         
         // Применяем фильтрацию
-        let filteredPayments = [...allPayments];
+        let filteredTransactions = [...allTransactions];
         
         // Фильтр по статусу
         if (status !== 'all') {
-            filteredPayments = filteredPayments.filter(p => p.status === status);
+            filteredTransactions = filteredTransactions.filter(p => p.status === status);
         }
         
         // Фильтр по дате
         const now = new Date();
-        filteredPayments = filteredPayments.filter(p => {
-            const paymentDate = new Date(p.created_at || p.timestamp);
+        filteredTransactions = filteredTransactions.filter(p => {
+            const transactionDate = new Date(p.created_at || p.timestamp);
             
             switch(dateRange) {
                 case 'today':
-                    return paymentDate.toDateString() === now.toDateString();
+                    return transactionDate.toDateString() === now.toDateString();
                 case 'week':
                     const weekAgo = new Date(now);
                     weekAgo.setDate(weekAgo.getDate() - 7);
-                    return paymentDate >= weekAgo;
+                    return transactionDate >= weekAgo;
                 case 'month':
                     const monthAgo = new Date(now);
                     monthAgo.setMonth(monthAgo.getMonth() - 1);
-                    return paymentDate >= monthAgo;
+                    return transactionDate >= monthAgo;
                 default:
                     return true;
             }
         });
         
         // Сортируем по дате (новые сначала)
-        filteredPayments.sort((a, b) => {
+        filteredTransactions.sort((a, b) => {
             const dateA = new Date(a.created_at || a.timestamp);
             const dateB = new Date(b.created_at || b.timestamp);
             return dateB - dateA;
         });
         
         // Сохраняем отфильтрованные платежи для пагинации и деталей
-        window.filteredPayments = filteredPayments;
+        window.filteredTransactions = filteredTransactions;
         
         // Отображаем первую страницу
-        displayPaymentsPage(1);
+        displayTransactionsPage(1);
     })
     .catch(error => {
         console.error('Ошибка загрузки платежей:', error);
@@ -1145,7 +1145,7 @@ function loadPaymentsData() {
 
 // Добавляем обработчик для кнопки применения фильтров
 document.getElementById('apply-filters').addEventListener('click', () => {
-    loadPaymentsData();
+    loadTransactionsData();
 });
     
     // Загрузка данных при первом открытии

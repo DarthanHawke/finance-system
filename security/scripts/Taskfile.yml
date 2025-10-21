@@ -5,7 +5,7 @@ vars:
   DAYS: "365"
   BITS: "4096"
   JWT_BITS: "2048"
-  SERVICES: ["payment", "sso", "billing", "client"]
+  SERVICES: ["transaction", "sso", "billing", "client"]
   CA_PASS: "secret"
 
 tasks:
@@ -13,7 +13,7 @@ tasks:
     desc: "Remove all generated certificates"
     cmds:
       - rm -rf "{{.ROOT_DIR}}/security/"*.{key,crt,csr,srl,pem, pfx}
-      - rm -rf "{{.ROOT_DIR}}/services/payment/security/"*.{key,crt,csr,srl,pem}
+      - rm -rf "{{.ROOT_DIR}}/services/transaction/security/"*.{key,crt,csr,srl,pem}
       - rm -rf "{{.ROOT_DIR}}/services/sso/security/"*.{key,crt,csr,srl,pem}
       - rm -rf "{{.ROOT_DIR}}/services/billing/security/"*.{key,crt,csr,srl,pem}
       - rm -rf "{{.ROOT_DIR}}/services/client/security/"*.{key,crt,csr,srl,pem}
@@ -29,7 +29,7 @@ tasks:
       - |
         openssl req -new -x509 -days {{$.DAYS}} -key "{{.ROOT_DIR}}/security/ca.key" -passin pass:{{.CA_PASS}} \
           -out "{{.ROOT_DIR}}/security/ca.crt" \
-          -subj "/C=RU/ST=Moscow/L=Moscow/O=PaymentSystem/OU=Development/CN=PaymentSystem CA"
+          -subj "/C=RU/ST=Moscow/L=Moscow/O=FinanceSystem/OU=Development/CN=FinanceSystem CA"
     generates:
       - "{{.ROOT_DIR}}/security/ca.key"
       - "{{.ROOT_DIR}}/security/ca.crt"
@@ -54,7 +54,7 @@ tasks:
     cmds:
       - task: generate-cert
         vars:
-          SERVICE: "payment"
+          SERVICE: "transaction"
       - task: generate-cert
         vars:
           SERVICE: "sso"
@@ -65,8 +65,8 @@ tasks:
         vars:
           SERVICE: "client"
     generates:
-      - "{{.ROOT_DIR}}/services/payment/security/payment.key"
-      - "{{.ROOT_DIR}}/services/payment/security/payment.crt"
+      - "{{.ROOT_DIR}}/services/transaction/security/transaction.key"
+      - "{{.ROOT_DIR}}/services/transaction/security/transaction.crt"
       - "{{.ROOT_DIR}}/services/sso/security/sso.key"
       - "{{.ROOT_DIR}}/services/sso/security/sso.crt"
       - "{{.ROOT_DIR}}/services/billing/security/billing.key"
@@ -133,8 +133,8 @@ tasks:
   check-certs:
     desc: "Check certificate details"
     cmds:
-      - echo "\n=== payment ==="
-      - openssl x509 -in "{{.ROOT_DIR}}/services/payment/security/payment.crt" -noout -text | grep -E "Subject:|Issuer:|Not Before|Not After"
+      - echo "\n=== transaction ==="
+      - openssl x509 -in "{{.ROOT_DIR}}/services/transaction/security/transaction.crt" -noout -text | grep -E "Subject:|Issuer:|Not Before|Not After"
       - echo "\n=== sso ==="
       - openssl x509 -in "{{.ROOT_DIR}}/services/sso/security/sso.crt" -noout -text | grep -E "Subject:|Issuer:|Not Before|Not After"
       - echo "\n=== billing ==="

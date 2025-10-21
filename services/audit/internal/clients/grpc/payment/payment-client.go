@@ -1,4 +1,4 @@
-package payment
+package transaction
 
 import (
 	"billing-service/internal/clients/grpc/interceptor"
@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	pmtgrpc "github.com/DarthanHawke/protos-payment-system/gen/go/payment"
+	pmtgrpc "github.com/DarthanHawke/protos-finance-system/gen/go/transaction"
 	"github.com/google/uuid"
 	grpclog "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
@@ -19,20 +19,20 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-type PaymentClient struct {
-	paymentApi pmtgrpc.PaymentServiceClient
-	logger     *zap.Logger
+type TransactionClient struct {
+	transactionApi pmtgrpc.TransactionServiceClient
+	logger         *zap.Logger
 }
 
-func NewPaymentClient(
+func NewTransactionClient(
 	ctx context.Context,
 	logger *zap.Logger,
 	addr string,
 	timeout time.Duration,
 	retriesCount int,
 	tlsConfig *tls.Config,
-) (*PaymentClient, error) {
-	const op = "clients.grpc.payment.NewPaymentClient"
+) (*TransactionClient, error) {
+	const op = "clients.grpc.transaction.NewTransactionClient"
 
 	retryOpts := []grpcretry.CallOption{
 		grpcretry.WithCodes(codes.NotFound, codes.Aborted, codes.DeadlineExceeded),
@@ -44,7 +44,7 @@ func NewPaymentClient(
 		grpclog.WithLogOnEvents(grpclog.PayloadReceived, grpclog.PayloadSent),
 	}
 	creds := credentials.NewTLS(&tls.Config{
-		ServerName:   "payment-service",
+		ServerName:   "transaction-service",
 		Certificates: tlsConfig.Certificates,
 		RootCAs:      tlsConfig.ClientCAs,
 	})
@@ -60,22 +60,22 @@ func NewPaymentClient(
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return &PaymentClient{
-		paymentApi: pmtgrpc.NewPaymentServiceClient(cc),
-		logger:     logger,
+	return &TransactionClient{
+		transactionApi: pmtgrpc.NewTransactionServiceClient(cc),
+		logger:         logger,
 	}, nil
 }
 
-// CreatePayment создает новый платеж
-func (c *PaymentClient) CreatePayment(
+// CreateTransaction создает новый платеж
+func (c *TransactionClient) CreateTransaction(
 	ctx context.Context,
 	sender, receiver string,
 	amount float64,
 	currency, description string,
 ) (uuid.UUID, error) {
-	const op = "clients.grpc.payment.CreatePayment"
+	const op = "clients.grpc.transaction.CreateTransaction"
 
-	response, err := c.paymentApi.CreatePayment(ctx, &pmtgrpc.CreatePaymentRequest{
+	response, err := c.transactionApi.CreateTransaction(ctx, &pmtgrpc.CreateTransactionRequest{
 		Sender:      sender,
 		Receiver:    receiver,
 		Amount:      amount,
@@ -86,45 +86,45 @@ func (c *PaymentClient) CreatePayment(
 		return uuid.Nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	paymentId, err := uuid.Parse(response.GetId().GetValue())
+	transactionId, err := uuid.Parse(response.GetId().GetValue())
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return paymentId, nil
+	return transactionId, nil
 }
 
-// GetPayment получает информацию о платеже
-func (c *PaymentClient) GetPayment(ctx context.Context, paymentID uuid.UUID) (*models.Payment, error) {
-	const op = "clients.grpc.payment.GetPayment"
+// GetTransaction получает информацию о платеже
+func (c *TransactionClient) GetTransaction(ctx context.Context, transactionID uuid.UUID) (*models.Transaction, error) {
+	const op = "clients.grpc.transaction.GetTransaction"
 
-	response, err := c.paymentApi.GetPayment(ctx, &pmtgrpc.GetPaymentRequest{
-		Id: &pmtgrpc.UUID{Value: paymentID.String()},
+	response, err := c.transactionApi.GetTransaction(ctx, &pmtgrpc.GetTransactionRequest{
+		Id: &pmtgrpc.UUID{Value: transactionID.String()},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	protoPayment := response.GetPayment()
-	return &models.Payment{
-		ID:          uuid.MustParse(protoPayment.GetId().GetValue()),
-		Sender:      protoPayment.Sender,
-		Receiver:    protoPayment.Receiver,
-		Amount:      protoPayment.Amount,
-		Currency:    protoPayment.Currency,
-		Status:      protoPayment.Status,
-		Description: *protoPayment.Description,
-		CreatedAt:   protoPayment.CreatedAt.AsTime(),
-		UpdatedAt:   protoPayment.UpdatedAt.AsTime(),
+	protoTransaction := response.GetTransaction()
+	return &models.Transaction{
+		ID:          uuid.MustParse(protoTransaction.GetId().GetValue()),
+		Sender:      protoTransaction.Sender,
+		Receiver:    protoTransaction.Receiver,
+		Amount:      protoTransaction.Amount,
+		Currency:    protoTransaction.Currency,
+		Status:      protoTransaction.Status,
+		Description: *protoTransaction.Description,
+		CreatedAt:   protoTransaction.CreatedAt.AsTime(),
+		UpdatedAt:   protoTransaction.UpdatedAt.AsTime(),
 	}, nil
 }
 
-// UpdateStatusPayment обновляет статус платежа
-func (c *PaymentClient) UpdateStatusPayment(ctx context.Context, paymentID uuid.UUID, status string) error {
-	const op = "clients.grpc.payment.UpdateStatusPayment"
+// UpdateStatusTransaction обновляет статус платежа
+func (c *TransactionClient) UpdateStatusTransaction(ctx context.Context, transactionID uuid.UUID, status string) error {
+	const op = "clients.grpc.transaction.UpdateStatusTransaction"
 
-	_, err := c.paymentApi.UpdateStatusPayment(ctx, &pmtgrpc.UpdateStatusPaymentRequest{
-		Id:     &pmtgrpc.UUID{Value: paymentID.String()},
+	_, err := c.transactionApi.UpdateStatusTransaction(ctx, &pmtgrpc.UpdateStatusTransactionRequest{
+		Id:     &pmtgrpc.UUID{Value: transactionID.String()},
 		Status: status,
 	})
 	if err != nil {
@@ -134,12 +134,12 @@ func (c *PaymentClient) UpdateStatusPayment(ctx context.Context, paymentID uuid.
 	return nil
 }
 
-// CancelPayment отменяет платеж
-func (c *PaymentClient) CancelPayment(ctx context.Context, paymentID uuid.UUID) error {
-	const op = "clients.grpc.payment.CancelPayment"
+// CancelTransaction отменяет платеж
+func (c *TransactionClient) CancelTransaction(ctx context.Context, transactionID uuid.UUID) error {
+	const op = "clients.grpc.transaction.CancelTransaction"
 
-	_, err := c.paymentApi.CancelPayment(ctx, &pmtgrpc.CancelPaymentRequest{
-		Id: &pmtgrpc.UUID{Value: paymentID.String()},
+	_, err := c.transactionApi.CancelTransaction(ctx, &pmtgrpc.CancelTransactionRequest{
+		Id: &pmtgrpc.UUID{Value: transactionID.String()},
 	})
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)

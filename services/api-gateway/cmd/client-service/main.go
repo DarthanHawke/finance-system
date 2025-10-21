@@ -22,7 +22,7 @@ const (
 	production  = "production"
 )
 
-// @title Payment API
+// @title Transaction API
 // @version 1.0
 // @description API для платежной системы
 // @host localhost

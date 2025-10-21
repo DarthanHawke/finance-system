@@ -7,10 +7,10 @@ import (
 )
 
 const (
-	PaymentStatusPending   string = "pending"
-	PaymentStatusCompleted string = "completed"
-	PaymentStatusCancelled string = "cancelled"
-	PaymentStatusRefunded  string = "refunded"
+	TransactionStatusPending   string = "pending"
+	TransactionStatusCompleted string = "completed"
+	TransactionStatusCancelled string = "cancelled"
+	TransactionStatusRefunded  string = "refunded"
 )
 
 const (
@@ -20,7 +20,7 @@ const (
 )
 
 // структура платежа
-type Payment struct {
+type Transaction struct {
 	ID          uuid.UUID `json:"id" db:"id"`
 	Sender      string    `json:"sender" db:"sender"`
 	Receiver    string    `json:"receiver" db:"receiver"`
@@ -32,9 +32,9 @@ type Payment struct {
 	UpdatedAt   time.Time `json:"updated_at,omitempty" db:"updated_at"`
 }
 
-// PaymentRequest - DTO для платежа
-type PaymentRequest struct {
-	PaymentID uuid.UUID `json:"paymentID" validate:"required"`
+// TransactionRequest - DTO для платежа
+type TransactionRequest struct {
+	TransactionID uuid.UUID `json:"transactionID" validate:"required"`
 }
 
 // TransferRequest - DTO для создания платежа
@@ -47,8 +47,8 @@ type TransferRequest struct {
 
 // UpdateStatusRequest - DTO для обновления статуса платежа
 type UpdateStatusRequest struct {
-	PaymentID uuid.UUID `json:"paymentID" validate:"required"`
-	Status    string    `json:"status" validate:"required,oneof=completed refunded"`
+	TransactionID uuid.UUID `json:"transactionID" validate:"required"`
+	Status        string    `json:"status" validate:"required,oneof=completed refunded"`
 }
 
 type DepositRequest struct {
@@ -58,7 +58,7 @@ type DepositRequest struct {
 }
 
 type DepositResponse struct {
-	PaymentID uuid.UUID `json:"payment_id"`
+	TransactionID uuid.UUID `json:"transaction_id"`
 }
 
 type ConvertCurrencyRequest struct {

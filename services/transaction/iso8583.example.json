@@ -1,0 +1,40 @@
+{
+  "bank_code": "044525999",
+  "terminal_id": "12345678",
+  "merchant_id": "9999888877776666",
+  "acquirer_id": "1000009999",
+  "forwarder_id": "2000008888",
+  "currency_code": "643",
+  "institution_id": "12345678901",
+  "processing_codes": {
+    "purchase": "000000",
+    "withdrawal": "010000",
+    "transfer": "020000",
+    "payment": "030000",
+    "refund": "040000"
+  },
+  "message_types": {
+    "authorization_request": "0100",
+    "financial_request": "0200",
+    "authorization_response": "0110",
+    "financial_response": "0210",
+    "reversal_request": "0400",
+    "reversal_response": "0410"
+  },
+  "response_codes": {
+    "approved": "00",
+    "insufficient_funds": "51",
+    "invalid_transaction": "12",
+    "invalid_card": "14",
+    "do_not_honor": "05",
+    "timeout": "91",
+    "system_error": "96"
+  },
+  "merchant_categories": {
+    "retail": "5411",
+    "restaurant": "5812",
+    "utilities": "4900",
+    "financial_services": "6012",
+    "e_commerce": "5999"
+  }
+}

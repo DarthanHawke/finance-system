@@ -1,4 +1,4 @@
-package payment
+package transaction
 
 import (
 	"client-service/internal/models"
@@ -11,38 +11,38 @@ import (
 	"github.com/google/uuid"
 )
 
-type PaymentService interface {
-	Transfer(ctx context.Context, req models.TransferRequest) (*models.Payment, error)
+type TransactionService interface {
+	Transfer(ctx context.Context, req models.TransferRequest) (*models.Transaction, error)
 	Deposit(ctx context.Context, req models.DepositRequest) (uuid.UUID, error)
-	GetPayment(ctx context.Context, req models.PaymentRequest) (*models.Payment, error)
-	GetAllPayment(ctx context.Context, userID uuid.UUID) ([]models.Payment, error)
-	UpdateStatusPayment(ctx context.Context, req models.UpdateStatusRequest) error
-	CancelPayment(ctx context.Context, req models.PaymentRequest) error
+	GetTransaction(ctx context.Context, req models.TransactionRequest) (*models.Transaction, error)
+	GetAllTransaction(ctx context.Context, userID uuid.UUID) ([]models.Transaction, error)
+	UpdateStatusTransaction(ctx context.Context, req models.UpdateStatusRequest) error
+	CancelTransaction(ctx context.Context, req models.TransactionRequest) error
 	ConvertCurrency(ctx context.Context, req models.ConvertCurrencyRequest) (uuid.UUID, error)
 	GetOperationHistory(ctx context.Context, req models.OperationHistoryRequest) ([]models.BalanceOperation, error)
 	UpdateCurrencyRate(ctx context.Context, req models.UpdateCurrencyRateRequest) error
 	GetCurrencyRate(ctx context.Context, req models.GetCurrencyRateRequest) (float64, error)
 }
 
-type PaymentHandler struct {
-	paymentService PaymentService
+type TransactionHandler struct {
+	transactionService TransactionService
 }
 
-func NewPaymentHandler(paymentService PaymentService) *PaymentHandler {
-	return &PaymentHandler{
-		paymentService: paymentService,
+func NewTransactionHandler(transactionService TransactionService) *TransactionHandler {
+	return &TransactionHandler{
+		transactionService: transactionService,
 	}
 }
 
-func (h *PaymentHandler) Routes() chi.Router {
+func (h *TransactionHandler) Routes() chi.Router {
 	r := chi.NewRouter()
 
 	r.Post("/transfer", h.Transfer)
 	r.Post("/deposit", h.Deposit)
-	r.Get("/get", h.GetAllPayments)
-	r.Get("/{paymentID}", h.GetPayment)
-	r.Patch("/{paymentID}/update", h.UpdatePaymentStatus)
-	r.Patch("/{paymentID}/cancel", h.CancelPayment)
+	r.Get("/get", h.GetAllTransactions)
+	r.Get("/{transactionID}", h.GetTransaction)
+	r.Patch("/{transactionID}/update", h.UpdateTransactionStatus)
+	r.Patch("/{transactionID}/cancel", h.CancelTransaction)
 	r.Post("/convert", h.ConvertCurrency)
 	r.Get("/history", h.GetOperationHistory)
 	r.Post("/currency-rate", h.UpdateCurrencyRate)
@@ -53,7 +53,7 @@ func (h *PaymentHandler) Routes() chi.Router {
 // Transfer Перевод
 // @Summary Перевести на другой счет
 // @Description Создаеёт перевод между указанными счетами
-// @Tags payments
+// @Tags transactions
 // @Accept x-www-form-urlencoded
 // @Produce json
 // @Security CookieAuth
@@ -62,11 +62,11 @@ func (h *PaymentHandler) Routes() chi.Router {
 // @Param amount formData number true "Сумма платежа"
 // @Param currency formData string true "Валюта" Enums(USD,EUR,RUB)
 // @Param description formData string false "Описание платежа"
-// @Success 201 {object} models.Payment
+// @Success 201 {object} models.Transaction
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /payments/transfer [post]
-func (h *PaymentHandler) Transfer(w http.ResponseWriter, r *http.Request) {
+// @Router /transactions/transfer [post]
+func (h *TransactionHandler) Transfer(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, models.ErrorResponse{Error: "failed to parse form data"})
@@ -95,23 +95,23 @@ func (h *PaymentHandler) Transfer(w http.ResponseWriter, r *http.Request) {
 		Description: description,
 	}
 
-	payment, err := h.paymentService.Transfer(r.Context(), req)
+	transaction, err := h.transactionService.Transfer(r.Context(), req)
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, models.ErrorResponse{
-			Error: "failed to create payment",
+			Error: "failed to create transaction",
 		})
 		return
 	}
 
 	render.Status(r, http.StatusCreated)
-	render.JSON(w, r, payment)
+	render.JSON(w, r, transaction)
 }
 
 // Deposit пополняет счет
 // @Summary Пополнить счет
 // @Description Пополняет счет на указанную сумму
-// @Tags payments
+// @Tags transactions
 // @Accept x-www-form-urlencoded
 // @Produce json
 // @Security CookieAuth
@@ -121,8 +121,8 @@ func (h *PaymentHandler) Transfer(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} models.DepositResponse
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /payments/deposit [post]
-func (h *PaymentHandler) Deposit(w http.ResponseWriter, r *http.Request) {
+// @Router /transactions/deposit [post]
+func (h *TransactionHandler) Deposit(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, models.ErrorResponse{Error: "failed to parse form data"})
@@ -148,74 +148,74 @@ func (h *PaymentHandler) Deposit(w http.ResponseWriter, r *http.Request) {
 		Description: description,
 	}
 
-	paymentID, err := h.paymentService.Deposit(r.Context(), req)
+	transactionID, err := h.transactionService.Deposit(r.Context(), req)
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, models.ErrorResponse{Error: "failed to deposit"})
 		return
 	}
 
-	render.JSON(w, r, models.DepositResponse{PaymentID: paymentID})
+	render.JSON(w, r, models.DepositResponse{TransactionID: transactionID})
 }
 
-// GetPayment Возвращает информацию о платеже
+// GetTransaction Возвращает информацию о платеже
 // @Summary Получить платеж
 // @Description Возвращает информацию о конкретном платеже
-// @Tags payments
+// @Tags transactions
 // @Produce json
 // @Security CookieAuth
-// @Param paymentID path string true "ID платежа"
-// @Success 200 {object} models.Payment
+// @Param transactionID path string true "ID платежа"
+// @Success 200 {object} models.Transaction
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 404 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /payments/{paymentID} [get]
-func (h *PaymentHandler) GetPayment(w http.ResponseWriter, r *http.Request) {
-	paymentIDStr := chi.URLParam(r, "paymentID")
-	paymentID, err := uuid.Parse(paymentIDStr)
+// @Router /transactions/{transactionID} [get]
+func (h *TransactionHandler) GetTransaction(w http.ResponseWriter, r *http.Request) {
+	transactionIDStr := chi.URLParam(r, "transactionID")
+	transactionID, err := uuid.Parse(transactionIDStr)
 	if err != nil {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, models.ErrorResponse{
-			Error: "invalid payment ID format",
+			Error: "invalid transaction ID format",
 		})
 		return
 	}
 
-	req := models.PaymentRequest{
-		PaymentID: paymentID,
+	req := models.TransactionRequest{
+		TransactionID: transactionID,
 	}
 
-	payment, err := h.paymentService.GetPayment(r.Context(), req)
+	transaction, err := h.transactionService.GetTransaction(r.Context(), req)
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, models.ErrorResponse{
-			Error: "failed to get payment",
+			Error: "failed to get transaction",
 		})
 		return
 	}
 
-	if payment == nil {
+	if transaction == nil {
 		render.Status(r, http.StatusNotFound)
 		render.JSON(w, r, models.ErrorResponse{
-			Error: "payment not found",
+			Error: "transaction not found",
 		})
 		return
 	}
 
-	render.JSON(w, r, payment)
+	render.JSON(w, r, transaction)
 }
 
-// GetAllPayments Возвращает все платежи
+// GetAllTransactions Возвращает все платежи
 // @Summary Получить все платежи
 // @Description Возвращает список всех платежей
-// @Tags payments
+// @Tags transactions
 // @Produce json
 // @Security CookieAuth
 // @Param userID query string false "ID пользователя"
-// @Success 200 {array} models.Payment
+// @Success 200 {array} models.Transaction
 // @Failure 500 {object} models.ErrorResponse
-// @Router /payments/get [get]
-func (h *PaymentHandler) GetAllPayments(w http.ResponseWriter, r *http.Request) {
+// @Router /transactions/get [get]
+func (h *TransactionHandler) GetAllTransactions(w http.ResponseWriter, r *http.Request) {
 	var userID uuid.UUID
 	var err error
 
@@ -234,39 +234,39 @@ func (h *PaymentHandler) GetAllPayments(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	payments, err := h.paymentService.GetAllPayment(r.Context(), userID)
+	transactions, err := h.transactionService.GetAllTransaction(r.Context(), userID)
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, models.ErrorResponse{
-			Error: "failed to get payments",
+			Error: "failed to get transactions",
 		})
 		return
 	}
 
-	render.JSON(w, r, payments)
+	render.JSON(w, r, transactions)
 }
 
-// UpdatePaymentStatus Обновляет статус платежа
+// UpdateTransactionStatus Обновляет статус платежа
 // @Summary Обновить статус платежа
 // @Description Обновляет статус указанного платежа
-// @Tags payments
+// @Tags transactions
 // @Accept x-www-form-urlencoded
 // @Produce json
 // @Security CookieAuth
-// @Param paymentID path string true "ID платежа"
+// @Param transactionID path string true "ID платежа"
 // @Param status formData string true "Статус" Enums(completed,refunded)
 // @Success 200
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 404 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /payments/{paymentID}/update [patch]
-func (h *PaymentHandler) UpdatePaymentStatus(w http.ResponseWriter, r *http.Request) {
-	paymentIDStr := chi.URLParam(r, "paymentID")
-	paymentID, err := uuid.Parse(paymentIDStr)
+// @Router /transactions/{transactionID}/update [patch]
+func (h *TransactionHandler) UpdateTransactionStatus(w http.ResponseWriter, r *http.Request) {
+	transactionIDStr := chi.URLParam(r, "transactionID")
+	transactionID, err := uuid.Parse(transactionIDStr)
 	if err != nil {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, models.ErrorResponse{
-			Error: "invalid payment ID format",
+			Error: "invalid transaction ID format",
 		})
 		return
 	}
@@ -280,14 +280,14 @@ func (h *PaymentHandler) UpdatePaymentStatus(w http.ResponseWriter, r *http.Requ
 	status := r.FormValue("status")
 
 	req := models.UpdateStatusRequest{
-		PaymentID: paymentID,
-		Status:    status,
+		TransactionID: transactionID,
+		Status:        status,
 	}
 
-	if err := h.paymentService.UpdateStatusPayment(r.Context(), req); err != nil {
+	if err := h.transactionService.UpdateStatusTransaction(r.Context(), req); err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, models.ErrorResponse{
-			Error: "failed to update payment status",
+			Error: "failed to update transaction status",
 		})
 		return
 	}
@@ -295,36 +295,36 @@ func (h *PaymentHandler) UpdatePaymentStatus(w http.ResponseWriter, r *http.Requ
 	render.Status(r, http.StatusOK)
 }
 
-// CancelPayment Отменяет платеж
+// CancelTransaction Отменяет платеж
 // @Summary Отменить платеж
 // @Description Отменяет указанный платеж
-// @Tags payments
+// @Tags transactions
 // @Security CookieAuth
-// @Param paymentID path string true "ID платежа"
+// @Param transactionID path string true "ID платежа"
 // @Success 200
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 404 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /payments/{paymentID}/cancel [patch]
-func (h *PaymentHandler) CancelPayment(w http.ResponseWriter, r *http.Request) {
-	paymentIDStr := chi.URLParam(r, "paymentID")
-	paymentID, err := uuid.Parse(paymentIDStr)
+// @Router /transactions/{transactionID}/cancel [patch]
+func (h *TransactionHandler) CancelTransaction(w http.ResponseWriter, r *http.Request) {
+	transactionIDStr := chi.URLParam(r, "transactionID")
+	transactionID, err := uuid.Parse(transactionIDStr)
 	if err != nil {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, models.ErrorResponse{
-			Error: "invalid payment ID format",
+			Error: "invalid transaction ID format",
 		})
 		return
 	}
 
-	req := models.PaymentRequest{
-		PaymentID: paymentID,
+	req := models.TransactionRequest{
+		TransactionID: transactionID,
 	}
 
-	if err := h.paymentService.CancelPayment(r.Context(), req); err != nil {
+	if err := h.transactionService.CancelTransaction(r.Context(), req); err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, models.ErrorResponse{
-			Error: "failed to cancel payment",
+			Error: "failed to cancel transaction",
 		})
 		return
 	}
@@ -335,7 +335,7 @@ func (h *PaymentHandler) CancelPayment(w http.ResponseWriter, r *http.Request) {
 // ConvertCurrency конвертирует валюту
 // @Summary Конвертировать валюту
 // @Description Конвертирует указанную сумму из одной валюты в другую
-// @Tags payments
+// @Tags transactions
 // @Accept x-www-form-urlencoded
 // @Produce json
 // @Security CookieAuth
@@ -346,8 +346,8 @@ func (h *PaymentHandler) CancelPayment(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} models.ConvertCurrencyResponse
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /payments/convert [post]
-func (h *PaymentHandler) ConvertCurrency(w http.ResponseWriter, r *http.Request) {
+// @Router /transactions/convert [post]
+func (h *TransactionHandler) ConvertCurrency(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, models.ErrorResponse{Error: "failed to parse form data"})
@@ -376,7 +376,7 @@ func (h *PaymentHandler) ConvertCurrency(w http.ResponseWriter, r *http.Request)
 		Description:   description,
 	}
 
-	operationID, err := h.paymentService.ConvertCurrency(r.Context(), req)
+	operationID, err := h.transactionService.ConvertCurrency(r.Context(), req)
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, models.ErrorResponse{Error: "failed to convert currency"})
@@ -389,7 +389,7 @@ func (h *PaymentHandler) ConvertCurrency(w http.ResponseWriter, r *http.Request)
 // GetOperationHistory возвращает историю операций по счету
 // @Summary Получить историю операций
 // @Description Возвращает историю операций по указанному счету
-// @Tags payments
+// @Tags transactions
 // @Produce json
 // @Security CookieAuth
 // @Param account_id query string true "Номер счета"
@@ -398,8 +398,8 @@ func (h *PaymentHandler) ConvertCurrency(w http.ResponseWriter, r *http.Request)
 // @Success 200 {array} models.BalanceOperation
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /payments/history [get]
-func (h *PaymentHandler) GetOperationHistory(w http.ResponseWriter, r *http.Request) {
+// @Router /transactions/history [get]
+func (h *TransactionHandler) GetOperationHistory(w http.ResponseWriter, r *http.Request) {
 	accountID := r.URL.Query().Get("account_id")
 	if accountID == "" {
 		render.Status(r, http.StatusBadRequest)
@@ -428,7 +428,7 @@ func (h *PaymentHandler) GetOperationHistory(w http.ResponseWriter, r *http.Requ
 			return
 		}
 	}
-	operations, err := h.paymentService.GetOperationHistory(r.Context(), models.OperationHistoryRequest{
+	operations, err := h.transactionService.GetOperationHistory(r.Context(), models.OperationHistoryRequest{
 		AccountID: accountID,
 		Limit:     limit,
 		Offset:    offset,
@@ -445,7 +445,7 @@ func (h *PaymentHandler) GetOperationHistory(w http.ResponseWriter, r *http.Requ
 // UpdateCurrencyRate обновляет курс валют
 // @Summary Обновить курс валют
 // @Description Обновляет курс конвертации между валютами (Admin only)
-// @Tags payments
+// @Tags transactions
 // @Accept json
 // @Produce json
 // @Security CookieAuth
@@ -453,8 +453,8 @@ func (h *PaymentHandler) GetOperationHistory(w http.ResponseWriter, r *http.Requ
 // @Success 200
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /payments/currency-rate [post]
-func (h *PaymentHandler) UpdateCurrencyRate(w http.ResponseWriter, r *http.Request) {
+// @Router /transactions/currency-rate [post]
+func (h *TransactionHandler) UpdateCurrencyRate(w http.ResponseWriter, r *http.Request) {
 	var req models.UpdateCurrencyRateRequest
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
 		render.Status(r, http.StatusBadRequest)
@@ -462,7 +462,7 @@ func (h *PaymentHandler) UpdateCurrencyRate(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err := h.paymentService.UpdateCurrencyRate(r.Context(), req); err != nil {
+	if err := h.transactionService.UpdateCurrencyRate(r.Context(), req); err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, models.ErrorResponse{Error: "failed to update currency rate"})
 		return
@@ -474,7 +474,7 @@ func (h *PaymentHandler) UpdateCurrencyRate(w http.ResponseWriter, r *http.Reque
 // GetCurrencyRate возвращает текущий курс обмена между валютами
 // @Summary Получить курс валют
 // @Description Возвращает текущий курс обмена между указанными валютами
-// @Tags payments
+// @Tags transactions
 // @Produce json
 // @Security CookieAuth
 // @Param from query string true "Исходная валюта (например: USD)"
@@ -482,8 +482,8 @@ func (h *PaymentHandler) UpdateCurrencyRate(w http.ResponseWriter, r *http.Reque
 // @Success 200 {object} models.CurrencyRateResponse
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /payments/currency-rate/get [get]
-func (h *PaymentHandler) GetCurrencyRate(w http.ResponseWriter, r *http.Request) {
+// @Router /transactions/currency-rate/get [get]
+func (h *TransactionHandler) GetCurrencyRate(w http.ResponseWriter, r *http.Request) {
 	fromCurrency := r.URL.Query().Get("from")
 	toCurrency := r.URL.Query().Get("to")
 
@@ -500,7 +500,7 @@ func (h *PaymentHandler) GetCurrencyRate(w http.ResponseWriter, r *http.Request)
 		ToCurrency:   toCurrency,
 	}
 
-	rate, err := h.paymentService.GetCurrencyRate(r.Context(), req)
+	rate, err := h.transactionService.GetCurrencyRate(r.Context(), req)
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, models.ErrorResponse{

@@ -9,16 +9,16 @@ import (
 
 // Топики для событий:
 const (
-	TopicAccount = "account-commands"
-	TopicPayment = "payment-commands"
+	TopicAccount     = "account-commands"
+	TopicTransaction = "transaction-commands"
 )
 
 // Статусы событий:
 const (
-	// PaymentStatusPending - платеж в обработке
+	// TransactionStatusPending - платеж в обработке
 	EventStatusPending string = "pending"
 
-	// PaymentStatusCompleted - платеж завершён
+	// TransactionStatusCompleted - платеж завершён
 	EventStatusCompleted string = "completed"
 )
 
@@ -39,16 +39,21 @@ const (
 
 	EventWithdrawRequest  = "withdraw.request"
 	EventWithdrawResponse = "withdraw.response"
+	EventRefundRequest    = "refund.request"
+	EventRefundResponse   = "refund.response"
+
+	EventBlockRequest  = "block.request"
+	EventBlockResponse = "block.response"
 )
 
 type Event struct {
-	ID        uuid.UUID `db:"id" json:"id"`
-	PaymentID uuid.UUID `db:"payment_id" json:"payment_id"`
-	Type      string    `db:"type" json:"type"`
-	Status    string    `db:"status" json:"status"`
-	Source    string    `db:"source" json:"source"`
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
-	Payload   []byte    `db:"payload" json:"payload"`
+	ID            uuid.UUID `db:"id" json:"id"`
+	TransactionID uuid.UUID `db:"transaction_id" json:"transaction_id"`
+	Type          string    `db:"type" json:"type"`
+	Status        string    `db:"status" json:"status"`
+	Source        string    `db:"source" json:"source"`
+	CreatedAt     time.Time `db:"created_at" json:"created_at"`
+	Payload       []byte    `db:"payload" json:"payload"`
 }
 
 type BalanceRequestPayload struct {

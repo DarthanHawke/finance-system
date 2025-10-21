@@ -8,7 +8,7 @@ CREATE TABLE events (
     id              UUID PRIMARY KEY,
 
     -- ID платежа
-    payment_id      UUID NOT NULL,
+    transaction_id      UUID NOT NULL,
 
     -- Тип события
     type            VARCHAR(50) NOT NULL,
@@ -26,5 +26,8 @@ CREATE TABLE events (
     processed_at    TIMESTAMP WITH TIME ZONE,
 
     -- Данные события
-    payload         TEXT NOT NULL
+    payload         TEXT NOT 
+    
+    -- Для платежа выполнится не более 1 одинакового события
+    UNIQUE(transaction_id, type)
 );

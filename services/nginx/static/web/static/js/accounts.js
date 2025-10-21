@@ -124,7 +124,7 @@ document.getElementById('next-page').addEventListener('click', function() {
     const historyContainer = document.getElementById('history-container');
     historyContainer.innerHTML = '<div class="loading">Загрузка операций...</div>';
     
-    fetch(`/payments/history?account_id=${currentAccountId}&limit=${limit}&offset=${offset}`, {
+    fetch(`/transactions/history?account_id=${currentAccountId}&limit=${limit}&offset=${offset}`, {
         method: 'GET',
         credentials: 'include'
     })

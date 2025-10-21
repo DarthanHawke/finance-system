@@ -1,9 +1,9 @@
-# 🪙 Payment System (Client Service)
+# 🪙 Transaction System (Client Service)
 Микросервисная платежная система(Клиентский сервис)
 > [!WARNING]
 > Проект ещё находится в активной разработке и не все представленные функции реализованы
 ## 🎀 О проекте
-Client Service - микросервис в системе платежей Payment System, предоставляет REST API для взаимодействия с другими сервисами Payment System.
+Client Service - микросервис в системе платежей Transaction System, предоставляет REST API для взаимодействия с другими сервисами Transaction System.
 ## ⚙️ Стек технологий
 - Golang, gRPC, REST, WebSocket
 ## 🛡️ Безопасность
@@ -17,4 +17,4 @@ Client Service - микросервис в системе платежей Payme
 - Тестов ещё нет
 - Планирую сделать рефакторинг кода для соответствия Effective Go
 ## 🚀 Запуск
-https://github.com/DarthanHawke/payment-system
+https://github.com/DarthanHawke/finance-system

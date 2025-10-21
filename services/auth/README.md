@@ -1,9 +1,9 @@
-# 🪙 Payment System (SSO Service)
+# 🪙 Transaction System (SSO Service)
 Микросервисная платежная система(Auth сервис)
 > [!WARNING]
 > Проект ещё находится в активной разработке и не все представленные функции реализованы
 ## 🎀 О проекте
-SSO Service - микросервис в системе платежей Payment System, предоставляет возможности для авторизации и аутентификации, а также управляет доступом к системе(ReBAC)
+SSO Service - микросервис в системе платежей Transaction System, предоставляет возможности для авторизации и аутентификации, а также управляет доступом к системе(ReBAC)
 ## ⚙️ Стек технологий
 - Golang, gRPC, PostgreSQL, Redis
 ## 🛡️ Безопасность
@@ -24,4 +24,4 @@ SSO Service - микросервис в системе платежей Payment 
 - Тестов ещё нет
 - Планирую сделать рефакторинг кода для соответствия Effective Go
 ## 🚀 Запуск
-https://github.com/DarthanHawke/payment-system
+https://github.com/DarthanHawke/finance-system

@@ -44,7 +44,7 @@ func (s *NotificationService) Start(ctx context.Context) error {
 
 func (s *NotificationService) processMessage(msg amqp.Delivery) {
 	var payload struct {
-		ID     string `json:"payment_id"`
+		ID     string `json:"transaction_id"`
 		Status string `json:"status"`
 	}
 
@@ -53,5 +53,5 @@ func (s *NotificationService) processMessage(msg amqp.Delivery) {
 		return
 	}
 
-	s.logger.Printf("Payment id: %v, status: %s", payload.ID, payload.Status)
+	s.logger.Printf("Transaction id: %v, status: %s", payload.ID, payload.Status)
 }

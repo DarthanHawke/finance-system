@@ -1,4 +1,4 @@
-package payment
+package transaction
 
 import (
 	"client-service/internal/models"
@@ -9,28 +9,28 @@ import (
 	"go.uber.org/zap"
 )
 
-type PaymentService struct {
-	paymentManage PaymentManage
-	logger        *zap.Logger
+type TransactionService struct {
+	transactionManage TransactionManage
+	logger            *zap.Logger
 }
 
-func NewPaymentService(
-	paymentManage PaymentManage,
+func NewTransactionService(
+	transactionManage TransactionManage,
 	logger *zap.Logger,
-) *PaymentService {
-	return &PaymentService{
-		paymentManage: paymentManage,
-		logger:        logger.With(zap.String("component", "client_service")),
+) *TransactionService {
+	return &TransactionService{
+		transactionManage: transactionManage,
+		logger:            logger.With(zap.String("component", "client_service")),
 	}
 }
 
-type PaymentManage interface {
+type TransactionManage interface {
 	Transfer(ctx context.Context, sender, receiver string, amount float64, description string) (uuid.UUID, error)
 	Deposit(ctx context.Context, accountID string, amount float64, description string) (uuid.UUID, error)
-	GetPayment(ctx context.Context, paymentID uuid.UUID) (*models.Payment, error)
-	GetAllPayment(ctx context.Context, userID uuid.UUID) ([]models.Payment, error)
-	UpdateStatusPayment(ctx context.Context, paymentID uuid.UUID, status string) error
-	CancelPayment(ctx context.Context, paymentID uuid.UUID) error
+	GetTransaction(ctx context.Context, transactionID uuid.UUID) (*models.Transaction, error)
+	GetAllTransaction(ctx context.Context, userID uuid.UUID) ([]models.Transaction, error)
+	UpdateStatusTransaction(ctx context.Context, transactionID uuid.UUID, status string) error
+	CancelTransaction(ctx context.Context, transactionID uuid.UUID) error
 	ConvertCurrency(ctx context.Context, fromAccountID, toAccountID string, amount float64, description string) (uuid.UUID, error)
 	GetOperationHistory(ctx context.Context, accountID string, limit, offset int) ([]models.BalanceOperation, error)
 	UpdateCurrencyRate(ctx context.Context, fromCurrency, toCurrency string, rate float64) error
@@ -38,28 +38,28 @@ type PaymentManage interface {
 }
 
 // Transfer создаёт платёж пользователя, предварительно валидируя доступ
-func (s *PaymentService) Transfer(ctx context.Context, req models.TransferRequest) (*models.Payment, error) {
-	const op = "service.payment.Transfer"
+func (s *TransactionService) Transfer(ctx context.Context, req models.TransferRequest) (*models.Transaction, error) {
+	const op = "service.transaction.Transfer"
 
 	logger := s.logger.With(
 		zap.String("op", op),
 	)
 
-	logger.Info("Creating payment")
+	logger.Info("Creating transaction")
 
-	paymentId, err := s.paymentManage.Transfer(ctx, req.Sender, req.Receiver, req.Amount, req.Description)
+	transactionId, err := s.transactionManage.Transfer(ctx, req.Sender, req.Receiver, req.Amount, req.Description)
 	if err != nil {
-		logger.Error("cant create payment", zap.Error(err))
+		logger.Error("cant create transaction", zap.Error(err))
 
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return s.paymentManage.GetPayment(ctx, paymentId)
+	return s.transactionManage.GetTransaction(ctx, transactionId)
 }
 
 // Deposit пополняет баланс
-func (s *PaymentService) Deposit(ctx context.Context, req models.DepositRequest) (uuid.UUID, error) {
-	const op = "service.payment.Deposit"
+func (s *TransactionService) Deposit(ctx context.Context, req models.DepositRequest) (uuid.UUID, error) {
+	const op = "service.transaction.Deposit"
 
 	logger := s.logger.With(
 		zap.String("op", op),
@@ -69,66 +69,66 @@ func (s *PaymentService) Deposit(ctx context.Context, req models.DepositRequest)
 
 	logger.Info("Processing deposit")
 
-	paymentID, err := s.paymentManage.Deposit(ctx, req.AccountID, req.Amount, req.Description)
+	transactionID, err := s.transactionManage.Deposit(ctx, req.AccountID, req.Amount, req.Description)
 	if err != nil {
 		logger.Error("failed to deposit", zap.Error(err))
 		return uuid.Nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return paymentID, nil
+	return transactionID, nil
 }
 
-// GetPayment - возращает информацию о платеже
-func (s *PaymentService) GetPayment(ctx context.Context, req models.PaymentRequest) (*models.Payment, error) {
-	const op = "service.payment.GetPayment"
+// GetTransaction - возращает информацию о платеже
+func (s *TransactionService) GetTransaction(ctx context.Context, req models.TransactionRequest) (*models.Transaction, error) {
+	const op = "service.transaction.GetTransaction"
 
 	logger := s.logger.With(
 		zap.String("op", op),
 	)
 
-	logger.Info("Getting payment")
+	logger.Info("Getting transaction")
 
-	payment, err := s.paymentManage.GetPayment(ctx, req.PaymentID)
+	transaction, err := s.transactionManage.GetTransaction(ctx, req.TransactionID)
 	if err != nil {
-		logger.Error("cant get payment", zap.Error(err))
+		logger.Error("cant get transaction", zap.Error(err))
 
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
-	return payment, nil
+	return transaction, nil
 }
 
-// GetAllPayment - возвращает все платежи пользователя
-func (s *PaymentService) GetAllPayment(ctx context.Context, userID uuid.UUID) ([]models.Payment, error) {
-	const op = "service.payment.GetAllPayment"
+// GetAllTransaction - возвращает все платежи пользователя
+func (s *TransactionService) GetAllTransaction(ctx context.Context, userID uuid.UUID) ([]models.Transaction, error) {
+	const op = "service.transaction.GetAllTransaction"
 
 	logger := s.logger.With(
 		zap.String("op", op),
 	)
 
-	logger.Info("Getting payment")
+	logger.Info("Getting transaction")
 
-	payments, err := s.paymentManage.GetAllPayment(ctx, userID)
+	transactions, err := s.transactionManage.GetAllTransaction(ctx, userID)
 	if err != nil {
-		logger.Error("cant get payment", zap.Error(err))
+		logger.Error("cant get transaction", zap.Error(err))
 
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return payments, nil
+	return transactions, nil
 }
 
-func (s *PaymentService) UpdateStatusPayment(ctx context.Context, req models.UpdateStatusRequest) error {
-	const op = "service.payment.UpdateStatusPayment"
+func (s *TransactionService) UpdateStatusTransaction(ctx context.Context, req models.UpdateStatusRequest) error {
+	const op = "service.transaction.UpdateStatusTransaction"
 
 	logger := s.logger.With(
 		zap.String("op", op),
 	)
 
-	logger.Info("Updating payment")
+	logger.Info("Updating transaction")
 
-	err := s.paymentManage.UpdateStatusPayment(ctx, req.PaymentID, req.Status)
+	err := s.transactionManage.UpdateStatusTransaction(ctx, req.TransactionID, req.Status)
 	if err != nil {
-		logger.Error("cant update payment", zap.Error(err))
+		logger.Error("cant update transaction", zap.Error(err))
 
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -136,18 +136,18 @@ func (s *PaymentService) UpdateStatusPayment(ctx context.Context, req models.Upd
 	return nil
 }
 
-func (s *PaymentService) CancelPayment(ctx context.Context, req models.PaymentRequest) error {
-	const op = "service.payment.UpdateStatusPayment"
+func (s *TransactionService) CancelTransaction(ctx context.Context, req models.TransactionRequest) error {
+	const op = "service.transaction.UpdateStatusTransaction"
 
 	logger := s.logger.With(
 		zap.String("op", op),
 	)
 
-	logger.Info("Canceling payment")
+	logger.Info("Canceling transaction")
 
-	err := s.paymentManage.CancelPayment(ctx, req.PaymentID)
+	err := s.transactionManage.CancelTransaction(ctx, req.TransactionID)
 	if err != nil {
-		logger.Error("cant cancel payment", zap.Error(err))
+		logger.Error("cant cancel transaction", zap.Error(err))
 
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -156,8 +156,8 @@ func (s *PaymentService) CancelPayment(ctx context.Context, req models.PaymentRe
 }
 
 // ConvertCurrency конвертирует валюту между счетами
-func (s *PaymentService) ConvertCurrency(ctx context.Context, req models.ConvertCurrencyRequest) (uuid.UUID, error) {
-	const op = "service.payment.ConvertCurrency"
+func (s *TransactionService) ConvertCurrency(ctx context.Context, req models.ConvertCurrencyRequest) (uuid.UUID, error) {
+	const op = "service.transaction.ConvertCurrency"
 
 	logger := s.logger.With(
 		zap.String("op", op),
@@ -168,7 +168,7 @@ func (s *PaymentService) ConvertCurrency(ctx context.Context, req models.Convert
 
 	logger.Info("Processing currency conversion")
 
-	operationID, err := s.paymentManage.ConvertCurrency(ctx, req.FromAccountID, req.ToAccountID, req.Amount, req.Description)
+	operationID, err := s.transactionManage.ConvertCurrency(ctx, req.FromAccountID, req.ToAccountID, req.Amount, req.Description)
 	if err != nil {
 		logger.Error("failed to convert currency", zap.Error(err))
 		return uuid.Nil, fmt.Errorf("%s: %w", op, err)
@@ -178,8 +178,8 @@ func (s *PaymentService) ConvertCurrency(ctx context.Context, req models.Convert
 }
 
 // GetOperationHistory возвращает историю операций
-func (s *PaymentService) GetOperationHistory(ctx context.Context, req models.OperationHistoryRequest) ([]models.BalanceOperation, error) {
-	const op = "service.payment.GetOperationHistory"
+func (s *TransactionService) GetOperationHistory(ctx context.Context, req models.OperationHistoryRequest) ([]models.BalanceOperation, error) {
+	const op = "service.transaction.GetOperationHistory"
 
 	logger := s.logger.With(
 		zap.String("op", op),
@@ -190,7 +190,7 @@ func (s *PaymentService) GetOperationHistory(ctx context.Context, req models.Ope
 
 	logger.Info("Getting operation history")
 
-	operations, err := s.paymentManage.GetOperationHistory(ctx, req.AccountID, req.Limit, req.Offset)
+	operations, err := s.transactionManage.GetOperationHistory(ctx, req.AccountID, req.Limit, req.Offset)
 	if err != nil {
 		logger.Error("failed to get operation history", zap.Error(err))
 		return nil, fmt.Errorf("%s: %w", op, err)
@@ -200,8 +200,8 @@ func (s *PaymentService) GetOperationHistory(ctx context.Context, req models.Ope
 }
 
 // UpdateCurrencyRate обновляет курс валют
-func (s *PaymentService) UpdateCurrencyRate(ctx context.Context, req models.UpdateCurrencyRateRequest) error {
-	const op = "service.payment.UpdateCurrencyRate"
+func (s *TransactionService) UpdateCurrencyRate(ctx context.Context, req models.UpdateCurrencyRateRequest) error {
+	const op = "service.transaction.UpdateCurrencyRate"
 
 	logger := s.logger.With(
 		zap.String("op", op),
@@ -212,7 +212,7 @@ func (s *PaymentService) UpdateCurrencyRate(ctx context.Context, req models.Upda
 
 	logger.Info("Updating currency rate")
 
-	err := s.paymentManage.UpdateCurrencyRate(ctx, req.FromCurrency, req.ToCurrency, req.Rate)
+	err := s.transactionManage.UpdateCurrencyRate(ctx, req.FromCurrency, req.ToCurrency, req.Rate)
 	if err != nil {
 		logger.Error("failed to update currency rate", zap.Error(err))
 		return fmt.Errorf("%s: %w", op, err)
@@ -222,11 +222,11 @@ func (s *PaymentService) UpdateCurrencyRate(ctx context.Context, req models.Upda
 }
 
 // GetCurrencyRate возвращает текущий курс обмена между валютами
-func (s *PaymentService) GetCurrencyRate(
+func (s *TransactionService) GetCurrencyRate(
 	ctx context.Context,
 	req models.GetCurrencyRateRequest,
 ) (float64, error) {
-	const op = "service.payment.GetCurrencyRate"
+	const op = "service.transaction.GetCurrencyRate"
 
 	logger := s.logger.With(
 		zap.String("op", op),
@@ -236,7 +236,7 @@ func (s *PaymentService) GetCurrencyRate(
 
 	logger.Info("Getting currency rate")
 
-	rate, err := s.paymentManage.GetCurrencyRate(ctx, req.FromCurrency, req.ToCurrency)
+	rate, err := s.transactionManage.GetCurrencyRate(ctx, req.FromCurrency, req.ToCurrency)
 	if err != nil {
 		logger.Error("failed to get currency rate",
 			zap.Error(err),

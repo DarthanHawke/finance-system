@@ -78,7 +78,7 @@ func (i *Initializer) InitSystem(ctx context.Context, systemUsers []config.User)
 // checkAlreadyInitialized проверяет, была ли уже выполнена инициализация
 func (i *Initializer) checkAlreadyInitialized(ctx context.Context) error {
 	// Проверяем наличие хотя бы одного разрешения как маркер инициализации
-	_, err := i.roleManage.GetPermissionByName(ctx, "payment_create")
+	_, err := i.roleManage.GetPermissionByName(ctx, "transaction_create")
 	if err != nil {
 		return fmt.Errorf("system not initialized: %w", err)
 	}
@@ -91,12 +91,12 @@ func (i *Initializer) createPermissions(ctx context.Context) error {
 		name        string
 		description string
 	}{
-		{models.PaymentCreate, "Create a payment"},
-		{models.PaymentRead, "Read payment information"},
-		{models.PaymentReadAll, "Read all user's payments"},
-		{models.PaymentCancel, "Cancel a payment"},
-		{models.PaymentConvert, "Convert between currencies"},
-		{models.PaymentUpdateStatus, "Update payment status"},
+		{models.TransactionCreate, "Create a transaction"},
+		{models.TransactionRead, "Read transaction information"},
+		{models.TransactionReadAll, "Read all user's transactions"},
+		{models.TransactionCancel, "Cancel a transaction"},
+		{models.TransactionConvert, "Convert between currencies"},
+		{models.TransactionUpdateStatus, "Update transaction status"},
 		{models.UserRead, "Read user information"},
 		{models.UserReadAll, "Read all users information"},
 		{models.UserUpdate, "Update user information"},
@@ -130,11 +130,11 @@ func (i *Initializer) assignPermissions(ctx context.Context) error {
 		permission   string
 	}{
 		// Владелец
-		{models.ClientRelationType, models.PaymentCreate},
-		{models.ClientRelationType, models.PaymentRead},
-		{models.ClientRelationType, models.PaymentReadAll},
-		{models.ClientRelationType, models.PaymentCancel},
-		{models.ClientRelationType, models.PaymentConvert},
+		{models.ClientRelationType, models.TransactionCreate},
+		{models.ClientRelationType, models.TransactionRead},
+		{models.ClientRelationType, models.TransactionReadAll},
+		{models.ClientRelationType, models.TransactionCancel},
+		{models.ClientRelationType, models.TransactionConvert},
 		{models.ClientRelationType, models.UserRead},
 		{models.ClientRelationType, models.UserUpdate},
 		{models.ClientRelationType, models.AccountCreate},
@@ -143,10 +143,10 @@ func (i *Initializer) assignPermissions(ctx context.Context) error {
 		{models.ClientRelationType, models.SessionTerminate},
 
 		// Администратор
-		{models.AdminRelationType, models.PaymentRead},
-		{models.AdminRelationType, models.PaymentReadAll},
-		{models.AdminRelationType, models.PaymentCancel},
-		{models.AdminRelationType, models.PaymentUpdateStatus},
+		{models.AdminRelationType, models.TransactionRead},
+		{models.AdminRelationType, models.TransactionReadAll},
+		{models.AdminRelationType, models.TransactionCancel},
+		{models.AdminRelationType, models.TransactionUpdateStatus},
 		{models.AdminRelationType, models.AccountCreate},
 		{models.AdminRelationType, models.AccountRead},
 		{models.AdminRelationType, models.UserRead},
@@ -162,8 +162,8 @@ func (i *Initializer) assignPermissions(ctx context.Context) error {
 		{models.AdminRelationType, models.SessionManage},
 
 		// Поддержка
-		{models.SupportRelationType, models.PaymentRead},
-		{models.SupportRelationType, models.PaymentReadAll},
+		{models.SupportRelationType, models.TransactionRead},
+		{models.SupportRelationType, models.TransactionReadAll},
 		{models.SupportRelationType, models.UserRead},
 		{models.SupportRelationType, models.UserReadAll},
 		{models.SupportRelationType, models.AccountRead},
@@ -194,12 +194,12 @@ func (i *Initializer) assignPermissions(ctx context.Context) error {
 
 // createEntitys создает все необходимые разрешения
 func (i *Initializer) createEntitysAndRelations(ctx context.Context) error {
-	paymentSystemEntityId, err := i.roleManage.CreateEntity(ctx, models.PaymentSystemEntity)
+	financeSystemEntityId, err := i.roleManage.CreateEntity(ctx, models.FinanceSystemEntity)
 	if err != nil {
 		return fmt.Errorf("failed to create user entity in ReBAC: %v", err)
 	}
 
-	paymentEntityId, err := i.roleManage.CreateEntity(ctx, models.PaymentEntity)
+	transactionEntityId, err := i.roleManage.CreateEntity(ctx, models.TransactionEntity)
 	if err != nil {
 		return fmt.Errorf("failed to create user entity in ReBAC: %v", err)
 	}
@@ -229,32 +229,32 @@ func (i *Initializer) createEntitysAndRelations(ctx context.Context) error {
 		return fmt.Errorf("failed to create user entity in ReBAC: %v", err)
 	}
 
-	err = i.roleManage.CreateRelation(ctx, paymentSystemEntityId, paymentEntityId, models.SystemRelationType)
+	err = i.roleManage.CreateRelation(ctx, financeSystemEntityId, transactionEntityId, models.SystemRelationType)
 	if err != nil {
 		return fmt.Errorf("failed to create self-ownership relation in ReBAC: %v", err)
 	}
 
-	err = i.roleManage.CreateRelation(ctx, paymentSystemEntityId, accountEntityId, models.SystemRelationType)
+	err = i.roleManage.CreateRelation(ctx, financeSystemEntityId, accountEntityId, models.SystemRelationType)
 	if err != nil {
 		return fmt.Errorf("failed to create self-ownership relation in ReBAC: %v", err)
 	}
 
-	err = i.roleManage.CreateRelation(ctx, paymentSystemEntityId, currencyEntityId, models.SystemRelationType)
+	err = i.roleManage.CreateRelation(ctx, financeSystemEntityId, currencyEntityId, models.SystemRelationType)
 	if err != nil {
 		return fmt.Errorf("failed to create self-ownership relation in ReBAC: %v", err)
 	}
 
-	err = i.roleManage.CreateRelation(ctx, paymentSystemEntityId, userEntityId, models.SystemRelationType)
+	err = i.roleManage.CreateRelation(ctx, financeSystemEntityId, userEntityId, models.SystemRelationType)
 	if err != nil {
 		return fmt.Errorf("failed to create self-ownership relation in ReBAC: %v", err)
 	}
 
-	err = i.roleManage.CreateRelation(ctx, paymentSystemEntityId, relationEntytyId, models.SystemRelationType)
+	err = i.roleManage.CreateRelation(ctx, financeSystemEntityId, relationEntytyId, models.SystemRelationType)
 	if err != nil {
 		return fmt.Errorf("failed to create self-ownership relation in ReBAC: %v", err)
 	}
 
-	err = i.roleManage.CreateRelation(ctx, paymentSystemEntityId, permissionEntityId, models.SystemRelationType)
+	err = i.roleManage.CreateRelation(ctx, financeSystemEntityId, permissionEntityId, models.SystemRelationType)
 	if err != nil {
 		return fmt.Errorf("failed to create self-ownership relation in ReBAC: %v", err)
 	}
@@ -270,7 +270,7 @@ func (i *Initializer) createSystemUsers(ctx context.Context, systemUsers []confi
 			return fmt.Errorf("failed to register %s user: %v", user.Role, err)
 		}
 
-		paymentSystemEntityId, err := i.roleManage.GetEntityID(ctx, models.PaymentSystemEntity)
+		financeSystemEntityId, err := i.roleManage.GetEntityID(ctx, models.FinanceSystemEntity)
 		if err != nil {
 			return fmt.Errorf("failed to get entity in ReBAC: %v", err)
 		}
@@ -303,7 +303,7 @@ func (i *Initializer) createSystemUsers(ctx context.Context, systemUsers []confi
 		if err != nil {
 			return fmt.Errorf("failed to create relation in ReBAC: %v", err)
 		}
-		err = i.roleManage.CreateRelation(ctx, userID, paymentSystemEntityId, relationType)
+		err = i.roleManage.CreateRelation(ctx, userID, financeSystemEntityId, relationType)
 		if err != nil {
 			return fmt.Errorf("failed to create relation in ReBAC: %v", err)
 		}

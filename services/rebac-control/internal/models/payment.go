@@ -7,10 +7,10 @@ import (
 )
 
 const (
-	PaymentStatusPending   string = "pending"
-	PaymentStatusCompleted string = "completed"
-	PaymentStatusCancelled string = "cancelled"
-	PaymentStatusRefunded  string = "refunded"
+	TransactionStatusPending   string = "pending"
+	TransactionStatusCompleted string = "completed"
+	TransactionStatusCancelled string = "cancelled"
+	TransactionStatusRefunded  string = "refunded"
 )
 
 const (
@@ -20,7 +20,7 @@ const (
 )
 
 // структура платежа
-type Payment struct {
+type Transaction struct {
 	ID          uuid.UUID `json:"id" db:"id"`
 	Sender      string    `json:"sender" db:"sender"`
 	Receiver    string    `json:"receiver" db:"receiver"`
@@ -32,8 +32,8 @@ type Payment struct {
 	UpdatedAt   time.Time `json:"updated_at,omitempty" db:"updated_at"`
 }
 
-// PaymentCreateRequest - DTO для создания платежа
-type PaymentCreateRequest struct {
+// TransactionCreateRequest - DTO для создания платежа
+type TransactionCreateRequest struct {
 	Amount      float64 `json:"amount" validate:"required,gt=0"`
 	Currency    string  `json:"currency" validate:"required,oneof=USD EUR RUB"`
 	Description string  `json:"description,omitempty" validate:"max=255"`

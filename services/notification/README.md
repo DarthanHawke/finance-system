@@ -1,9 +1,9 @@
-# 🪙 Payment System (Notification Service)
+# 🪙 Transaction System (Notification Service)
 Микросервисная платежная система(Сервис уведомлений)
 > [!WARNING]
 > Проект ещё находится в активной разработке и не все представленные функции реализованы
 ## 🎀 О проекте
-Notification Service - микросервис в системе платежей Payment System, который принимает сообщения от Payment и делает рассылку уведомлений.
+Notification Service - микросервис в системе платежей Transaction System, который принимает сообщения от Transaction и делает рассылку уведомлений.
 ## ⚙️ Стек технологий
 - Golang, RabitMQ
 ## 🛡️ Безопасность
@@ -19,4 +19,4 @@ Notification Service - микросервис в системе платежей
 - Тестов ещё нет
 - Планирую сделать рефакторинг кода для соответствия Effective Go
 ## 🚀 Запуск
-https://github.com/DarthanHawke/payment-system
+https://github.com/DarthanHawke/finance-system

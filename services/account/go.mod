@@ -4,7 +4,7 @@ go 1.23.6
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/DarthanHawke/protos-payment-system v0.9.5
+	github.com/DarthanHawke/protos-finance-system v0.9.5
 	github.com/golang-migrate/migrate/v4 v4.18.3
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2

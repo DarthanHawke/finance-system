@@ -1,10 +1,10 @@
-package payment
+package transaction
 
 import (
 	"billing-service/internal/models"
 	"context"
 
-	blnggrpc "github.com/DarthanHawke/protos-payment-system/gen/go/billing"
+	blnggrpc "github.com/DarthanHawke/protos-finance-system/gen/go/billing"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -17,12 +17,12 @@ var (
 	nilAmount = 0.0
 )
 
-type Payment interface {
+type Transaction interface {
 	Transfer(ctx context.Context, sender, receiver string, amount float64, description string) (uuid.UUID, error)
-	GetPayment(ctx context.Context, paymentID uuid.UUID) (*models.Payment, error)
-	GetAllPayment(ctx context.Context, targetID uuid.UUID) ([]models.Payment, error)
-	UpdateStatusPayment(ctx context.Context, paymentID uuid.UUID, status string) error
-	CancelPayment(ctx context.Context, paymentID uuid.UUID) error
+	GetTransaction(ctx context.Context, transactionID uuid.UUID) (*models.Transaction, error)
+	GetAllTransaction(ctx context.Context, targetID uuid.UUID) ([]models.Transaction, error)
+	UpdateStatusTransaction(ctx context.Context, transactionID uuid.UUID, status string) error
+	CancelTransaction(ctx context.Context, transactionID uuid.UUID) error
 	Deposit(ctx context.Context, accountID string, amount float64, description string) (uuid.UUID, error)
 	ConvertCurrency(ctx context.Context, fromAccountID, toAccountID string, amount float64, description string) (uuid.UUID, error)
 	GetOperationHistory(ctx context.Context, accountID string, limit, offset int) ([]models.BalanceOperation, error)
@@ -30,16 +30,16 @@ type Payment interface {
 	GetCurrencyRate(ctx context.Context, fromCurrency, toCurrency string) (float64, error)
 }
 
-type PaymentServerAPI struct {
-	blnggrpc.UnimplementedPaymentServiceServer
-	payment Payment
+type TransactionServerAPI struct {
+	blnggrpc.UnimplementedTransactionServiceServer
+	transaction Transaction
 }
 
-func NewPaymentServer(gRPC *grpc.Server, payment Payment) {
-	blnggrpc.RegisterPaymentServiceServer(gRPC, &PaymentServerAPI{payment: payment})
+func NewTransactionServer(gRPC *grpc.Server, transaction Transaction) {
+	blnggrpc.RegisterTransactionServiceServer(gRPC, &TransactionServerAPI{transaction: transaction})
 }
 
-func (s *PaymentServerAPI) Transfer(
+func (s *TransactionServerAPI) Transfer(
 	ctx context.Context,
 	req *blnggrpc.TransferRequest,
 ) (*blnggrpc.TransferResponse, error) {
@@ -51,7 +51,7 @@ func (s *PaymentServerAPI) Transfer(
 		return nil, status.Error(codes.InvalidArgument, "sender and receiver are required")
 	}
 
-	paymentID, err := s.payment.Transfer(
+	transactionID, err := s.transaction.Transfer(
 		ctx,
 		req.GetSender(),
 		req.GetReceiver(),
@@ -59,45 +59,45 @@ func (s *PaymentServerAPI) Transfer(
 		req.GetDescription(),
 	)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to create payment")
+		return nil, status.Error(codes.Internal, "failed to create transaction")
 	}
 
-	return &blnggrpc.TransferResponse{PaymentId: &blnggrpc.UUID{Value: paymentID.String()}}, nil
+	return &blnggrpc.TransferResponse{TransactionId: &blnggrpc.UUID{Value: transactionID.String()}}, nil
 }
 
-func (s *PaymentServerAPI) GetPayment(
+func (s *TransactionServerAPI) GetTransaction(
 	ctx context.Context,
-	req *blnggrpc.GetPaymentRequest,
-) (*blnggrpc.GetPaymentResponse, error) {
-	paymentID, err := uuid.Parse(req.GetPaymentId().GetValue())
+	req *blnggrpc.GetTransactionRequest,
+) (*blnggrpc.GetTransactionResponse, error) {
+	transactionID, err := uuid.Parse(req.GetTransactionId().GetValue())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid UUID format: %v", err)
 	}
 
-	payment, err := s.payment.GetPayment(ctx, paymentID)
+	transaction, err := s.transaction.GetTransaction(ctx, transactionID)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to get payment")
+		return nil, status.Error(codes.Internal, "failed to get transaction")
 	}
 
-	return &blnggrpc.GetPaymentResponse{
-		Payment: &blnggrpc.Payment{
-			Id:          &blnggrpc.UUID{Value: payment.ID.String()},
-			Sender:      payment.Sender,
-			Receiver:    payment.Receiver,
-			Amount:      payment.Amount,
-			Currency:    payment.Currency,
-			Status:      payment.Status,
-			Description: &payment.Description,
-			CreatedAt:   timestamppb.New(payment.CreatedAt),
-			UpdatedAt:   timestamppb.New(payment.UpdatedAt),
+	return &blnggrpc.GetTransactionResponse{
+		Transaction: &blnggrpc.Transaction{
+			Id:          &blnggrpc.UUID{Value: transaction.ID.String()},
+			Sender:      transaction.Sender,
+			Receiver:    transaction.Receiver,
+			Amount:      transaction.Amount,
+			Currency:    transaction.Currency,
+			Status:      transaction.Status,
+			Description: &transaction.Description,
+			CreatedAt:   timestamppb.New(transaction.CreatedAt),
+			UpdatedAt:   timestamppb.New(transaction.UpdatedAt),
 		},
 	}, nil
 }
 
-func (s *PaymentServerAPI) GetAllPayment(
+func (s *TransactionServerAPI) GetAllTransaction(
 	ctx context.Context,
-	req *blnggrpc.GetAllPaymentRequest,
-) (*blnggrpc.GetAllPaymentResponse, error) {
+	req *blnggrpc.GetAllTransactionRequest,
+) (*blnggrpc.GetAllTransactionResponse, error) {
 	var userID uuid.UUID
 	var err error
 	userIDStr := req.GetUserId().GetValue()
@@ -108,15 +108,15 @@ func (s *PaymentServerAPI) GetAllPayment(
 		}
 	}
 
-	var paymants []models.Payment
-	paymants, err = s.payment.GetAllPayment(ctx, userID)
+	var paymants []models.Transaction
+	paymants, err = s.transaction.GetAllTransaction(ctx, userID)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to get payment")
+		return nil, status.Error(codes.Internal, "failed to get transaction")
 	}
 
-	protoPayments := make([]*blnggrpc.Payment, 0, len(paymants))
+	protoTransactions := make([]*blnggrpc.Transaction, 0, len(paymants))
 	for _, p := range paymants {
-		protoPayments = append(protoPayments, &blnggrpc.Payment{
+		protoTransactions = append(protoTransactions, &blnggrpc.Transaction{
 			Id:          &blnggrpc.UUID{Value: p.ID.String()},
 			Sender:      p.Sender,
 			Receiver:    p.Receiver,
@@ -129,44 +129,44 @@ func (s *PaymentServerAPI) GetAllPayment(
 		})
 	}
 
-	return &blnggrpc.GetAllPaymentResponse{Payment: protoPayments}, nil
+	return &blnggrpc.GetAllTransactionResponse{Transaction: protoTransactions}, nil
 }
 
-func (s *PaymentServerAPI) UpdateStatusPayment(
+func (s *TransactionServerAPI) UpdateStatusTransaction(
 	ctx context.Context,
-	req *blnggrpc.UpdateStatusPaymentRequest,
+	req *blnggrpc.UpdateStatusTransactionRequest,
 ) (*emptypb.Empty, error) {
-	paymentID, err := uuid.Parse(req.GetPaymentId().GetValue())
+	transactionID, err := uuid.Parse(req.GetTransactionId().GetValue())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid UUID format: %v", err)
 	}
 
-	err = s.payment.UpdateStatusPayment(ctx, paymentID, req.GetStatus())
+	err = s.transaction.UpdateStatusTransaction(ctx, transactionID, req.GetStatus())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to update payment")
+		return nil, status.Error(codes.Internal, "failed to update transaction")
 	}
 
 	return &emptypb.Empty{}, nil
 }
 
-func (s *PaymentServerAPI) CancelPayment(
+func (s *TransactionServerAPI) CancelTransaction(
 	ctx context.Context,
-	req *blnggrpc.CancelPaymentRequest,
+	req *blnggrpc.CancelTransactionRequest,
 ) (*emptypb.Empty, error) {
-	paymentID, err := uuid.Parse(req.GetPaymentId().GetValue())
+	transactionID, err := uuid.Parse(req.GetTransactionId().GetValue())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid UUID format: %v", err)
 	}
 
-	err = s.payment.CancelPayment(ctx, paymentID)
+	err = s.transaction.CancelTransaction(ctx, transactionID)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to cancel payment")
+		return nil, status.Error(codes.Internal, "failed to cancel transaction")
 	}
 
 	return &emptypb.Empty{}, nil
 }
 
-func (s *PaymentServerAPI) Deposit(ctx context.Context, req *blnggrpc.DepositRequest) (*blnggrpc.DepositResponse, error) {
+func (s *TransactionServerAPI) Deposit(ctx context.Context, req *blnggrpc.DepositRequest) (*blnggrpc.DepositResponse, error) {
 	if req.GetAccountId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "invalid account ID")
 	}
@@ -174,15 +174,15 @@ func (s *PaymentServerAPI) Deposit(ctx context.Context, req *blnggrpc.DepositReq
 		return nil, status.Error(codes.InvalidArgument, "amount must be positive")
 	}
 
-	paymentID, err := s.payment.Deposit(ctx, req.GetAccountId(), req.GetAmount(), req.GetDescription())
+	transactionID, err := s.transaction.Deposit(ctx, req.GetAccountId(), req.GetAmount(), req.GetDescription())
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to deposit")
 	}
 
-	return &blnggrpc.DepositResponse{PaymentId: &blnggrpc.UUID{Value: paymentID.String()}}, nil
+	return &blnggrpc.DepositResponse{TransactionId: &blnggrpc.UUID{Value: transactionID.String()}}, nil
 }
 
-func (s *PaymentServerAPI) ConvertCurrency(ctx context.Context, req *blnggrpc.ConvertCurrencyRequest) (*blnggrpc.ConvertCurrencyResponse, error) {
+func (s *TransactionServerAPI) ConvertCurrency(ctx context.Context, req *blnggrpc.ConvertCurrencyRequest) (*blnggrpc.ConvertCurrencyResponse, error) {
 	if req.GetFromAccountId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "invalid account ID")
 	}
@@ -193,7 +193,7 @@ func (s *PaymentServerAPI) ConvertCurrency(ctx context.Context, req *blnggrpc.Co
 		return nil, status.Error(codes.InvalidArgument, "amount must be positive")
 	}
 
-	operationID, err := s.payment.ConvertCurrency(ctx, req.GetFromAccountId(), req.GetToAccountId(), req.GetAmount(), req.GetDescription())
+	operationID, err := s.transaction.ConvertCurrency(ctx, req.GetFromAccountId(), req.GetToAccountId(), req.GetAmount(), req.GetDescription())
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to convert currency")
 	}
@@ -201,7 +201,7 @@ func (s *PaymentServerAPI) ConvertCurrency(ctx context.Context, req *blnggrpc.Co
 	return &blnggrpc.ConvertCurrencyResponse{OperationId: &blnggrpc.UUID{Value: operationID.String()}}, nil
 }
 
-func (s *PaymentServerAPI) GetCurrencyRate(
+func (s *TransactionServerAPI) GetCurrencyRate(
 	ctx context.Context,
 	req *blnggrpc.GetCurrencyRateRequest,
 ) (*blnggrpc.GetCurrencyRateResponse, error) {
@@ -209,7 +209,7 @@ func (s *PaymentServerAPI) GetCurrencyRate(
 		return nil, status.Error(codes.InvalidArgument, "both currencies are required")
 	}
 
-	rate, err := s.payment.GetCurrencyRate(ctx, req.GetFromCurrency(), req.GetToCurrency())
+	rate, err := s.transaction.GetCurrencyRate(ctx, req.GetFromCurrency(), req.GetToCurrency())
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to get currency rate")
 	}
@@ -217,7 +217,7 @@ func (s *PaymentServerAPI) GetCurrencyRate(
 	return &blnggrpc.GetCurrencyRateResponse{Rate: rate}, nil
 }
 
-func (s *PaymentServerAPI) GetOperationHistory(ctx context.Context, req *blnggrpc.GetOperationHistoryRequest) (*blnggrpc.GetOperationHistoryResponse, error) {
+func (s *TransactionServerAPI) GetOperationHistory(ctx context.Context, req *blnggrpc.GetOperationHistoryRequest) (*blnggrpc.GetOperationHistoryResponse, error) {
 	if req.GetAccountId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "invalid account ID")
 	}
@@ -228,7 +228,7 @@ func (s *PaymentServerAPI) GetOperationHistory(ctx context.Context, req *blnggrp
 	}
 	offset := int(req.GetOffset())
 
-	operations, err := s.payment.GetOperationHistory(ctx, req.GetAccountId(), limit, offset)
+	operations, err := s.transaction.GetOperationHistory(ctx, req.GetAccountId(), limit, offset)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to get operation history")
 	}
@@ -238,7 +238,7 @@ func (s *PaymentServerAPI) GetOperationHistory(ctx context.Context, req *blnggrp
 		protoOperations = append(protoOperations, &blnggrpc.BalanceOperation{
 			Id:            &blnggrpc.UUID{Value: operation.ID.String()},
 			OperationId:   &blnggrpc.UUID{Value: operation.OperationID.String()},
-			PaymentId:     &blnggrpc.UUID{Value: operation.PaymentID.String()},
+			TransactionId: &blnggrpc.UUID{Value: operation.TransactionID.String()},
 			AccountId:     operation.AccountCode,
 			Currency:      operation.Currency,
 			Amount:        operation.Amount,
@@ -253,7 +253,7 @@ func (s *PaymentServerAPI) GetOperationHistory(ctx context.Context, req *blnggrp
 	return &blnggrpc.GetOperationHistoryResponse{Operations: protoOperations}, nil
 }
 
-func (s *PaymentServerAPI) UpdateCurrencyRate(ctx context.Context, req *blnggrpc.UpdateCurrencyRateRequest) (*emptypb.Empty, error) {
+func (s *TransactionServerAPI) UpdateCurrencyRate(ctx context.Context, req *blnggrpc.UpdateCurrencyRateRequest) (*emptypb.Empty, error) {
 	if req.GetFromCurrency() == "" || req.GetToCurrency() == "" {
 		return nil, status.Error(codes.InvalidArgument, "both currencies are required")
 	}
@@ -261,7 +261,7 @@ func (s *PaymentServerAPI) UpdateCurrencyRate(ctx context.Context, req *blnggrpc
 		return nil, status.Error(codes.InvalidArgument, "rate must be positive")
 	}
 
-	if err := s.payment.UpdateCurrencyRate(ctx, req.GetFromCurrency(), req.GetToCurrency(), req.GetRate()); err != nil {
+	if err := s.transaction.UpdateCurrencyRate(ctx, req.GetFromCurrency(), req.GetToCurrency(), req.GetRate()); err != nil {
 		return nil, status.Error(codes.Internal, "failed to update currency rate")
 	}
 

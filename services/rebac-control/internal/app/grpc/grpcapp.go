@@ -4,8 +4,8 @@ import (
 	grpcaccount "billing-service/internal/grpc/account"
 	grpcauth "billing-service/internal/grpc/auth"
 	"billing-service/internal/grpc/interceptor"
-	grpcpayment "billing-service/internal/grpc/payment"
 	grpcrole "billing-service/internal/grpc/role"
+	grpctransaction "billing-service/internal/grpc/transaction"
 	grpcuser "billing-service/internal/grpc/user"
 
 	"crypto/tls"
@@ -29,7 +29,7 @@ func New(
 	tlsConfig *tls.Config,
 	authInterceptor *interceptor.AuthInterceptor,
 	authService grpcauth.Auth,
-	paymentService grpcpayment.Payment,
+	transactionService grpctransaction.Transaction,
 	accountService grpcaccount.Account,
 	userService grpcuser.User,
 	roleService grpcrole.Role,
@@ -38,7 +38,7 @@ func New(
 	creds := credentials.NewTLS(tlsConfig)
 	gRPCServer := grpc.NewServer(grpc.UnaryInterceptor(authInterceptor.Unary()), grpc.Creds(creds))
 	grpcauth.NewAuthServer(gRPCServer, authService)
-	grpcpayment.NewPaymentServer(gRPCServer, paymentService)
+	grpctransaction.NewTransactionServer(gRPCServer, transactionService)
 	grpcaccount.NewAccountServer(gRPCServer, accountService)
 	grpcuser.NewUserServer(gRPCServer, userService)
 	grpcrole.NewRoleServer(gRPCServer, roleService)

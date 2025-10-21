@@ -30,7 +30,7 @@ type DataBase struct {
 	Port     int    `mapstructure:"DB_PORT" env-default:"5432"`
 	User     string `mapstructure:"DB_USER" env-default:"postgres"`
 	Password string `mapstructure:"DB_PASSWORD" env-default:"secret"`
-	Name     string `mapstructure:"DB_NAME" env-default:"payment_db"`
+	Name     string `mapstructure:"DB_NAME" env-default:"transaction_db"`
 	SSLMode  string `mapstructure:"SSL_MODE" env-default:"disable"`
 	RootCert string `mapstructure:"DB_ROOT_CERT" env-default:""`
 	Cert     string `mapstructure:"DB_CERT" env-default:""`

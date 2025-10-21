@@ -20,8 +20,8 @@ var (
 	// ErrAccountNotFound - счет не найден
 	ErrAccountNotFound = &AppError{Code: "ACCOUNT_NOT_FOUND", Message: "account not found"}
 
-	// ErrInsufficientFunds - недостаточно средств
-	ErrInsufficientFunds = &AppError{Code: "INSUFFICIENT_FUNDS", Message: "insufficient funds"}
+	// ErrAccountUpdateFailed - невозможно обновить счет(счет не найден, недостаточно средств, счет не активен)
+	ErrAccountUpdateFailed = &AppError{Code: "ACCOUNT_UPDATE_FAILED", Message: "account update failed"}
 
 	// ErrInvalidAmount - неккоректная сумма
 	ErrInvalidAmount = &AppError{Code: "INVALID_AMOUNT", Message: "invalid amount"}

@@ -5,7 +5,7 @@
     "swagger": "2.0",
     "info": {
         "description": "API для платежной системы",
-        "title": "Payment API",
+        "title": "Transaction API",
         "contact": {},
         "version": "1.0"
     },
@@ -575,7 +575,7 @@
                 }
             }
         },
-        "/payments/convert": {
+        "/transactions/convert": {
             "post": {
                 "security": [
                     {
@@ -590,7 +590,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Конвертировать валюту",
                 "parameters": [
@@ -644,7 +644,7 @@
                 }
             }
         },
-        "/payments/currency-rate": {
+        "/transactions/currency-rate": {
             "post": {
                 "security": [
                     {
@@ -659,7 +659,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Обновить курс валют",
                 "parameters": [
@@ -692,7 +692,7 @@
                 }
             }
         },
-        "/payments/currency-rate/get": {
+        "/transactions/currency-rate/get": {
             "get": {
                 "security": [
                     {
@@ -704,7 +704,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Получить курс валют",
                 "parameters": [
@@ -745,7 +745,7 @@
                 }
             }
         },
-        "/payments/deposit": {
+        "/transactions/deposit": {
             "post": {
                 "security": [
                     {
@@ -760,7 +760,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Пополнить счет",
                 "parameters": [
@@ -807,7 +807,7 @@
                 }
             }
         },
-        "/payments/get": {
+        "/transactions/get": {
             "get": {
                 "security": [
                     {
@@ -819,7 +819,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Получить все платежи",
                 "parameters": [
@@ -836,7 +836,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.Payment"
+                                "$ref": "#/definitions/models.Transaction"
                             }
                         }
                     },
@@ -849,7 +849,7 @@
                 }
             }
         },
-        "/payments/history": {
+        "/transactions/history": {
             "get": {
                 "security": [
                     {
@@ -861,7 +861,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Получить историю операций",
                 "parameters": [
@@ -910,7 +910,7 @@
                 }
             }
         },
-        "/payments/transfer": {
+        "/transactions/transfer": {
             "post": {
                 "security": [
                     {
@@ -925,7 +925,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Перевести на другой счет",
                 "parameters": [
@@ -973,7 +973,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/models.Payment"
+                            "$ref": "#/definitions/models.Transaction"
                         }
                     },
                     "400": {
@@ -991,7 +991,7 @@
                 }
             }
         },
-        "/payments/{paymentID}": {
+        "/transactions/{transactionID}": {
             "get": {
                 "security": [
                     {
@@ -1003,14 +1003,14 @@
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Получить платеж",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "ID платежа",
-                        "name": "paymentID",
+                        "name": "transactionID",
                         "in": "path",
                         "required": true
                     }
@@ -1019,7 +1019,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Payment"
+                            "$ref": "#/definitions/models.Transaction"
                         }
                     },
                     "400": {
@@ -1043,7 +1043,7 @@
                 }
             }
         },
-        "/payments/{paymentID}/cancel": {
+        "/transactions/{transactionID}/cancel": {
             "patch": {
                 "security": [
                     {
@@ -1052,14 +1052,14 @@
                 ],
                 "description": "Отменяет указанный платеж",
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Отменить платеж",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "ID платежа",
-                        "name": "paymentID",
+                        "name": "transactionID",
                         "in": "path",
                         "required": true
                     }
@@ -1089,7 +1089,7 @@
                 }
             }
         },
-        "/payments/{paymentID}/update": {
+        "/transactions/{transactionID}/update": {
             "patch": {
                 "security": [
                     {
@@ -1104,14 +1104,14 @@
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Обновить статус платежа",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "ID платежа",
-                        "name": "paymentID",
+                        "name": "transactionID",
                         "in": "path",
                         "required": true
                     },
@@ -1953,7 +1953,7 @@
                 "operation_type": {
                     "type": "string"
                 },
-                "payment_id": {
+                "transaction_id": {
                     "type": "string"
                 },
                 "processed_at": {
@@ -2081,7 +2081,7 @@
         "models.DepositResponse": {
             "type": "object",
             "properties": {
-                "payment_id": {
+                "transaction_id": {
                     "type": "string"
                 }
             }
@@ -2116,7 +2116,7 @@
                 }
             }
         },
-        "models.Payment": {
+        "models.Transaction": {
             "type": "object",
             "properties": {
                 "amount": {

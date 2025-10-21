@@ -571,15 +571,15 @@ func (s *RoleService) GetUserRole(ctx context.Context) (string, error) {
 	if !ok {
 		return unknown, fmt.Errorf("%s: %w", op, billingerr.ErrGetProfile)
 	}
-	paymentSystemEntityId, err := s.roleManage.GetEntityID(ctx, models.PaymentSystemEntity)
+	financeSystemEntityId, err := s.roleManage.GetEntityID(ctx, models.FinanceSystemEntity)
 	if err != nil {
 		return unknown, fmt.Errorf("failed to get entity in ReBAC: %v", err)
 	}
 
-	relations, err := s.roleManage.GetEntityRelations(ctx, paymentSystemEntityId)
+	relations, err := s.roleManage.GetEntityRelations(ctx, financeSystemEntityId)
 	if err != nil {
 		logger.Error("failed to get entity relations",
-			zap.String("entityID", paymentSystemEntityId.String()),
+			zap.String("entityID", financeSystemEntityId.String()),
 			zap.Error(err),
 		)
 		return unknown, err

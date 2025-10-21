@@ -127,7 +127,7 @@ func (s *AccountService) CreateAccount(ctx context.Context, currency, name strin
 		return stringNil, fmt.Errorf("failed to get account uuid: %v: %w", op, err)
 	}
 
-	err = s.roleManage.CreateEntityWithID(ctx, accountId, models.PaymentEntity)
+	err = s.roleManage.CreateEntityWithID(ctx, accountId, models.TransactionEntity)
 	if err != nil {
 		return stringNil, fmt.Errorf("failed to create user entity in ReBAC: %v", err)
 	}

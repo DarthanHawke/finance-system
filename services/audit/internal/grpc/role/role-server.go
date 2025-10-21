@@ -4,7 +4,7 @@ import (
 	"billing-service/internal/models"
 	"context"
 
-	blnggrpc "github.com/DarthanHawke/protos-payment-system/gen/go/billing"
+	blnggrpc "github.com/DarthanHawke/protos-finance-system/gen/go/billing"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

@@ -15,7 +15,7 @@ type BalanceOperation struct {
 	NewBalance    float64   `json:"new_balance"`
 	OperationType string    `json:"operation_type"`
 	Status        string    `json:"status"`
-	PaymentID     uuid.UUID `json:"payment_id,omitempty"`
+	TransactionID uuid.UUID `json:"transaction_id,omitempty"`
 	Description   string    `json:"description,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
 	ProcessedAt   time.Time `json:"processed_at,omitempty"`

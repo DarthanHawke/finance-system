@@ -21,7 +21,7 @@
                 <ul>
                     <li class="active"><a href="#" data-section="dashboard"><i class="icon-dashboard"></i> Обзор</a></li>
                     <li><a href="#" data-section="users"><i class="icon-users"></i> Пользователи</a></li>
-                    <li><a href="#" data-section="payments"><i class="icon-payments"></i> Платежи</a></li>
+                    <li><a href="#" data-section="transactions"><i class="icon-transactions"></i> Платежи</a></li>
                     <li><a href="#" id="logout-btn"><i class="icon-logout"></i> Выйти</a></li>
                 </ul>
             </nav>
@@ -101,13 +101,13 @@
                 </div>
             </div>
             
-            <div class="support-section" id="payments-section">
+            <div class="support-section" id="transactions-section">
                 <h2>Платежи</h2>
                 
                 <div class="filters">
                     <div class="filter-group">
-                        <label for="payment-status">Статус:</label>
-                        <select id="payment-status">
+                        <label for="transaction-status">Статус:</label>
+                        <select id="transaction-status">
                             <option value="all">Все</option>
                             <option value="pending">В ожидании</option>
                             <option value="completed">Завершённые</option>
@@ -115,8 +115,8 @@
                         </select>
                     </div>
                     <div class="filter-group">
-                        <label for="payment-date">Дата:</label>
-                        <select id="payment-date">
+                        <label for="transaction-date">Дата:</label>
+                        <select id="transaction-date">
                             <option value="today">Сегодня</option>
                             <option value="week">Неделя</option>
                             <option value="month">Месяц</option>
@@ -126,8 +126,8 @@
                     <button id="apply-filters">Применить</button>
                 </div>
                 
-                <div class="payments-table-container">
-                    <table class="payments-table" id="payments-table">
+                <div class="transactions-table-container">
+                    <table class="transactions-table" id="transactions-table">
                         <thead>
                             <tr>
                                 <th>ID</th>

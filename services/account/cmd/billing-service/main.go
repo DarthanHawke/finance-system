@@ -94,7 +94,7 @@ func main() {
 		tlsConfig,
 		cfg.DataBase.DSN(),
 		&cfg.SSOClient,
-		&cfg.PaymentClient,
+		&cfg.TransactionClient,
 		&cfg.Redis,
 		jwtManager,
 		ibanManager,

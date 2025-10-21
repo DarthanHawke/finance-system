@@ -3,7 +3,7 @@ package http
 import (
 	accounthandler "client-service/internal/http/handlers/account"
 	authhandler "client-service/internal/http/handlers/auth"
-	paymenthandler "client-service/internal/http/handlers/payment"
+	transactionhandler "client-service/internal/http/handlers/transaction"
 	"os"
 
 	rolehandler "client-service/internal/http/handlers/role"
@@ -34,13 +34,13 @@ func New(
 	logger *zap.Logger,
 	httpPort int,
 	authService authhandler.AuthService,
-	paymentService paymenthandler.PaymentService,
+	transactionService transactionhandler.TransactionService,
 	accountService accounthandler.AccountService,
 	userService userhandler.UserService,
 	roleService rolehandler.RoleService,
 ) *HTTPApp {
 	authHandler := authhandler.NewAuthHandler(authService)
-	paymentHandler := paymenthandler.NewPaymentHandler(paymentService)
+	transactionHandler := transactionhandler.NewTransactionHandler(transactionService)
 	accountHandler := accounthandler.NewAccountHandler(accountService)
 	userHandler := userhandler.NewUserHandler(userService)
 	roleHandler := rolehandler.NewRoleHandler(roleService)
@@ -71,7 +71,7 @@ func New(
 
 		// Защищенные маршруты
 		apiRouter.Group(func(protectedRouter chi.Router) {
-			protectedRouter.Mount("/payments", paymentHandler.Routes())
+			protectedRouter.Mount("/transactions", transactionHandler.Routes())
 			protectedRouter.Mount("/account", accountHandler.Routes())
 			protectedRouter.Mount("/user", userHandler.Routes())
 			protectedRouter.Mount("/role", roleHandler.Routes())

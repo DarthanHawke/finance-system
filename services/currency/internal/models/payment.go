@@ -1,10 +1,10 @@
 package models
 
 const (
-	PaymentStatusPending   string = "pending"
-	PaymentStatusCompleted string = "completed"
-	PaymentStatusCancelled string = "cancelled"
-	PaymentStatusRefunded  string = "refunded"
+	TransactionStatusPending   string = "pending"
+	TransactionStatusCompleted string = "completed"
+	TransactionStatusCancelled string = "cancelled"
+	TransactionStatusRefunded  string = "refunded"
 )
 
 const (

@@ -3,7 +3,7 @@ module rebac-service
 go 1.23.6
 
 require (
-	github.com/DarthanHawke/protos-payment-system v0.9.5
+	github.com/DarthanHawke/protos-finance-system v0.9.5
 	github.com/golang-migrate/migrate/v4 v4.18.3
 	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.4.0

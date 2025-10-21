@@ -1,4 +1,4 @@
-package payment
+package transaction
 
 import (
 	"client-service/internal/clients/grpc/interceptor"
@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	blggrpc "github.com/DarthanHawke/protos-payment-system/gen/go/billing"
+	blggrpc "github.com/DarthanHawke/protos-finance-system/gen/go/billing"
 	"github.com/google/uuid"
 	grpclog "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
@@ -19,20 +19,20 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-type PaymentClient struct {
-	paymentApi blggrpc.PaymentServiceClient
-	logger     *zap.Logger
+type TransactionClient struct {
+	transactionApi blggrpc.TransactionServiceClient
+	logger         *zap.Logger
 }
 
-func NewPaymentClient(
+func NewTransactionClient(
 	ctx context.Context,
 	logger *zap.Logger,
 	addr string,
 	timeout time.Duration,
 	retriesCount int,
 	tlsConfig *tls.Config,
-) (*PaymentClient, error) {
-	const op = "clients.grpc.billing.payment.NewPaymentClient"
+) (*TransactionClient, error) {
+	const op = "clients.grpc.billing.transaction.NewTransactionClient"
 
 	retryOpts := []grpcretry.CallOption{
 		grpcretry.WithCodes(codes.NotFound, codes.Aborted, codes.DeadlineExceeded),
@@ -60,22 +60,22 @@ func NewPaymentClient(
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return &PaymentClient{
-		paymentApi: blggrpc.NewPaymentServiceClient(cc),
-		logger:     logger,
+	return &TransactionClient{
+		transactionApi: blggrpc.NewTransactionServiceClient(cc),
+		logger:         logger,
 	}, nil
 }
 
-// CreatePayment создает новый платеж
-func (c *PaymentClient) Transfer(
+// CreateTransaction создает новый платеж
+func (c *TransactionClient) Transfer(
 	ctx context.Context,
 	sender, receiver string,
 	amount float64,
 	description string,
 ) (uuid.UUID, error) {
-	const op = "clients.grpc.billing.payment.Transfer"
+	const op = "clients.grpc.billing.transaction.Transfer"
 
-	response, err := c.paymentApi.Transfer(ctx, &blggrpc.TransferRequest{
+	response, err := c.transactionApi.Transfer(ctx, &blggrpc.TransferRequest{
 		Sender:      sender,
 		Receiver:    receiver,
 		Amount:      amount,
@@ -85,24 +85,24 @@ func (c *PaymentClient) Transfer(
 		return uuid.Nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	paymentId, err := uuid.Parse(response.GetPaymentId().GetValue())
+	transactionId, err := uuid.Parse(response.GetTransactionId().GetValue())
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return paymentId, nil
+	return transactionId, nil
 }
 
 // Deposit пополняет баланс на указанную сумму
-func (c *PaymentClient) Deposit(
+func (c *TransactionClient) Deposit(
 	ctx context.Context,
 	accountID string,
 	amount float64,
 	description string,
 ) (uuid.UUID, error) {
-	const op = "clients.grpc.billing.payment.Deposit"
+	const op = "clients.grpc.billing.transaction.Deposit"
 
-	response, err := c.paymentApi.Deposit(ctx, &blggrpc.DepositRequest{
+	response, err := c.transactionApi.Deposit(ctx, &blggrpc.DepositRequest{
 		AccountId:   accountID,
 		Amount:      amount,
 		Description: description,
@@ -111,83 +111,83 @@ func (c *PaymentClient) Deposit(
 		return uuid.Nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	paymentID, err := uuid.Parse(response.GetPaymentId().GetValue())
+	transactionID, err := uuid.Parse(response.GetTransactionId().GetValue())
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return paymentID, nil
+	return transactionID, nil
 }
 
-// GetPayment получает информацию о платеже
-func (c *PaymentClient) GetPayment(
+// GetTransaction получает информацию о платеже
+func (c *TransactionClient) GetTransaction(
 	ctx context.Context,
-	paymentID uuid.UUID,
-) (*models.Payment, error) {
-	const op = "clients.grpc.billing.payment.GetPayment"
+	transactionID uuid.UUID,
+) (*models.Transaction, error) {
+	const op = "clients.grpc.billing.transaction.GetTransaction"
 
-	response, err := c.paymentApi.GetPayment(ctx, &blggrpc.GetPaymentRequest{
-		PaymentId: &blggrpc.UUID{Value: paymentID.String()},
+	response, err := c.transactionApi.GetTransaction(ctx, &blggrpc.GetTransactionRequest{
+		TransactionId: &blggrpc.UUID{Value: transactionID.String()},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	protoPayment := response.GetPayment()
-	return &models.Payment{
-		ID:          uuid.MustParse(protoPayment.GetId().GetValue()),
-		Sender:      protoPayment.Sender,
-		Receiver:    protoPayment.Receiver,
-		Amount:      protoPayment.Amount,
-		Currency:    protoPayment.Currency,
-		Status:      protoPayment.Status,
-		Description: *protoPayment.Description,
-		CreatedAt:   protoPayment.CreatedAt.AsTime(),
-		UpdatedAt:   protoPayment.UpdatedAt.AsTime(),
+	protoTransaction := response.GetTransaction()
+	return &models.Transaction{
+		ID:          uuid.MustParse(protoTransaction.GetId().GetValue()),
+		Sender:      protoTransaction.Sender,
+		Receiver:    protoTransaction.Receiver,
+		Amount:      protoTransaction.Amount,
+		Currency:    protoTransaction.Currency,
+		Status:      protoTransaction.Status,
+		Description: *protoTransaction.Description,
+		CreatedAt:   protoTransaction.CreatedAt.AsTime(),
+		UpdatedAt:   protoTransaction.UpdatedAt.AsTime(),
 	}, nil
 }
 
-// GetAllPayment получает информацию о всех платежах
-func (c *PaymentClient) GetAllPayment(
+// GetAllTransaction получает информацию о всех платежах
+func (c *TransactionClient) GetAllTransaction(
 	ctx context.Context,
 	userID uuid.UUID,
-) ([]models.Payment, error) {
-	const op = "clients.grpc.billing.payment.GetPayment"
+) ([]models.Transaction, error) {
+	const op = "clients.grpc.billing.transaction.GetTransaction"
 
-	response, err := c.paymentApi.GetAllPayment(ctx, &blggrpc.GetAllPaymentRequest{
+	response, err := c.transactionApi.GetAllTransaction(ctx, &blggrpc.GetAllTransactionRequest{
 		UserId: &blggrpc.UUID{Value: userID.String()},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	payments := make([]models.Payment, 0, len(response.GetPayment()))
-	for _, payment := range response.GetPayment() {
-		payments = append(payments, models.Payment{
-			ID:          uuid.MustParse(payment.GetId().GetValue()),
-			Sender:      payment.Sender,
-			Receiver:    payment.Receiver,
-			Amount:      payment.Amount,
-			Currency:    payment.Currency,
-			Status:      payment.Status,
-			Description: *payment.Description,
-			CreatedAt:   payment.CreatedAt.AsTime(),
-			UpdatedAt:   payment.UpdatedAt.AsTime(),
+	transactions := make([]models.Transaction, 0, len(response.GetTransaction()))
+	for _, transaction := range response.GetTransaction() {
+		transactions = append(transactions, models.Transaction{
+			ID:          uuid.MustParse(transaction.GetId().GetValue()),
+			Sender:      transaction.Sender,
+			Receiver:    transaction.Receiver,
+			Amount:      transaction.Amount,
+			Currency:    transaction.Currency,
+			Status:      transaction.Status,
+			Description: *transaction.Description,
+			CreatedAt:   transaction.CreatedAt.AsTime(),
+			UpdatedAt:   transaction.UpdatedAt.AsTime(),
 		})
 	}
-	return payments, nil
+	return transactions, nil
 }
 
-// UpdateStatusPayment отменяет платеж
-func (c *PaymentClient) UpdateStatusPayment(ctx context.Context,
-	paymentID uuid.UUID,
+// UpdateStatusTransaction отменяет платеж
+func (c *TransactionClient) UpdateStatusTransaction(ctx context.Context,
+	transactionID uuid.UUID,
 	status string,
 ) error {
-	const op = "clients.grpc.billing.payment.UpdateStatusPayment"
+	const op = "clients.grpc.billing.transaction.UpdateStatusTransaction"
 
-	_, err := c.paymentApi.UpdateStatusPayment(ctx, &blggrpc.UpdateStatusPaymentRequest{
-		PaymentId: &blggrpc.UUID{Value: paymentID.String()},
-		Status:    status,
+	_, err := c.transactionApi.UpdateStatusTransaction(ctx, &blggrpc.UpdateStatusTransactionRequest{
+		TransactionId: &blggrpc.UUID{Value: transactionID.String()},
+		Status:        status,
 	})
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
@@ -196,12 +196,12 @@ func (c *PaymentClient) UpdateStatusPayment(ctx context.Context,
 	return nil
 }
 
-// CancelPayment отменяет платеж
-func (c *PaymentClient) CancelPayment(ctx context.Context, paymentID uuid.UUID) error {
-	const op = "clients.grpc.billing.payment.CancelPayment"
+// CancelTransaction отменяет платеж
+func (c *TransactionClient) CancelTransaction(ctx context.Context, transactionID uuid.UUID) error {
+	const op = "clients.grpc.billing.transaction.CancelTransaction"
 
-	_, err := c.paymentApi.CancelPayment(ctx, &blggrpc.CancelPaymentRequest{
-		PaymentId: &blggrpc.UUID{Value: paymentID.String()},
+	_, err := c.transactionApi.CancelTransaction(ctx, &blggrpc.CancelTransactionRequest{
+		TransactionId: &blggrpc.UUID{Value: transactionID.String()},
 	})
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
@@ -211,15 +211,15 @@ func (c *PaymentClient) CancelPayment(ctx context.Context, paymentID uuid.UUID) 
 }
 
 // ConvertCurrency конвертирует валюту между счетами
-func (c *PaymentClient) ConvertCurrency(
+func (c *TransactionClient) ConvertCurrency(
 	ctx context.Context,
 	fromAccountID, toAccountID string,
 	amount float64,
 	description string,
 ) (uuid.UUID, error) {
-	const op = "clients.grpc.billing.payment.ConvertCurrency"
+	const op = "clients.grpc.billing.transaction.ConvertCurrency"
 
-	response, err := c.paymentApi.ConvertCurrency(ctx, &blggrpc.ConvertCurrencyRequest{
+	response, err := c.transactionApi.ConvertCurrency(ctx, &blggrpc.ConvertCurrencyRequest{
 		FromAccountId: fromAccountID,
 		ToAccountId:   toAccountID,
 		Amount:        amount,
@@ -238,14 +238,14 @@ func (c *PaymentClient) ConvertCurrency(
 }
 
 // GetOperationHistory получает историю операций по счету
-func (c *PaymentClient) GetOperationHistory(
+func (c *TransactionClient) GetOperationHistory(
 	ctx context.Context,
 	accountID string,
 	limit, offset int,
 ) ([]models.BalanceOperation, error) {
-	const op = "clients.grpc.billing.payment.GetOperationHistory"
+	const op = "clients.grpc.billing.transaction.GetOperationHistory"
 
-	response, err := c.paymentApi.GetOperationHistory(ctx, &blggrpc.GetOperationHistoryRequest{
+	response, err := c.transactionApi.GetOperationHistory(ctx, &blggrpc.GetOperationHistoryRequest{
 		AccountId: accountID,
 		Limit:     int32(limit),
 		Offset:    int32(offset),
@@ -260,7 +260,7 @@ func (c *PaymentClient) GetOperationHistory(
 			ID:            uuid.MustParse(operation.GetId().GetValue()),
 			OperationID:   uuid.MustParse(operation.GetOperationId().GetValue()),
 			AccountID:     operation.GetAccountId(),
-			PaymentID:     uuid.MustParse(operation.GetPaymentId().GetValue()),
+			TransactionID: uuid.MustParse(operation.GetTransactionId().GetValue()),
 			Currency:      operation.GetCurrency(),
 			Amount:        operation.GetAmount(),
 			OperationType: operation.GetOperationType(),
@@ -275,14 +275,14 @@ func (c *PaymentClient) GetOperationHistory(
 }
 
 // UpdateCurrencyRate обновляет курс валют
-func (c *PaymentClient) UpdateCurrencyRate(
+func (c *TransactionClient) UpdateCurrencyRate(
 	ctx context.Context,
 	fromCurrency, toCurrency string,
 	rate float64,
 ) error {
-	const op = "clients.grpc.billing.payment.UpdateCurrencyRate"
+	const op = "clients.grpc.billing.transaction.UpdateCurrencyRate"
 
-	_, err := c.paymentApi.UpdateCurrencyRate(ctx, &blggrpc.UpdateCurrencyRateRequest{
+	_, err := c.transactionApi.UpdateCurrencyRate(ctx, &blggrpc.UpdateCurrencyRateRequest{
 		FromCurrency: fromCurrency,
 		ToCurrency:   toCurrency,
 		Rate:         rate,
@@ -295,13 +295,13 @@ func (c *PaymentClient) UpdateCurrencyRate(
 }
 
 // GetCurrencyRate получает текущий курс обмена между валютами
-func (c *PaymentClient) GetCurrencyRate(
+func (c *TransactionClient) GetCurrencyRate(
 	ctx context.Context,
 	fromCurrency, toCurrency string,
 ) (float64, error) {
-	const op = "clients.grpc.billing.payment.GetCurrencyRate"
+	const op = "clients.grpc.billing.transaction.GetCurrencyRate"
 
-	response, err := c.paymentApi.GetCurrencyRate(ctx, &blggrpc.GetCurrencyRateRequest{
+	response, err := c.transactionApi.GetCurrencyRate(ctx, &blggrpc.GetCurrencyRateRequest{
 		FromCurrency: fromCurrency,
 		ToCurrency:   toCurrency,
 	})

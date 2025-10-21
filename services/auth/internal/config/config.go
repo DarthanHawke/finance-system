@@ -33,7 +33,7 @@ type DataBase struct {
 	Port     int    `mapstructure:"DB_PORT" env-default:"5432"`
 	User     string `mapstructure:"DB_USER" env-default:"postgres"`
 	Password string `mapstructure:"DB_PASSWORD" env-default:"secret"`
-	Name     string `mapstructure:"DB_NAME" env-default:"payment_db"`
+	Name     string `mapstructure:"DB_NAME" env-default:"transaction_db"`
 	SSLMode  string `mapstructure:"SSL_MODE" env-default:"disable"`
 	RootCert string `mapstructure:"DB_ROOT_CERT" env-default:""`
 	Cert     string `mapstructure:"DB_CERT" env-default:""`
@@ -49,7 +49,7 @@ type Redis struct {
 type JWT struct {
 	AccessTokenTTL  time.Duration `mapstructure:"JWT_ACCESS_TOKEN_TTL" env-default:"15m"`
 	RefreshTokenTTL time.Duration `mapstructure:"JWT_REFRESH_TOKEN_TTL" env-default:"168h"`
-	Issuer          string        `mapstructure:"JWT_ISSUER" env-default:"payment-system"`
+	Issuer          string        `mapstructure:"JWT_ISSUER" env-default:"finance-system"`
 }
 
 type JWTKeys struct {

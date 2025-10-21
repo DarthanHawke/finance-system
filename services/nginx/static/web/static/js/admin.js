@@ -208,24 +208,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
             document.getElementById('total-accounts').textContent = accounts_1.length;
 
-            const allUserPayments = await Promise.all(
-                Object.keys(usersMap_1).map(userId => fetch(`/payments/get?userID=${userId}`, {
+            const allUserTransactions = await Promise.all(
+                Object.keys(usersMap_1).map(userId => fetch(`/transactions/get?userID=${userId}`, {
                     method: 'GET',
                     credentials: 'include'
                 })
                     .then(response_2 => response_2.json())
-                    .then(payments => {
+                    .then(transactions => {
                         const user_2 = usersMap_1[userId];
-                        return payments.map(payment => {
-                            const senderAccount = accountsMap[payment.sender];
-                            const receiverAccount = accountsMap[payment.receiver];
+                        return transactions.map(transaction => {
+                            const senderAccount = accountsMap[transaction.sender];
+                            const receiverAccount = accountsMap[transaction.receiver];
                             const account_2 = senderAccount || receiverAccount;
                             const userFromAccount = account_2 ? usersMap_1[account_2.user_id] : null;
 
                             return {
-                                ...payment,
+                                ...transaction,
                                 userName: userFromAccount ? userFromAccount.full_name : user_2.full_name,
-                                type: 'payment'
+                                type: 'transaction'
                             };
                         });
                     })
@@ -243,11 +243,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
             });
 
-            const allPayments = [].concat(...allUserPayments);
-            const allActivities = [...allPayments, ...accountCreations];
+            const allTransactions = [].concat(...allUserTransactions);
+            const allActivities = [...allTransactions, ...accountCreations];
             allActivities.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-            document.getElementById('total-transactions').textContent = allPayments.length;
+            document.getElementById('total-transactions').textContent = allTransactions.length;
             displayRecentActivities(allActivities.slice(0, 10));
         } catch (error) {
             console.error('Error loading dashboard data:', error);
@@ -939,17 +939,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Глобальная переменная для хранения текущего ID платежа
-    let currentPaymentId = null;
+    let currentTransactionId = null;
 
     // Функция для показа деталей платежа
-    function showPaymentDetails(paymentId) {
-        const modal = document.getElementById('payment-details-modal');
-        const content = document.getElementById('payment-details-content');
-        const actionsContainer = document.getElementById('payment-actions');
+    function showTransactionDetails(transactionId) {
+        const modal = document.getElementById('transaction-details-modal');
+        const content = document.getElementById('transaction-details-content');
+        const actionsContainer = document.getElementById('transaction-actions');
         const updateForm = document.getElementById('update-status-form');
         
         // Очищаем предыдущие данные
-        currentPaymentId = paymentId;
+        currentTransactionId = transactionId;
         content.innerHTML = '<div class="loading">Загрузка деталей платежа...</div>';
         actionsContainer.innerHTML = '';
         updateForm.style.display = 'none';
@@ -958,7 +958,7 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.classList.add('active');
         
         // Загружаем детали платежа
-        fetch(`/payments/${paymentId}`, {
+        fetch(`/transactions/${transactionId}`, {
             method: 'GET',
             credentials: 'include'
         })
@@ -966,54 +966,54 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!response.ok) throw new Error('Ошибка загрузки деталей платежа');
             return response.json();
         })
-        .then(payment => {
+        .then(transaction => {
             // Отображаем детали платежа
             content.innerHTML = `
-                <div class="payment-detail">
-                    <span class="payment-detail-label">ID:</span>
-                    <span class="payment-detail-value">${payment.id}</span>
+                <div class="transaction-detail">
+                    <span class="transaction-detail-label">ID:</span>
+                    <span class="transaction-detail-value">${transaction.id}</span>
                 </div>
-                <div class="payment-detail">
-                    <span class="payment-detail-label">Отправитель:</span>
-                    <span class="payment-detail-value">${payment.sender}</span>
+                <div class="transaction-detail">
+                    <span class="transaction-detail-label">Отправитель:</span>
+                    <span class="transaction-detail-value">${transaction.sender}</span>
                 </div>
-                <div class="payment-detail">
-                    <span class="payment-detail-label">Получатель:</span>
-                    <span class="payment-detail-value">${payment.receiver}</span>
+                <div class="transaction-detail">
+                    <span class="transaction-detail-label">Получатель:</span>
+                    <span class="transaction-detail-value">${transaction.receiver}</span>
                 </div>
-                <div class="payment-detail">
-                    <span class="payment-detail-label">Сумма:</span>
-                    <span class="payment-detail-value">${payment.amount.toFixed(2)} ${payment.currency}</span>
+                <div class="transaction-detail">
+                    <span class="transaction-detail-label">Сумма:</span>
+                    <span class="transaction-detail-value">${transaction.amount.toFixed(2)} ${transaction.currency}</span>
                 </div>
-                <div class="payment-detail">
-                    <span class="payment-detail-label">Статус:</span>
-                    <span class="payment-detail-value status-${payment.status.toLowerCase()}">${payment.status}</span>
+                <div class="transaction-detail">
+                    <span class="transaction-detail-label">Статус:</span>
+                    <span class="transaction-detail-value status-${transaction.status.toLowerCase()}">${transaction.status}</span>
                 </div>
-                <div class="payment-detail">
-                    <span class="payment-detail-label">Описание:</span>
-                    <span class="payment-detail-value">${payment.description || 'Нет описания'}</span>
+                <div class="transaction-detail">
+                    <span class="transaction-detail-label">Описание:</span>
+                    <span class="transaction-detail-value">${transaction.description || 'Нет описания'}</span>
                 </div>
-                <div class="payment-detail">
-                    <span class="payment-detail-label">Создан:</span>
-                    <span class="payment-detail-value">${new Date(payment.createdAt).toLocaleString()}</span>
+                <div class="transaction-detail">
+                    <span class="transaction-detail-label">Создан:</span>
+                    <span class="transaction-detail-value">${new Date(transaction.createdAt).toLocaleString()}</span>
                 </div>
-                <div class="payment-detail">
-                    <span class="payment-detail-label">Обновлен:</span>
-                    <span class="payment-detail-value">${payment.updatedAt ? new Date(payment.updatedAt).toLocaleString() : 'Не обновлялся'}</span>
+                <div class="transaction-detail">
+                    <span class="transaction-detail-label">Обновлен:</span>
+                    <span class="transaction-detail-value">${transaction.updatedAt ? new Date(transaction.updatedAt).toLocaleString() : 'Не обновлялся'}</span>
                 </div>
             `;
             
             // Добавляем кнопки действий в зависимости от статуса
-            if (payment.status.toLowerCase() !== 'cancelled') {
-                if (payment.status.toLowerCase() !== 'completed') {
+            if (transaction.status.toLowerCase() !== 'cancelled') {
+                if (transaction.status.toLowerCase() !== 'completed') {
                     const cancelBtn = document.createElement('button');
                     cancelBtn.className = 'action-btn danger';
                     cancelBtn.textContent = 'Отменить';
-                    cancelBtn.onclick = () => cancelPayment(paymentId);
+                    cancelBtn.onclick = () => cancelTransaction(transactionId);
                     actionsContainer.appendChild(cancelBtn);
                 }
                 
-                if (payment.status.toLowerCase() !== 'completed') {
+                if (transaction.status.toLowerCase() !== 'completed') {
                     const updateBtn = document.createElement('button');
                     updateBtn.className = 'action-btn';
                     updateBtn.textContent = 'Обновить статус';
@@ -1025,7 +1025,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Обработчик для кнопки обновления статуса
                     document.getElementById('update-status-btn').onclick = () => {
                         const status = document.getElementById('status-select').value;
-                        updatePaymentStatus(paymentId, status);
+                        updateTransactionStatus(transactionId, status);
                     };
                 }
             }
@@ -1050,10 +1050,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Функция для отмены платежа
-    function cancelPayment(paymentId) {
+    function cancelTransaction(transactionId) {
         if (!confirm('Вы уверены, что хотите отменить этот платеж?')) return;
         
-        fetch(`/payments/${paymentId}/cancel`, {
+        fetch(`/transactions/${transactionId}/cancel`, {
             method: 'PATCH',
             credentials: 'include'
         })
@@ -1064,7 +1064,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(() => {
             alert('Платеж успешно отменен');
             // Перезагружаем детали платежа
-            showPaymentDetails(paymentId);
+            showTransactionDetails(transactionId);
         })
         .catch(error => {
             console.error('Ошибка отмены платежа:', error);
@@ -1073,11 +1073,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Функция для обновления статуса платежа
-    function updatePaymentStatus(paymentId, status) {
+    function updateTransactionStatus(transactionId, status) {
         const formData = new URLSearchParams();
         formData.append('status', status);
         
-        fetch(`/payments/${paymentId}/update`, {
+        fetch(`/transactions/${transactionId}/update`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -1092,7 +1092,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(() => {
             alert('Статус платежа успешно обновлен');
             // Перезагружаем детали платежа
-            showPaymentDetails(paymentId);
+            showTransactionDetails(transactionId);
             // Скрываем форму обновления
             document.getElementById('update-status-form').style.display = 'none';
         })
@@ -1114,7 +1114,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const offset = (page - 1) * operationsPerPage;
         
         // Загружаем операции
-        fetch(`/payments/history?account_id=${accountId}&limit=${operationsPerPage}&offset=${offset}`, {
+        fetch(`/transactions/history?account_id=${accountId}&limit=${operationsPerPage}&offset=${offset}`, {
             method: 'GET',
             credentials: 'include'
         })
@@ -1154,9 +1154,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const amountSign = operation.amount >= 0 ? '+' : '';
                 const processedAt = operation.processed_at ? new Date(operation.processed_at).toLocaleString() : 'Не обработано';
                 
-                // Добавляем кнопку "Детали платежа" только если есть PaymentID
-                const paymentDetailsBtn = operation.payment_id ? 
-                    `<button class="action-btn view-payment-details" data-payment-id="${operation.payment_id}">Детали платежа</button>` : 
+                // Добавляем кнопку "Детали платежа" только если есть TransactionID
+                const transactionDetailsBtn = operation.transaction_id ? 
+                    `<button class="action-btn view-transaction-details" data-transaction-id="${operation.transaction_id}">Детали платежа</button>` : 
                     '';
                 
                 html += `
@@ -1168,7 +1168,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         <div class="operation-date">${new Date(operation.created_at).toLocaleString()} (обработано: ${processedAt})</div>
                         <div class="operation-actions">
-                            ${paymentDetailsBtn}
+                            ${transactionDetailsBtn}
                         </div>
                     </div>
                 `;
@@ -1177,10 +1177,10 @@ document.addEventListener('DOMContentLoaded', function() {
             operationsContainer.innerHTML = html;
             
             // Добавляем обработчики для кнопок "Детали платежа"
-            document.querySelectorAll('.view-payment-details').forEach(btn => {
+            document.querySelectorAll('.view-transaction-details').forEach(btn => {
                 btn.onclick = function() {
-                    const paymentId = this.dataset.paymentId;
-                    showPaymentDetails(paymentId);
+                    const transactionId = this.dataset.transactionId;
+                    showTransactionDetails(transactionId);
                 };
             });
             
@@ -2141,7 +2141,7 @@ document.addEventListener('DOMContentLoaded', function() {
         ];
         
         Promise.all(currencyPairs.map(pair => 
-            fetch(`/payments/currency-rate/get?from=${pair.from}&to=${pair.to}`, {
+            fetch(`/transactions/currency-rate/get?from=${pair.from}&to=${pair.to}`, {
                 method: 'GET',
                 credentials: 'include'
             })
@@ -2184,7 +2184,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const toCurrency = document.getElementById('to-currency').value;
             const rate = document.getElementById('rate').value;
             
-            fetch('/payments/currency-rate', {
+            fetch('/transactions/currency-rate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -3,7 +3,7 @@ package billingapp
 import (
 	grpcapp "billing-service/internal/app/grpc"
 	"billing-service/internal/cache"
-	paymentclient "billing-service/internal/clients/grpc/payment"
+	transactionclient "billing-service/internal/clients/grpc/transaction"
 	initialization "billing-service/internal/initialization/role"
 
 	roleclient "billing-service/internal/clients/grpc/sso/role"
@@ -15,8 +15,8 @@ import (
 	"billing-service/internal/lib/jwt"
 	"billing-service/internal/service/account"
 	"billing-service/internal/service/auth"
-	"billing-service/internal/service/payment"
 	"billing-service/internal/service/role"
+	"billing-service/internal/service/transaction"
 	"billing-service/internal/service/user"
 	"billing-service/internal/storage"
 	"context"
@@ -36,7 +36,7 @@ func New(
 	tlsConfig *tls.Config,
 	storagePath string,
 	ssoClientConfig *config.SSOClient,
-	paymentClientConfig *config.PaymentClient,
+	transactionClientConfig *config.TransactionClient,
 	redisConfig *config.Redis,
 	jwtManager *jwt.TokenValidator,
 	ibanManager *iban.IbanGenerator,
@@ -51,7 +51,7 @@ func New(
 	redisCache := cache.NewRedisCache(redisConfig.Addr, redisConfig.Password, redisConfig.DB, 10*time.Minute)
 
 	accountDataBase := storage.NewAccountRepository(dataBase, redisCache)
-	paymentDataBase := storage.NewPaymentRepository(dataBase, redisCache)
+	transactionDataBase := storage.NewTransactionRepository(dataBase, redisCache)
 
 	sessionClient, _ := sessionclient.NewSessionClient(
 		context.Background(),
@@ -77,18 +77,18 @@ func New(
 		ssoClientConfig.RetriesCount,
 		tlsConfig,
 	)
-	paymentClient, _ := paymentclient.NewPaymentClient(
+	transactionClient, _ := transactionclient.NewTransactionClient(
 		context.Background(),
 		logger,
-		paymentClientConfig.Address,
-		paymentClientConfig.Timeout,
-		paymentClientConfig.RetriesCount,
+		transactionClientConfig.Address,
+		transactionClientConfig.Timeout,
+		transactionClientConfig.RetriesCount,
 		tlsConfig,
 	)
 
 	authInterceptor := interceptor.NewAuthInterceptor(jwtManager, redisCache)
 	authService := auth.NewAuthService(userClient, sessionClient, roleClient, redisCache, logger)
-	paymentService := payment.NewPaymentService(accountDataBase, paymentClient, paymentDataBase, roleClient, ibanManager, logger)
+	transactionService := transaction.NewTransactionService(accountDataBase, transactionClient, transactionDataBase, roleClient, ibanManager, logger)
 	accountService := account.NewAccountService(accountDataBase, roleClient, ibanManager, logger)
 	userService := user.NewUserService(userClient, roleClient, logger)
 	roleService := role.NewRoleService(roleClient, logger)
@@ -97,7 +97,7 @@ func New(
 
 	gRPCApp := grpcapp.New(
 		logger, grpcPort, tlsConfig, authInterceptor,
-		authService, paymentService, accountService, userService, roleService,
+		authService, transactionService, accountService, userService, roleService,
 	)
 
 	return &App{

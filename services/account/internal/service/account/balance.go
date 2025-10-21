@@ -41,6 +41,7 @@ type BalanceManager interface {
 	UnreserveDeposit(ctx context.Context, req *models.BalanceRequest, event *models.CreateEventRequest) error
 	WithdrawBalance(ctx context.Context, req *models.BalanceRequest, event *models.CreateEventRequest) error
 	DepositBalance(ctx context.Context, req *models.BalanceRequest, event *models.CreateEventRequest) error
+	BlockAccountWithEvent(ctx context.Context, req *models.UpdateAccountRequest, event *models.CreateEventRequest) error
 }
 
 // EventManager определяет методы управления платежами
@@ -54,7 +55,7 @@ func (s *BalanceService) handleOperationError(ctx context.Context, err error, ev
 
 	logger := s.logger.With(
 		zap.String("op:", op),
-		zap.String("payment ID:", event.PaymentID.String()),
+		zap.String("transaction ID:", event.TransactionID.String()),
 	)
 
 	payload := models.BalanceResponsePayload{
@@ -81,7 +82,7 @@ func (s *BalanceService) handleOperationError(ctx context.Context, err error, ev
 	return nil
 }
 
-func (s *BalanceService) createSuccessEvent(paymentID uuid.UUID, eventType string) (*models.CreateEventRequest, error) {
+func (s *BalanceService) createSuccessEvent(transactionID uuid.UUID, eventType string) (*models.CreateEventRequest, error) {
 	payload := models.BalanceResponsePayload{Success: true}
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -90,12 +91,12 @@ func (s *BalanceService) createSuccessEvent(paymentID uuid.UUID, eventType strin
 
 	return &models.CreateEventRequest{
 		Event: &models.Event{
-			ID:        uuid.New(),
-			PaymentID: paymentID,
-			Type:      eventType,
-			CreatedAt: time.Now(),
-			Source:    models.Source,
-			Payload:   payloadBytes,
+			ID:            uuid.New(),
+			TransactionID: transactionID,
+			Type:          eventType,
+			CreatedAt:     time.Now(),
+			Source:        models.Source,
+			Payload:       payloadBytes,
 		},
 	}, nil
 }
@@ -107,9 +108,9 @@ func (s *BalanceService) extractBalanceRequest(event *models.Event) (*models.Bal
 	}
 
 	return &models.BalanceRequest{
-		Code:      payloadReq.AccountCode,
-		Amount:    payloadReq.Amount,
-		PaymentID: event.PaymentID,
+		Code:          payloadReq.AccountCode,
+		Amount:        payloadReq.Amount,
+		TransactionID: event.TransactionID,
 	}, nil
 }
 
@@ -119,12 +120,12 @@ func (s *BalanceService) HandleFreezeRequest(ctx context.Context, event *models.
 
 	logger := s.logger.With(
 		zap.String("op:", op),
-		zap.String("payment ID:", event.PaymentID.String()),
+		zap.String("transaction ID:", event.TransactionID.String()),
 	)
 
 	logger.Info("freeze balance started")
 
-	successEvent, err := s.createSuccessEvent(event.PaymentID, models.EventFreezeResponse)
+	successEvent, err := s.createSuccessEvent(event.TransactionID, models.EventFreezeResponse)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -147,12 +148,12 @@ func (s *BalanceService) HandleUnfreezeRequest(ctx context.Context, event *model
 
 	logger := s.logger.With(
 		zap.String("op:", op),
-		zap.String("payment ID:", event.PaymentID.String()),
+		zap.String("transaction ID:", event.TransactionID.String()),
 	)
 
 	logger.Info("unfreeze balance started")
 
-	successEvent, err := s.createSuccessEvent(event.PaymentID, models.EventUnfreezeResponse)
+	successEvent, err := s.createSuccessEvent(event.TransactionID, models.EventUnfreezeResponse)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -175,12 +176,12 @@ func (s *BalanceService) HandleReserveRequest(ctx context.Context, event *models
 
 	logger := s.logger.With(
 		zap.String("op:", op),
-		zap.String("payment ID:", event.PaymentID.String()),
+		zap.String("transaction ID:", event.TransactionID.String()),
 	)
 
 	logger.Info("reserve balance started")
 
-	successEvent, err := s.createSuccessEvent(event.PaymentID, models.EventReserveResponse)
+	successEvent, err := s.createSuccessEvent(event.TransactionID, models.EventReserveResponse)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -203,12 +204,12 @@ func (s *BalanceService) HandleUnreserveRequest(ctx context.Context, event *mode
 
 	logger := s.logger.With(
 		zap.String("op:", op),
-		zap.String("payment ID:", event.PaymentID.String()),
+		zap.String("transaction ID:", event.TransactionID.String()),
 	)
 
 	logger.Info("unreserve balance started")
 
-	successEvent, err := s.createSuccessEvent(event.PaymentID, models.EventUnreserveResponse)
+	successEvent, err := s.createSuccessEvent(event.TransactionID, models.EventUnreserveResponse)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -231,12 +232,12 @@ func (s *BalanceService) HandleWithdrawRequest(ctx context.Context, event *model
 
 	logger := s.logger.With(
 		zap.String("op:", op),
-		zap.String("payment ID:", event.PaymentID.String()),
+		zap.String("transaction ID:", event.TransactionID.String()),
 	)
 
 	logger.Info("withdraw balance started")
 
-	successEvent, err := s.createSuccessEvent(event.PaymentID, models.EventWithdrawResponse)
+	successEvent, err := s.createSuccessEvent(event.TransactionID, models.EventWithdrawResponse)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -253,18 +254,46 @@ func (s *BalanceService) HandleWithdrawRequest(ctx context.Context, event *model
 	return nil
 }
 
+// HandleRefundRequest откатываем списани средств
+func (s *BalanceService) HandleRefundRequest(ctx context.Context, event *models.Event) error {
+	const op = "service.account.HandleRefundRequest"
+
+	logger := s.logger.With(
+		zap.String("op:", op),
+		zap.String("transaction ID:", event.TransactionID.String()),
+	)
+
+	logger.Info("refund balance started")
+
+	successEvent, err := s.createSuccessEvent(event.TransactionID, models.EventRefundResponse)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	balanceReq, err := s.extractBalanceRequest(event)
+	if err != nil {
+		return s.handleOperationError(ctx, err, successEvent)
+	}
+
+	if err := s.balanceManager.FreezeBalance(ctx, balanceReq, successEvent); err != nil {
+		return s.handleOperationError(ctx, err, successEvent)
+	}
+
+	return nil
+}
+
 // HandleDepositRequest коммитим пополнение средств (пополняем из зарезервированных)
 func (s *BalanceService) HandleDepositRequest(ctx context.Context, event *models.Event) error {
 	const op = "service.account.HandleDepositRequest"
 
 	logger := s.logger.With(
 		zap.String("op:", op),
-		zap.String("payment ID:", event.PaymentID.String()),
+		zap.String("transaction ID:", event.TransactionID.String()),
 	)
 
 	logger.Info("deposit balance started")
 
-	successEvent, err := s.createSuccessEvent(event.PaymentID, models.EventDepositResponse)
+	successEvent, err := s.createSuccessEvent(event.TransactionID, models.EventDepositResponse)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -275,6 +304,34 @@ func (s *BalanceService) HandleDepositRequest(ctx context.Context, event *models
 	}
 
 	if err := s.balanceManager.DepositBalance(ctx, balanceReq, successEvent); err != nil {
+		return s.handleOperationError(ctx, err, successEvent)
+	}
+
+	return nil
+}
+
+// HandleBlockAccount блокируем счет для любых транзакций(+размораживается баланс счета)
+func (s *BalanceService) HandleBlockAccount(ctx context.Context, event *models.Event) error {
+	const op = "service.account.HandleBlockAccount"
+
+	logger := s.logger.With(
+		zap.String("op:", op),
+		zap.String("transaction ID:", event.TransactionID.String()),
+	)
+
+	logger.Info("blocking account started")
+
+	successEvent, err := s.createSuccessEvent(event.TransactionID, models.EventBlockResponse)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	var payloadReq *models.UpdateAccountRequest
+	if err := json.Unmarshal(event.Payload, payloadReq); err != nil {
+		return err
+	}
+
+	if err := s.balanceManager.BlockAccountWithEvent(ctx, payloadReq, successEvent); err != nil {
 		return s.handleOperationError(ctx, err, successEvent)
 	}
 

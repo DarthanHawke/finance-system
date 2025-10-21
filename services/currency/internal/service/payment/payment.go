@@ -1,4 +1,4 @@
-package payment
+package transaction
 
 import (
 	billingerr "billing-service/internal/lib/errors"
@@ -10,28 +10,28 @@ import (
 	"go.uber.org/zap"
 )
 
-type PaymentService struct {
-	internalPayment InternalPayment
-	accountManage   AccountManage
-	roleManage      RoleManage
-	logger          *zap.Logger
+type TransactionService struct {
+	internalTransaction InternalTransaction
+	accountManage       AccountManage
+	roleManage          RoleManage
+	logger              *zap.Logger
 }
 
-func NewPaymentService(
-	internalPayment InternalPayment,
+func NewTransactionService(
+	internalTransaction InternalTransaction,
 	accountManage AccountManage,
 	roleManage RoleManage,
 	logger *zap.Logger,
-) *PaymentService {
-	return &PaymentService{
-		internalPayment: internalPayment,
-		accountManage:   accountManage,
-		roleManage:      roleManage,
-		logger:          logger.With(zap.String("component", "billing_service")),
+) *TransactionService {
+	return &TransactionService{
+		internalTransaction: internalTransaction,
+		accountManage:       accountManage,
+		roleManage:          roleManage,
+		logger:              logger.With(zap.String("component", "billing_service")),
 	}
 }
 
-type InternalPayment interface {
+type InternalTransaction interface {
 	ConvertCurrency(ctx context.Context, operationID uuid.UUID, fromaccountCode, toaccountCode *models.CurrencyAccount, amount float64, description string) error
 	UpdateCurrencyRate(ctx context.Context, fromCurrency, toCurrency string, rate float64) error
 	GetCurrencyRate(ctx context.Context, fromCurrency, toCurrency string) (float64, error)
@@ -49,8 +49,8 @@ type RoleManage interface {
 }
 
 // ConvertCurrency конвертирует средства между счетами в разных валютах
-func (s *PaymentService) ConvertCurrency(ctx context.Context, fromaccountCode, toaccountCode string, amount float64, description string) (uuid.UUID, error) {
-	const op = "service.payment.ConvertCurrency"
+func (s *TransactionService) ConvertCurrency(ctx context.Context, fromaccountCode, toaccountCode string, amount float64, description string) (uuid.UUID, error) {
+	const op = "service.transaction.ConvertCurrency"
 
 	logger := s.logger.With(
 		zap.String("op", op),
@@ -69,19 +69,19 @@ func (s *PaymentService) ConvertCurrency(ctx context.Context, fromaccountCode, t
 	}
 
 	// Проверка прав доступа
-	allowed, err := s.roleManage.CheckPermission(ctx, userID, userID, models.PaymentCreate)
+	allowed, err := s.roleManage.CheckPermission(ctx, userID, userID, models.TransactionCreate)
 	if err != nil {
 		logger.Error("failed to check permission",
 			zap.Error(err),
 			zap.String("UserID", userID.String()),
-			zap.String("Permission name", models.PaymentCreate),
+			zap.String("Permission name", models.TransactionCreate),
 		)
 		return uuid.Nil, fmt.Errorf("failed to check permission: %v: %w", op, err)
 	}
 	if !allowed {
 		logger.Error("permission denied",
 			zap.Error(err),
-			zap.String("Permission name", models.PaymentCreate),
+			zap.String("Permission name", models.TransactionCreate),
 		)
 		return uuid.Nil, fmt.Errorf("permission denied %v: %w", op, err)
 	}
@@ -107,7 +107,7 @@ func (s *PaymentService) ConvertCurrency(ctx context.Context, fromaccountCode, t
 	operationID := uuid.New()
 
 	// Выполняем конвертацию
-	if err := s.internalPayment.ConvertCurrency(ctx, operationID, fromAccount, toAccount, amount, description); err != nil {
+	if err := s.internalTransaction.ConvertCurrency(ctx, operationID, fromAccount, toAccount, amount, description); err != nil {
 		logger.Error("failed to convert currency",
 			zap.Error(err),
 		)
@@ -118,8 +118,8 @@ func (s *PaymentService) ConvertCurrency(ctx context.Context, fromaccountCode, t
 }
 
 // UpdateCurrencyRate обновляет курс валют (админская функция)
-func (s *PaymentService) UpdateCurrencyRate(ctx context.Context, fromCurrency, toCurrency string, rate float64) error {
-	const op = "service.payment.UpdateCurrencyRate"
+func (s *TransactionService) UpdateCurrencyRate(ctx context.Context, fromCurrency, toCurrency string, rate float64) error {
+	const op = "service.transaction.UpdateCurrencyRate"
 
 	logger := s.logger.With(
 		zap.String("op", op),
@@ -135,7 +135,7 @@ func (s *PaymentService) UpdateCurrencyRate(ctx context.Context, fromCurrency, t
 
 	currencyEntityId, err := s.roleManage.GetEntityID(ctx, models.CurrencyEntity)
 	if err != nil {
-		return fmt.Errorf("%s: failed to get payment system entity: %w", op, err)
+		return fmt.Errorf("%s: failed to get transaction system entity: %w", op, err)
 	}
 
 	// Проверка прав доступа (только для администраторов)
@@ -156,7 +156,7 @@ func (s *PaymentService) UpdateCurrencyRate(ctx context.Context, fromCurrency, t
 		return fmt.Errorf("permission denied %v: %w", op, err)
 	}
 
-	if err := s.internalPayment.UpdateCurrencyRate(ctx, fromCurrency, toCurrency, rate); err != nil {
+	if err := s.internalTransaction.UpdateCurrencyRate(ctx, fromCurrency, toCurrency, rate); err != nil {
 		logger.Error("failed to update currency rate",
 			zap.Error(err),
 		)
@@ -167,11 +167,11 @@ func (s *PaymentService) UpdateCurrencyRate(ctx context.Context, fromCurrency, t
 }
 
 // GetCurrencyRate возвращает текущий курс обмена между валютами
-func (s *PaymentService) GetCurrencyRate(
+func (s *TransactionService) GetCurrencyRate(
 	ctx context.Context,
 	fromCurrency, toCurrency string,
 ) (float64, error) {
-	const op = "service.payment.GetCurrencyRate"
+	const op = "service.transaction.GetCurrencyRate"
 
 	logger := s.logger.With(
 		zap.String("op", op),
@@ -203,7 +203,7 @@ func (s *PaymentService) GetCurrencyRate(
 	}
 
 	// Получение курса валют
-	rate, err := s.internalPayment.GetCurrencyRate(ctx, fromCurrency, toCurrency)
+	rate, err := s.internalTransaction.GetCurrencyRate(ctx, fromCurrency, toCurrency)
 	if err != nil {
 		logger.Error("failed to get currency rate",
 			zap.Error(err),

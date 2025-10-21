@@ -4,16 +4,16 @@ import (
 	httpapp "client-service/internal/app/http"
 	accountclient "client-service/internal/clients/grpc/billing/account"
 	authclient "client-service/internal/clients/grpc/billing/auth"
-	paymentclient "client-service/internal/clients/grpc/billing/payment"
 	roleclient "client-service/internal/clients/grpc/billing/role"
+	transactionclient "client-service/internal/clients/grpc/billing/transaction"
 	userclient "client-service/internal/clients/grpc/billing/user"
 
 	"client-service/internal/config"
 
 	"client-service/internal/service/account"
 	"client-service/internal/service/auth"
-	"client-service/internal/service/payment"
 	"client-service/internal/service/role"
+	"client-service/internal/service/transaction"
 	"client-service/internal/service/user"
 
 	"context"
@@ -41,7 +41,7 @@ func New(
 		billingCfg.RetriesCount,
 		tlsConfig,
 	)
-	paymentClient, _ := paymentclient.NewPaymentClient(
+	transactionClient, _ := transactionclient.NewTransactionClient(
 		context.Background(),
 		logger,
 		billingCfg.Address,
@@ -75,13 +75,13 @@ func New(
 	)
 
 	authService := auth.NewAuthService(authClient, logger)
-	paymentService := payment.NewPaymentService(paymentClient, logger)
+	transactionService := transaction.NewTransactionService(transactionClient, logger)
 	accountService := account.NewAccountService(accountClient, logger)
 
 	userService := user.NewUserService(userClient, logger)
 	roleService := role.NewRoleService(roleClient, logger)
 
-	httpServer := httpapp.New(logger, httpPort, authService, paymentService, accountService, userService, roleService)
+	httpServer := httpapp.New(logger, httpPort, authService, transactionService, accountService, userService, roleService)
 	return &App{
 		HTTPServer: httpServer,
 	}

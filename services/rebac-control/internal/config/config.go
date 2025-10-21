@@ -8,15 +8,15 @@ import (
 )
 
 type Configuration struct {
-	Env           string `mapstructure:"ENV" env-default:"prod"`
-	GRPSServer    `mapstructure:",squash"`
-	TLS           `mapstructure:",squash"`
-	DataBase      `mapstructure:",squash"`
-	Redis         `mapstructure:",squash"`
-	JWT           `mapstructure:",squash"`
-	JWTKeys       `mapstructure:",squash"`
-	SSOClient     `mapstructure:",squash"`
-	PaymentClient `mapstructure:",squash"`
+	Env               string `mapstructure:"ENV" env-default:"prod"`
+	GRPSServer        `mapstructure:",squash"`
+	TLS               `mapstructure:",squash"`
+	DataBase          `mapstructure:",squash"`
+	Redis             `mapstructure:",squash"`
+	JWT               `mapstructure:",squash"`
+	JWTKeys           `mapstructure:",squash"`
+	SSOClient         `mapstructure:",squash"`
+	TransactionClient `mapstructure:",squash"`
 }
 
 type GRPSServer struct {
@@ -35,7 +35,7 @@ type DataBase struct {
 	Port     int    `mapstructure:"DB_PORT" env-default:"5432"`
 	User     string `mapstructure:"DB_USER" env-default:"postgres"`
 	Password string `mapstructure:"DB_PASSWORD" env-default:"secret"`
-	Name     string `mapstructure:"DB_NAME" env-default:"payment_db"`
+	Name     string `mapstructure:"DB_NAME" env-default:"transaction_db"`
 	SSLMode  string `mapstructure:"SSL_MODE" env-default:"disable"`
 	RootCert string `mapstructure:"DB_ROOT_CERT" env-default:""`
 	Cert     string `mapstructure:"DB_CERT" env-default:""`
@@ -51,7 +51,7 @@ type Redis struct {
 type JWT struct {
 	AccessTokenTTL  time.Duration `mapstructure:"JWT_ACCESS_TOKEN_TTL" env-default:"15m"`
 	RefreshTokenTTL time.Duration `mapstructure:"JWT_REFRESH_TOKEN_TTL" env-default:"168h"`
-	Issuer          string        `mapstructure:"JWT_ISSUER" env-default:"payment-system"`
+	Issuer          string        `mapstructure:"JWT_ISSUER" env-default:"finance-system"`
 }
 
 type JWTKeys struct {
@@ -63,10 +63,10 @@ type SSOClient struct {
 	Timeout      time.Duration `mapstructure:"CLIENT_SSO_TIMEOUT" env-default:"10s"`
 	RetriesCount int           `mapstructure:"CLIENT_SSO_RETRIES" env-default:"5"`
 }
-type PaymentClient struct {
-	Address      string        `mapstructure:"CLIENT_PAYMENT_ADRESS" env-default:"payment-service:50058"`
-	Timeout      time.Duration `mapstructure:"CLIENT_PAYMENT_TIMEOUT" env-default:"10s"`
-	RetriesCount int           `mapstructure:"CLIENT_PAYMENT_RETRIES" env-default:"5"`
+type TransactionClient struct {
+	Address      string        `mapstructure:"CLIENT_TRANSACTION_ADRESS" env-default:"transaction-service:50058"`
+	Timeout      time.Duration `mapstructure:"CLIENT_TRANSACTION_TIMEOUT" env-default:"10s"`
+	RetriesCount int           `mapstructure:"CLIENT_TRANSACTION_RETRIES" env-default:"5"`
 }
 
 type SystemUsers struct {

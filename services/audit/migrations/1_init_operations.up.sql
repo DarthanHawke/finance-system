@@ -10,7 +10,7 @@ CREATE TABLE operations (
     -- Идентификатор операции (может объединять несколько записей)
     operation_id UUID NOT NULL,
     
-    -- Тип операции: payment, transfer, conversion, deposit, withdrawal
+    -- Тип операции: transaction, transfer, conversion, deposit, withdrawal
     operation_type VARCHAR(50) NOT NULL,
     
     -- Сервис-источник операции
@@ -23,7 +23,7 @@ CREATE TABLE operations (
     user_id UUID,
     
     -- Ссылка на платеж
-    payment_id UUID,
+    transaction_id UUID,
     
     -- Исходная валюта
     from_currency VARCHAR(3),
@@ -60,4 +60,4 @@ COMMENT ON COLUMN operations.operation_type IS 'Тип операции';
 COMMENT ON COLUMN operations.service_source IS 'Сервис-источник операции';
 COMMENT ON COLUMN operations.account_code IS 'Код счёта, к которому относится операция';
 COMMENT ON COLUMN operations.user_id IS 'Идентификатор пользователя, связанного с операцией';
-COMMENT ON COLUMN operations.payment_id IS 'Ссылка на связанный платёж';
+COMMENT ON COLUMN operations.transaction_id IS 'Ссылка на связанный платёж';

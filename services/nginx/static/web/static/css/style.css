@@ -293,6 +293,6 @@ button:hover {
 }
 
 .icon-account::before { content: "💳"; margin-right: 0.5rem; }
-.icon-payment::before { content: "💰"; margin-right: 0.5rem; }
+.icon-transaction::before { content: "💰"; margin-right: 0.5rem; }
 .icon-profile::before { content: "👤"; margin-right: 0.5rem; }
 .icon-logout::before { content: "🚪"; margin-right: 0.5rem; }

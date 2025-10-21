@@ -1,4 +1,4 @@
-package payment
+package transaction
 
 import (
 	billingerr "billing-service/internal/lib/errors"
@@ -11,50 +11,50 @@ import (
 	"go.uber.org/zap"
 )
 
-type PaymentService struct {
-	accountManage   AccountManage
-	externalPayment ExternalPayment
-	internalPayment InternalPayment
-	roleManage      RoleManage
-	ibanGenerator   IbanGenerator
-	logger          *zap.Logger
+type TransactionService struct {
+	accountManage       AccountManage
+	externalTransaction ExternalTransaction
+	internalTransaction InternalTransaction
+	roleManage          RoleManage
+	ibanGenerator       IbanGenerator
+	logger              *zap.Logger
 }
 
-func NewPaymentService(
+func NewTransactionService(
 	accountManage AccountManage,
-	externalPayment ExternalPayment,
-	internalPayment InternalPayment,
+	externalTransaction ExternalTransaction,
+	internalTransaction InternalTransaction,
 	roleManage RoleManage,
 	ibanGenerator IbanGenerator,
 	logger *zap.Logger,
-) *PaymentService {
-	return &PaymentService{
-		accountManage:   accountManage,
-		externalPayment: externalPayment,
-		internalPayment: internalPayment,
-		roleManage:      roleManage,
-		ibanGenerator:   ibanGenerator,
-		logger:          logger.With(zap.String("component", "billing_service")),
+) *TransactionService {
+	return &TransactionService{
+		accountManage:       accountManage,
+		externalTransaction: externalTransaction,
+		internalTransaction: internalTransaction,
+		roleManage:          roleManage,
+		ibanGenerator:       ibanGenerator,
+		logger:              logger.With(zap.String("component", "billing_service")),
 	}
 }
 
-type ExternalPayment interface {
-	CreatePayment(
+type ExternalTransaction interface {
+	CreateTransaction(
 		ctx context.Context,
 		sender, receiver string,
 		amount float64,
 		currency string, description string,
 	) (uuid.UUID, error)
-	GetPayment(ctx context.Context, paymentID uuid.UUID) (*models.Payment, error)
-	UpdateStatusPayment(ctx context.Context, paymentID uuid.UUID, status string) error
-	CancelPayment(ctx context.Context, paymentID uuid.UUID) error
+	GetTransaction(ctx context.Context, transactionID uuid.UUID) (*models.Transaction, error)
+	UpdateStatusTransaction(ctx context.Context, transactionID uuid.UUID, status string) error
+	CancelTransaction(ctx context.Context, transactionID uuid.UUID) error
 }
 
-type InternalPayment interface {
-	GetPaymentsByUser(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
-	Deposit(ctx context.Context, operationID uuid.UUID, accountCode string, amount float64, paymentID uuid.UUID, description string) error
-	Withdraw(ctx context.Context, operationID uuid.UUID, accountCode string, amount float64, paymentID uuid.UUID, description string) error
-	Transfer(ctx context.Context, operationID uuid.UUID, fromAccount, toAccount *models.CurrencyAccount, amount float64, paymentID uuid.UUID, description string) error
+type InternalTransaction interface {
+	GetTransactionsByUser(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
+	Deposit(ctx context.Context, operationID uuid.UUID, accountCode string, amount float64, transactionID uuid.UUID, description string) error
+	Withdraw(ctx context.Context, operationID uuid.UUID, accountCode string, amount float64, transactionID uuid.UUID, description string) error
+	Transfer(ctx context.Context, operationID uuid.UUID, fromAccount, toAccount *models.CurrencyAccount, amount float64, transactionID uuid.UUID, description string) error
 	ConvertCurrency(ctx context.Context, operationID uuid.UUID, fromaccountCode, toaccountCode *models.CurrencyAccount, amount float64, description string) error
 	GetOperationHistory(ctx context.Context, accountCode string, limit, offset int) ([]models.BalanceOperation, error)
 	UpdateCurrencyRate(ctx context.Context, fromCurrency, toCurrency string, rate float64) error
@@ -80,31 +80,31 @@ type IbanGenerator interface {
 }
 
 // Transfer переводит средства
-func (s *PaymentService) Transfer(
+func (s *TransactionService) Transfer(
 	ctx context.Context,
 	sender, receiver string,
 	amount float64,
 	description string,
 ) (uuid.UUID, error) {
-	const op = "service.payment.Transfer"
+	const op = "service.transaction.Transfer"
 
 	logger := s.logger.With(
 		zap.String("op", op),
 	)
 
-	logger.Info("Creating payment")
+	logger.Info("Creating transaction")
 
 	userID, ok := ctx.Value(models.UserIDKey).(uuid.UUID)
 	if !ok {
-		return uuid.Nil, fmt.Errorf("%s: %w", op, billingerr.ErrPaymentCancel)
+		return uuid.Nil, fmt.Errorf("%s: %w", op, billingerr.ErrTransactionCancel)
 	}
 
-	allowed, err := s.roleManage.CheckPermission(ctx, userID, userID, models.PaymentCreate)
+	allowed, err := s.roleManage.CheckPermission(ctx, userID, userID, models.TransactionCreate)
 	if err != nil {
 		logger.Error("failed to check permission",
 			zap.Error(err),
 			zap.String("UserID", userID.String()),
-			zap.String("Permission name", models.PaymentCreate),
+			zap.String("Permission name", models.TransactionCreate),
 		)
 		return uuid.Nil, fmt.Errorf("failed to check permission: %v: %w", op, err)
 	}
@@ -112,7 +112,7 @@ func (s *PaymentService) Transfer(
 		logger.Error("permission denied",
 			zap.Error(err),
 			zap.String("UserID", userID.String()),
-			zap.String("Permission name", models.PaymentCreate),
+			zap.String("Permission name", models.TransactionCreate),
 		)
 		return uuid.Nil, fmt.Errorf("permission denied %v: %w", op, err)
 	}
@@ -145,17 +145,17 @@ func (s *PaymentService) Transfer(
 			return uuid.Nil, fmt.Errorf("%s: %w", op, err)
 		}
 	}
-	var paymentID uuid.UUID
+	var transactionID uuid.UUID
 	if receiverAccount == nil {
 		err := s.ibanGenerator.ValidateExternal(receiver)
 		if err != nil {
-			logger.Error("invalid receiver payment external account",
+			logger.Error("invalid receiver transaction external account",
 				zap.Error(err),
 				zap.String("receiver", receiver),
 			)
-			return uuid.Nil, fmt.Errorf("invalid receiver payment account: %v: %w", op, err)
+			return uuid.Nil, fmt.Errorf("invalid receiver transaction account: %v: %w", op, err)
 		}
-		paymentID, err = s.externalTransfer(ctx, sender, receiver, amount, senderAccount.Currency, description)
+		transactionID, err = s.externalTransfer(ctx, sender, receiver, amount, senderAccount.Currency, description)
 		if err != nil {
 			logger.Error("cant do external transfer", zap.Error(err))
 			return uuid.Nil, fmt.Errorf("%s: %w", op, billingerr.ErrTransfer)
@@ -163,49 +163,49 @@ func (s *PaymentService) Transfer(
 	} else {
 		err := s.ibanGenerator.ValidateInternal(receiver)
 		if err != nil {
-			logger.Error("invalid receiver payment internal account",
+			logger.Error("invalid receiver transaction internal account",
 				zap.Error(err),
 				zap.String("receiver", receiver),
 			)
-			return uuid.Nil, fmt.Errorf("invalid receiver payment account: %v: %w", op, err)
+			return uuid.Nil, fmt.Errorf("invalid receiver transaction account: %v: %w", op, err)
 		}
 
-		paymentID, err = s.internalTransfer(ctx, senderAccount, receiverAccount, amount, description)
+		transactionID, err = s.internalTransfer(ctx, senderAccount, receiverAccount, amount, description)
 		if err != nil {
 			logger.Error("cant do internal transfer", zap.Error(err))
 			return uuid.Nil, fmt.Errorf("%s: %w", op, billingerr.ErrTransfer)
 		}
 	}
 
-	return paymentID, nil
+	return transactionID, nil
 }
 
 // externalTtransfer переводит средства между другим сервисом
-func (s *PaymentService) externalTransfer(
+func (s *TransactionService) externalTransfer(
 	ctx context.Context,
 	sender, receiver string,
 	amount float64,
 	currency, description string,
 ) (uuid.UUID, error) {
-	const op = "service.payment.externalTtransfer"
+	const op = "service.transaction.externalTtransfer"
 
 	logger := s.logger.With(
 		zap.String("op", op),
 	)
 
-	logger.Info("Creating payment")
+	logger.Info("Creating transaction")
 
 	userID, ok := ctx.Value(models.UserIDKey).(uuid.UUID)
 	if !ok {
-		return uuid.Nil, fmt.Errorf("%s: %w", op, billingerr.ErrPaymentCancel)
+		return uuid.Nil, fmt.Errorf("%s: %w", op, billingerr.ErrTransactionCancel)
 	}
 
-	allowed, err := s.roleManage.CheckPermission(ctx, userID, userID, models.PaymentCreate)
+	allowed, err := s.roleManage.CheckPermission(ctx, userID, userID, models.TransactionCreate)
 	if err != nil {
 		logger.Error("failed to check permission",
 			zap.Error(err),
 			zap.String("UserID", userID.String()),
-			zap.String("Permission name", models.PaymentCreate),
+			zap.String("Permission name", models.TransactionCreate),
 		)
 		return uuid.Nil, fmt.Errorf("failed to check permission: %v: %w", op, err)
 	}
@@ -213,7 +213,7 @@ func (s *PaymentService) externalTransfer(
 		logger.Error("permission denied",
 			zap.Error(err),
 			zap.String("UserID", userID.String()),
-			zap.String("Permission name", models.PaymentCreate),
+			zap.String("Permission name", models.TransactionCreate),
 		)
 		return uuid.Nil, fmt.Errorf("permission denied %v: %w", op, err)
 	}
@@ -235,18 +235,18 @@ func (s *PaymentService) externalTransfer(
 		return uuid.Nil, fmt.Errorf("%s: %w", op, billingerr.ErrInsufficientFunds)
 	}
 
-	paymentId, err := s.externalPayment.CreatePayment(ctx, sender, receiver, amount, currency, description)
+	transactionId, err := s.externalTransaction.CreateTransaction(ctx, sender, receiver, amount, currency, description)
 	if err != nil {
-		logger.Error("cant create payment", zap.Error(err))
-		return uuid.Nil, fmt.Errorf("%s: %w", op, billingerr.ErrPaymentCancel)
+		logger.Error("cant create transaction", zap.Error(err))
+		return uuid.Nil, fmt.Errorf("%s: %w", op, billingerr.ErrTransactionCancel)
 	}
 
 	// 4. Списание средств с резервированием (Saga pattern)
 	operationID := uuid.New()
-	if err := s.internalPayment.Withdraw(ctx, operationID, sender, amount, paymentId, description); err != nil {
+	if err := s.internalTransaction.Withdraw(ctx, operationID, sender, amount, transactionId, description); err != nil {
 		// Компенсирующее действие - отмена платежа
-		if cancelErr := s.externalPayment.CancelPayment(ctx, paymentId); cancelErr != nil {
-			logger.Error("failed to cancel payment after withdraw failure",
+		if cancelErr := s.externalTransaction.CancelTransaction(ctx, transactionId); cancelErr != nil {
+			logger.Error("failed to cancel transaction after withdraw failure",
 				zap.NamedError("withdraw_error", err),
 				zap.NamedError("cancel_error", cancelErr),
 			)
@@ -254,32 +254,32 @@ func (s *PaymentService) externalTransfer(
 
 		logger.Error("failed to withdraw funds",
 			zap.Error(err),
-			zap.String("payment_id", paymentId.String()),
+			zap.String("transaction_id", transactionId.String()),
 		)
-		return uuid.Nil, fmt.Errorf("%s: %w", op, billingerr.ErrPaymentCancel)
+		return uuid.Nil, fmt.Errorf("%s: %w", op, billingerr.ErrTransactionCancel)
 	}
 
-	err = s.roleManage.CreateEntityWithID(ctx, paymentId, models.PaymentEntity)
+	err = s.roleManage.CreateEntityWithID(ctx, transactionId, models.TransactionEntity)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to create user entity in ReBAC: %v", err)
 	}
 
-	err = s.roleManage.CreateRelation(ctx, userID, paymentId, models.ClientRelationType)
+	err = s.roleManage.CreateRelation(ctx, userID, transactionId, models.ClientRelationType)
 	if err != nil {
 		logger.Error("failed to create self-ownership relation in ReBAC", zap.Error(err))
 		return uuid.Nil, fmt.Errorf("failed to create self-ownership relation in ReBAC: %v", err)
 	}
-	return paymentId, nil
+	return transactionId, nil
 }
 
-// internalTransfer переводит средства между счетами сервиса Payment
-func (s *PaymentService) internalTransfer(
+// internalTransfer переводит средства между счетами сервиса Transaction
+func (s *TransactionService) internalTransfer(
 	ctx context.Context,
 	sender, receiver *models.CurrencyAccount,
 	amount float64,
 	description string,
 ) (uuid.UUID, error) {
-	const op = "service.payment.internalTransfer"
+	const op = "service.transaction.internalTransfer"
 
 	logger := s.logger.With(
 		zap.String("op", op),
@@ -298,25 +298,25 @@ func (s *PaymentService) internalTransfer(
 	}
 
 	// Проверка прав доступа отправителя
-	allowed, err := s.roleManage.CheckPermission(ctx, userID, userID, models.PaymentCreate)
+	allowed, err := s.roleManage.CheckPermission(ctx, userID, userID, models.TransactionCreate)
 	if err != nil {
 		logger.Error("failed to check permission",
 			zap.Error(err),
 			zap.String("UserID", userID.String()),
-			zap.String("Permission name", models.PaymentCreate),
+			zap.String("Permission name", models.TransactionCreate),
 		)
 		return uuid.Nil, fmt.Errorf("failed to check permission: %v: %w", op, err)
 	}
 	if !allowed {
 		logger.Error("permission denied",
 			zap.Error(err),
-			zap.String("Permission name", models.PaymentCreate),
+			zap.String("Permission name", models.TransactionCreate),
 		)
 		return uuid.Nil, fmt.Errorf("permission denied %v: %w", op, err)
 	}
 
 	// Создаем платеж
-	paymentID, err := s.externalPayment.CreatePayment(
+	transactionID, err := s.externalTransaction.CreateTransaction(
 		ctx,
 		sender.AccountCode,
 		receiver.AccountCode,
@@ -325,7 +325,7 @@ func (s *PaymentService) internalTransfer(
 		description,
 	)
 	if err != nil {
-		logger.Error("failed to create payment for transfer",
+		logger.Error("failed to create transaction for transfer",
 			zap.Error(err),
 		)
 		return uuid.Nil, fmt.Errorf("%s: %w", op, err)
@@ -335,36 +335,36 @@ func (s *PaymentService) internalTransfer(
 	operationID := uuid.New()
 
 	// Выполняем перевод
-	if err := s.internalPayment.Transfer(ctx, operationID, sender, receiver, amount, paymentID, description); err != nil {
+	if err := s.internalTransaction.Transfer(ctx, operationID, sender, receiver, amount, transactionID, description); err != nil {
 		logger.Error("failed to transfer",
 			zap.Error(err),
 		)
 		// Отменяем платеж в случае ошибки
-		_ = s.externalPayment.CancelPayment(ctx, paymentID)
+		_ = s.externalTransaction.CancelTransaction(ctx, transactionID)
 		return uuid.Nil, fmt.Errorf("%s: %w", op, err)
 	}
-	err = s.roleManage.CreateEntityWithID(ctx, paymentID, models.PaymentEntity)
+	err = s.roleManage.CreateEntityWithID(ctx, transactionID, models.TransactionEntity)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to create user entity in ReBAC: %v", err)
 	}
 
-	err = s.roleManage.CreateRelation(ctx, userID, paymentID, models.ClientRelationType)
+	err = s.roleManage.CreateRelation(ctx, userID, transactionID, models.ClientRelationType)
 	if err != nil {
 		logger.Error("failed to create self-ownership relation in ReBAC", zap.Error(err))
 		return uuid.Nil, fmt.Errorf("failed to create self-ownership relation in ReBAC: %v", err)
 	}
 
-	err = s.externalPayment.UpdateStatusPayment(ctx, paymentID, "completed")
+	err = s.externalTransaction.UpdateStatusTransaction(ctx, transactionID, "completed")
 	if err != nil {
-		return paymentID, fmt.Errorf("cant update payment status to completed: %v", err)
+		return transactionID, fmt.Errorf("cant update transaction status to completed: %v", err)
 	}
 
-	return paymentID, nil
+	return transactionID, nil
 }
 
 // Deposit пополняет счет пользователя
-func (s *PaymentService) Deposit(ctx context.Context, accountCode string, amount float64, description string) (uuid.UUID, error) {
-	const op = "service.payment.Deposit"
+func (s *TransactionService) Deposit(ctx context.Context, accountCode string, amount float64, description string) (uuid.UUID, error) {
+	const op = "service.transaction.Deposit"
 
 	logger := s.logger.With(
 		zap.String("op", op),
@@ -381,19 +381,19 @@ func (s *PaymentService) Deposit(ctx context.Context, accountCode string, amount
 		return uuid.Nil, fmt.Errorf("%s: %w", op, billingerr.ErrInvalidUserID)
 	}
 
-	allowed, err := s.roleManage.CheckPermission(ctx, userID, userID, models.PaymentCreate)
+	allowed, err := s.roleManage.CheckPermission(ctx, userID, userID, models.TransactionCreate)
 	if err != nil {
 		logger.Error("failed to check permission",
 			zap.Error(err),
 			zap.String("UserID", userID.String()),
-			zap.String("Permission name", models.PaymentCreate),
+			zap.String("Permission name", models.TransactionCreate),
 		)
 		return uuid.Nil, fmt.Errorf("failed to check permission: %v: %w", op, err)
 	}
 	if !allowed {
 		logger.Error("permission denied",
 			zap.Error(err),
-			zap.String("Permission name", models.PaymentCreate),
+			zap.String("Permission name", models.TransactionCreate),
 		)
 		return uuid.Nil, fmt.Errorf("permission denied %v: %w", op, err)
 	}
@@ -408,7 +408,7 @@ func (s *PaymentService) Deposit(ctx context.Context, accountCode string, amount
 	}
 
 	// Создаем платеж (внешнее пополнение)
-	paymentID, err := s.externalPayment.CreatePayment(
+	transactionID, err := s.externalTransaction.CreateTransaction(
 		ctx,
 		"external",  // источник - внешний
 		accountCode, // получатель
@@ -417,7 +417,7 @@ func (s *PaymentService) Deposit(ctx context.Context, accountCode string, amount
 		description,
 	)
 	if err != nil {
-		logger.Error("failed to create payment for deposit",
+		logger.Error("failed to create transaction for deposit",
 			zap.Error(err),
 		)
 		return uuid.Nil, fmt.Errorf("%s: %w", op, err)
@@ -427,164 +427,164 @@ func (s *PaymentService) Deposit(ctx context.Context, accountCode string, amount
 	operationID := uuid.New()
 
 	// Выполняем пополнение
-	if err := s.internalPayment.Deposit(ctx, operationID, accountCode, amount, paymentID, description); err != nil {
+	if err := s.internalTransaction.Deposit(ctx, operationID, accountCode, amount, transactionID, description); err != nil {
 		logger.Error("failed to deposit",
 			zap.Error(err),
 		)
 		// Отменяем платеж в случае ошибки
-		_ = s.externalPayment.CancelPayment(ctx, paymentID)
+		_ = s.externalTransaction.CancelTransaction(ctx, transactionID)
 		return uuid.Nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	err = s.roleManage.CreateEntityWithID(ctx, paymentID, models.PaymentEntity)
+	err = s.roleManage.CreateEntityWithID(ctx, transactionID, models.TransactionEntity)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to create user entity in ReBAC: %v", err)
 	}
 
-	err = s.roleManage.CreateRelation(ctx, userID, paymentID, models.ClientRelationType)
+	err = s.roleManage.CreateRelation(ctx, userID, transactionID, models.ClientRelationType)
 	if err != nil {
 		logger.Error("failed to create self-ownership relation in ReBAC", zap.Error(err))
 		return uuid.Nil, fmt.Errorf("failed to create self-ownership relation in ReBAC: %v", err)
 	}
 
-	err = s.externalPayment.UpdateStatusPayment(ctx, paymentID, "completed")
+	err = s.externalTransaction.UpdateStatusTransaction(ctx, transactionID, "completed")
 	if err != nil {
-		return paymentID, fmt.Errorf("cant update payment status to completed: %v", err)
+		return transactionID, fmt.Errorf("cant update transaction status to completed: %v", err)
 	}
 
-	return paymentID, nil
+	return transactionID, nil
 }
 
-// GetPayment - возращает информацию о платеже
-func (s *PaymentService) GetPayment(
+// GetTransaction - возращает информацию о платеже
+func (s *TransactionService) GetTransaction(
 	ctx context.Context,
-	paymentID uuid.UUID,
-) (*models.Payment, error) {
-	const op = "service.payment.GetPayment"
+	transactionID uuid.UUID,
+) (*models.Transaction, error) {
+	const op = "service.transaction.GetTransaction"
 
 	logger := s.logger.With(
 		zap.String("op", op),
 	)
 
-	logger.Info("Starting getting payment")
+	logger.Info("Starting getting transaction")
 
 	userID, ok := ctx.Value(models.UserIDKey).(uuid.UUID)
 	if !ok {
-		return nil, fmt.Errorf("%s: %w", op, billingerr.ErrPaymentCancel)
+		return nil, fmt.Errorf("%s: %w", op, billingerr.ErrTransactionCancel)
 	}
 
-	allowed, err := s.roleManage.CheckPermission(ctx, userID, paymentID, models.PaymentRead)
+	allowed, err := s.roleManage.CheckPermission(ctx, userID, transactionID, models.TransactionRead)
 	if err != nil {
 		logger.Error("failed to check permission",
 			zap.Error(err),
 			zap.String("UserID", userID.String()),
-			zap.String("Permission name", models.PaymentRead),
+			zap.String("Permission name", models.TransactionRead),
 		)
 		return nil, fmt.Errorf("failed to check permission: %v: %w", op, err)
 	}
 	if !allowed {
 		logger.Error("permission denied",
 			zap.Error(err),
-			zap.String("Permission name", models.PaymentRead),
+			zap.String("Permission name", models.TransactionRead),
 		)
 		return nil, fmt.Errorf("permission denied %v: %w", op, err)
 	}
 
-	payment, err := s.externalPayment.GetPayment(ctx, paymentID)
+	transaction, err := s.externalTransaction.GetTransaction(ctx, transactionID)
 	if err != nil {
-		logger.Error("cant get payment", zap.Error(err))
+		logger.Error("cant get transaction", zap.Error(err))
 
-		return nil, fmt.Errorf("%s: %w", op, billingerr.ErrGetPayment)
+		return nil, fmt.Errorf("%s: %w", op, billingerr.ErrGetTransaction)
 	}
-	return payment, nil
+	return transaction, nil
 }
 
-// GetAllPayment - возвращает все платежи пользователя
-func (s *PaymentService) GetAllPayment(ctx context.Context, targetID uuid.UUID) ([]models.Payment, error) {
-	const op = "service.payment.GetAllPayment"
+// GetAllTransaction - возвращает все платежи пользователя
+func (s *TransactionService) GetAllTransaction(ctx context.Context, targetID uuid.UUID) ([]models.Transaction, error) {
+	const op = "service.transaction.GetAllTransaction"
 
 	logger := s.logger.With(
 		zap.String("op", op),
 	)
 
-	logger.Info("Getting payment")
+	logger.Info("Getting transaction")
 
 	userID, ok := ctx.Value(models.UserIDKey).(uuid.UUID)
 	if !ok {
-		return nil, fmt.Errorf("%s: %w", op, billingerr.ErrGetPayment)
+		return nil, fmt.Errorf("%s: %w", op, billingerr.ErrGetTransaction)
 	}
 
 	if targetID == uuid.Nil {
 		targetID = userID
 	}
 
-	allowed, err := s.roleManage.CheckPermission(ctx, userID, targetID, models.PaymentReadAll)
+	allowed, err := s.roleManage.CheckPermission(ctx, userID, targetID, models.TransactionReadAll)
 	if err != nil {
 		logger.Error("failed to check permission",
 			zap.Error(err),
 			zap.String("UserID", userID.String()),
-			zap.String("Permission name", models.PaymentReadAll),
+			zap.String("Permission name", models.TransactionReadAll),
 		)
 		return nil, fmt.Errorf("failed to check permission: %v: %w", op, err)
 	}
 	if !allowed {
 		logger.Error("permission denied",
 			zap.Error(err),
-			zap.String("Permission name", models.PaymentReadAll),
+			zap.String("Permission name", models.TransactionReadAll),
 		)
 		return nil, fmt.Errorf("permission denied %v: %w", op, err)
 	}
 
-	paymentsId, err := s.internalPayment.GetPaymentsByUser(ctx, targetID)
+	transactionsId, err := s.internalTransaction.GetTransactionsByUser(ctx, targetID)
 	if err != nil {
-		logger.Error("cant get payment", zap.Error(err))
+		logger.Error("cant get transaction", zap.Error(err))
 
-		return nil, fmt.Errorf("%s: %w", op, billingerr.ErrGetPayment)
+		return nil, fmt.Errorf("%s: %w", op, billingerr.ErrGetTransaction)
 	}
-	if paymentsId == nil {
-		logger.Info("payments not found")
+	if transactionsId == nil {
+		logger.Info("transactions not found")
 		return nil, nil
 	}
 
-	var paymants []models.Payment
-	for _, paymentID := range paymentsId {
-		payment, err := s.externalPayment.GetPayment(ctx, paymentID)
+	var paymants []models.Transaction
+	for _, transactionID := range transactionsId {
+		transaction, err := s.externalTransaction.GetTransaction(ctx, transactionID)
 		if err != nil {
-			logger.Error("cant get payment", zap.Error(err))
-			payment = nil
+			logger.Error("cant get transaction", zap.Error(err))
+			transaction = nil
 		}
-		if payment != nil {
-			paymants = append(paymants, *payment)
+		if transaction != nil {
+			paymants = append(paymants, *transaction)
 		}
 	}
 
 	return paymants, nil
 }
 
-func (s *PaymentService) UpdateStatusPayment(
+func (s *TransactionService) UpdateStatusTransaction(
 	ctx context.Context,
-	paymentID uuid.UUID,
+	transactionID uuid.UUID,
 	status string,
 ) error {
-	const op = "service.payment.UpdateStatusPayment"
+	const op = "service.transaction.UpdateStatusTransaction"
 
 	logger := s.logger.With(
 		zap.String("op", op),
 	)
 
-	logger.Info("Updating payment")
+	logger.Info("Updating transaction")
 
 	userID, ok := ctx.Value(models.UserIDKey).(uuid.UUID)
 	if !ok {
-		return fmt.Errorf("%s: %w", op, billingerr.ErrGetPayment)
+		return fmt.Errorf("%s: %w", op, billingerr.ErrGetTransaction)
 	}
 
-	allowed, err := s.roleManage.CheckPermission(ctx, userID, paymentID, models.PaymentUpdateStatus)
+	allowed, err := s.roleManage.CheckPermission(ctx, userID, transactionID, models.TransactionUpdateStatus)
 	if err != nil {
 		logger.Error("failed to check permission",
 			zap.Error(err),
 			zap.String("UserID", userID.String()),
-			zap.String("Permission name", models.PaymentUpdateStatus),
+			zap.String("Permission name", models.TransactionUpdateStatus),
 		)
 		return fmt.Errorf("failed to check permission: %v: %w", op, err)
 	}
@@ -592,32 +592,32 @@ func (s *PaymentService) UpdateStatusPayment(
 		logger.Error("permission denied",
 			zap.Error(err),
 			zap.String("UserID", userID.String()),
-			zap.String("Permission name", models.PaymentUpdateStatus),
+			zap.String("Permission name", models.TransactionUpdateStatus),
 		)
 		return fmt.Errorf("permission denied %v: %w", op, err)
 	}
 
-	err = s.externalPayment.UpdateStatusPayment(ctx, paymentID, status)
+	err = s.externalTransaction.UpdateStatusTransaction(ctx, transactionID, status)
 	if err != nil {
-		logger.Error("cant update payment", zap.Error(err))
+		logger.Error("cant update transaction", zap.Error(err))
 
-		return fmt.Errorf("%s: %w", op, billingerr.ErrUpdatePayment)
+		return fmt.Errorf("%s: %w", op, billingerr.ErrUpdateTransaction)
 	}
 
-	if status == models.PaymentStatusRefunded || status == models.PaymentStatusCancelled {
-		payment, err := s.externalPayment.GetPayment(ctx, paymentID)
+	if status == models.TransactionStatusRefunded || status == models.TransactionStatusCancelled {
+		transaction, err := s.externalTransaction.GetTransaction(ctx, transactionID)
 		if err != nil {
-			logger.Error("cant get payment", zap.Error(err))
+			logger.Error("cant get transaction", zap.Error(err))
 
-			return fmt.Errorf("%s: %w", op, billingerr.ErrGetPayment)
+			return fmt.Errorf("%s: %w", op, billingerr.ErrGetTransaction)
 		}
 
 		operationID := uuid.New()
-		if err := s.internalPayment.Deposit(ctx, operationID, payment.Sender, payment.Amount, paymentID, "Refund of funds"); err != nil {
+		if err := s.internalTransaction.Deposit(ctx, operationID, transaction.Sender, transaction.Amount, transactionID, "Refund of funds"); err != nil {
 			logger.Error("failed to deposit",
 				zap.Error(err),
 			)
-			_ = s.externalPayment.CancelPayment(ctx, paymentID)
+			_ = s.externalTransaction.CancelTransaction(ctx, transactionID)
 			return fmt.Errorf("%s: %w", op, err)
 		}
 	}
@@ -625,29 +625,29 @@ func (s *PaymentService) UpdateStatusPayment(
 	return nil
 }
 
-func (s *PaymentService) CancelPayment(
+func (s *TransactionService) CancelTransaction(
 	ctx context.Context,
-	paymentID uuid.UUID,
+	transactionID uuid.UUID,
 ) error {
-	const op = "service.payment.UpdateStatusPayment"
+	const op = "service.transaction.UpdateStatusTransaction"
 
 	logger := s.logger.With(
 		zap.String("op", op),
 	)
 
-	logger.Info("Canceling payment")
+	logger.Info("Canceling transaction")
 
 	userID, ok := ctx.Value(models.UserIDKey).(uuid.UUID)
 	if !ok {
-		return fmt.Errorf("%s: %w", op, billingerr.ErrGetPayment)
+		return fmt.Errorf("%s: %w", op, billingerr.ErrGetTransaction)
 	}
 
-	allowed, err := s.roleManage.CheckPermission(ctx, userID, paymentID, models.PaymentCancel)
+	allowed, err := s.roleManage.CheckPermission(ctx, userID, transactionID, models.TransactionCancel)
 	if err != nil {
 		logger.Error("failed to check permission",
 			zap.Error(err),
 			zap.String("UserID", userID.String()),
-			zap.String("Permission name", models.PaymentCancel),
+			zap.String("Permission name", models.TransactionCancel),
 		)
 		return fmt.Errorf("failed to check permission: %v: %w", op, err)
 	}
@@ -655,31 +655,31 @@ func (s *PaymentService) CancelPayment(
 		logger.Error("permission denied",
 			zap.Error(err),
 			zap.String("UserID", userID.String()),
-			zap.String("Permission name", models.PaymentCancel),
+			zap.String("Permission name", models.TransactionCancel),
 		)
 		return fmt.Errorf("permission denied %v: %w", op, err)
 	}
 
-	err = s.externalPayment.CancelPayment(ctx, paymentID)
+	err = s.externalTransaction.CancelTransaction(ctx, transactionID)
 	if err != nil {
-		logger.Error("cant cancel payment", zap.Error(err))
+		logger.Error("cant cancel transaction", zap.Error(err))
 
-		return fmt.Errorf("%s: %w", op, billingerr.ErrUpdatePayment)
+		return fmt.Errorf("%s: %w", op, billingerr.ErrUpdateTransaction)
 	}
 
-	payment, err := s.externalPayment.GetPayment(ctx, paymentID)
+	transaction, err := s.externalTransaction.GetTransaction(ctx, transactionID)
 	if err != nil {
-		logger.Error("cant get payment", zap.Error(err))
+		logger.Error("cant get transaction", zap.Error(err))
 
-		return fmt.Errorf("%s: %w", op, billingerr.ErrGetPayment)
+		return fmt.Errorf("%s: %w", op, billingerr.ErrGetTransaction)
 	}
 
 	operationID := uuid.New()
-	if err := s.internalPayment.Deposit(ctx, operationID, payment.Sender, payment.Amount, paymentID, "payment cancelled"); err != nil {
+	if err := s.internalTransaction.Deposit(ctx, operationID, transaction.Sender, transaction.Amount, transactionID, "transaction cancelled"); err != nil {
 		logger.Error("failed to deposit",
 			zap.Error(err),
 		)
-		_ = s.externalPayment.CancelPayment(ctx, paymentID)
+		_ = s.externalTransaction.CancelTransaction(ctx, transactionID)
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -687,8 +687,8 @@ func (s *PaymentService) CancelPayment(
 }
 
 // ConvertCurrency конвертирует средства между счетами в разных валютах
-func (s *PaymentService) ConvertCurrency(ctx context.Context, fromaccountCode, toaccountCode string, amount float64, description string) (uuid.UUID, error) {
-	const op = "service.payment.ConvertCurrency"
+func (s *TransactionService) ConvertCurrency(ctx context.Context, fromaccountCode, toaccountCode string, amount float64, description string) (uuid.UUID, error) {
+	const op = "service.transaction.ConvertCurrency"
 
 	logger := s.logger.With(
 		zap.String("op", op),
@@ -707,19 +707,19 @@ func (s *PaymentService) ConvertCurrency(ctx context.Context, fromaccountCode, t
 	}
 
 	// Проверка прав доступа
-	allowed, err := s.roleManage.CheckPermission(ctx, userID, userID, models.PaymentCreate)
+	allowed, err := s.roleManage.CheckPermission(ctx, userID, userID, models.TransactionCreate)
 	if err != nil {
 		logger.Error("failed to check permission",
 			zap.Error(err),
 			zap.String("UserID", userID.String()),
-			zap.String("Permission name", models.PaymentCreate),
+			zap.String("Permission name", models.TransactionCreate),
 		)
 		return uuid.Nil, fmt.Errorf("failed to check permission: %v: %w", op, err)
 	}
 	if !allowed {
 		logger.Error("permission denied",
 			zap.Error(err),
-			zap.String("Permission name", models.PaymentCreate),
+			zap.String("Permission name", models.TransactionCreate),
 		)
 		return uuid.Nil, fmt.Errorf("permission denied %v: %w", op, err)
 	}
@@ -745,7 +745,7 @@ func (s *PaymentService) ConvertCurrency(ctx context.Context, fromaccountCode, t
 	operationID := uuid.New()
 
 	// Выполняем конвертацию
-	if err := s.internalPayment.ConvertCurrency(ctx, operationID, fromAccount, toAccount, amount, description); err != nil {
+	if err := s.internalTransaction.ConvertCurrency(ctx, operationID, fromAccount, toAccount, amount, description); err != nil {
 		logger.Error("failed to convert currency",
 			zap.Error(err),
 		)
@@ -756,8 +756,8 @@ func (s *PaymentService) ConvertCurrency(ctx context.Context, fromaccountCode, t
 }
 
 // GetOperationHistory возвращает историю операций по счету
-func (s *PaymentService) GetOperationHistory(ctx context.Context, accountCode string, limit, offset int) ([]models.BalanceOperation, error) {
-	const op = "service.payment.GetOperationHistory"
+func (s *TransactionService) GetOperationHistory(ctx context.Context, accountCode string, limit, offset int) ([]models.BalanceOperation, error) {
+	const op = "service.transaction.GetOperationHistory"
 
 	logger := s.logger.With(
 		zap.String("op", op),
@@ -800,7 +800,7 @@ func (s *PaymentService) GetOperationHistory(ctx context.Context, accountCode st
 	}
 
 	// Получение истории операций
-	operations, err := s.internalPayment.GetOperationHistory(ctx, accountCode, limit, offset)
+	operations, err := s.internalTransaction.GetOperationHistory(ctx, accountCode, limit, offset)
 	if err != nil {
 		logger.Error("failed to get operation history",
 			zap.Error(err),
@@ -812,8 +812,8 @@ func (s *PaymentService) GetOperationHistory(ctx context.Context, accountCode st
 }
 
 // UpdateCurrencyRate обновляет курс валют (админская функция)
-func (s *PaymentService) UpdateCurrencyRate(ctx context.Context, fromCurrency, toCurrency string, rate float64) error {
-	const op = "service.payment.UpdateCurrencyRate"
+func (s *TransactionService) UpdateCurrencyRate(ctx context.Context, fromCurrency, toCurrency string, rate float64) error {
+	const op = "service.transaction.UpdateCurrencyRate"
 
 	logger := s.logger.With(
 		zap.String("op", op),
@@ -829,7 +829,7 @@ func (s *PaymentService) UpdateCurrencyRate(ctx context.Context, fromCurrency, t
 
 	currencyEntityId, err := s.roleManage.GetEntityID(ctx, models.CurrencyEntity)
 	if err != nil {
-		return fmt.Errorf("%s: failed to get payment system entity: %w", op, err)
+		return fmt.Errorf("%s: failed to get transaction system entity: %w", op, err)
 	}
 
 	// Проверка прав доступа (только для администраторов)
@@ -850,7 +850,7 @@ func (s *PaymentService) UpdateCurrencyRate(ctx context.Context, fromCurrency, t
 		return fmt.Errorf("permission denied %v: %w", op, err)
 	}
 
-	if err := s.internalPayment.UpdateCurrencyRate(ctx, fromCurrency, toCurrency, rate); err != nil {
+	if err := s.internalTransaction.UpdateCurrencyRate(ctx, fromCurrency, toCurrency, rate); err != nil {
 		logger.Error("failed to update currency rate",
 			zap.Error(err),
 		)
@@ -861,11 +861,11 @@ func (s *PaymentService) UpdateCurrencyRate(ctx context.Context, fromCurrency, t
 }
 
 // GetCurrencyRate возвращает текущий курс обмена между валютами
-func (s *PaymentService) GetCurrencyRate(
+func (s *TransactionService) GetCurrencyRate(
 	ctx context.Context,
 	fromCurrency, toCurrency string,
 ) (float64, error) {
-	const op = "service.payment.GetCurrencyRate"
+	const op = "service.transaction.GetCurrencyRate"
 
 	logger := s.logger.With(
 		zap.String("op", op),
@@ -897,7 +897,7 @@ func (s *PaymentService) GetCurrencyRate(
 	}
 
 	// Получение курса валют
-	rate, err := s.internalPayment.GetCurrencyRate(ctx, fromCurrency, toCurrency)
+	rate, err := s.internalTransaction.GetCurrencyRate(ctx, fromCurrency, toCurrency)
 	if err != nil {
 		logger.Error("failed to get currency rate",
 			zap.Error(err),

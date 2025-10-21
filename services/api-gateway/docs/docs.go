@@ -578,7 +578,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/payments/convert": {
+        "/transactions/convert": {
             "post": {
                 "security": [
                     {
@@ -593,7 +593,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Конвертировать валюту",
                 "parameters": [
@@ -647,7 +647,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/payments/currency-rate": {
+        "/transactions/currency-rate": {
             "post": {
                 "security": [
                     {
@@ -662,7 +662,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Обновить курс валют",
                 "parameters": [
@@ -695,7 +695,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/payments/currency-rate/get": {
+        "/transactions/currency-rate/get": {
             "get": {
                 "security": [
                     {
@@ -707,7 +707,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Получить курс валют",
                 "parameters": [
@@ -748,7 +748,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/payments/deposit": {
+        "/transactions/deposit": {
             "post": {
                 "security": [
                     {
@@ -763,7 +763,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Пополнить счет",
                 "parameters": [
@@ -810,7 +810,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/payments/get": {
+        "/transactions/get": {
             "get": {
                 "security": [
                     {
@@ -822,7 +822,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Получить все платежи",
                 "parameters": [
@@ -839,7 +839,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.Payment"
+                                "$ref": "#/definitions/models.Transaction"
                             }
                         }
                     },
@@ -852,7 +852,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/payments/history": {
+        "/transactions/history": {
             "get": {
                 "security": [
                     {
@@ -864,7 +864,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Получить историю операций",
                 "parameters": [
@@ -913,7 +913,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/payments/transfer": {
+        "/transactions/transfer": {
             "post": {
                 "security": [
                     {
@@ -928,7 +928,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Перевести на другой счет",
                 "parameters": [
@@ -976,7 +976,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/models.Payment"
+                            "$ref": "#/definitions/models.Transaction"
                         }
                     },
                     "400": {
@@ -994,7 +994,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/payments/{paymentID}": {
+        "/transactions/{transactionID}": {
             "get": {
                 "security": [
                     {
@@ -1006,14 +1006,14 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Получить платеж",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "ID платежа",
-                        "name": "paymentID",
+                        "name": "transactionID",
                         "in": "path",
                         "required": true
                     }
@@ -1022,7 +1022,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Payment"
+                            "$ref": "#/definitions/models.Transaction"
                         }
                     },
                     "400": {
@@ -1046,7 +1046,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/payments/{paymentID}/cancel": {
+        "/transactions/{transactionID}/cancel": {
             "patch": {
                 "security": [
                     {
@@ -1055,14 +1055,14 @@ const docTemplate = `{
                 ],
                 "description": "Отменяет указанный платеж",
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Отменить платеж",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "ID платежа",
-                        "name": "paymentID",
+                        "name": "transactionID",
                         "in": "path",
                         "required": true
                     }
@@ -1092,7 +1092,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/payments/{paymentID}/update": {
+        "/transactions/{transactionID}/update": {
             "patch": {
                 "security": [
                     {
@@ -1107,14 +1107,14 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payments"
+                    "transactions"
                 ],
                 "summary": "Обновить статус платежа",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "ID платежа",
-                        "name": "paymentID",
+                        "name": "transactionID",
                         "in": "path",
                         "required": true
                     },
@@ -1956,7 +1956,7 @@ const docTemplate = `{
                 "operation_type": {
                     "type": "string"
                 },
-                "payment_id": {
+                "transaction_id": {
                     "type": "string"
                 },
                 "processed_at": {
@@ -2084,7 +2084,7 @@ const docTemplate = `{
         "models.DepositResponse": {
             "type": "object",
             "properties": {
-                "payment_id": {
+                "transaction_id": {
                     "type": "string"
                 }
             }
@@ -2119,7 +2119,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Payment": {
+        "models.Transaction": {
             "type": "object",
             "properties": {
                 "amount": {
@@ -2295,7 +2295,7 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost",
 	BasePath:         "/",
 	Schemes:          []string{"https"},
-	Title:            "Payment API",
+	Title:            "Transaction API",
 	Description:      "API для платежной системы",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

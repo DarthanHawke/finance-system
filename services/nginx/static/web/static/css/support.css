@@ -107,7 +107,7 @@
     border-radius: 4px;
 }
 
-.payments-table-container {
+.transactions-table-container {
     overflow-x: auto;
         max-width: 100%;
         margin-bottom: 1rem;
@@ -116,25 +116,25 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.payments-table {
+.transactions-table {
         width: 100%;
         min-width: 900px;
         border-collapse: collapse;
 }
 
-.payments-table th,
-.payments-table td {
+.transactions-table th,
+.transactions-table td {
     padding: 1rem;
     text-align: left;
     border-bottom: 1px solid #eee;
 }
 
-.payments-table th {
+.transactions-table th {
     background-color: #f5f5f5;
     font-weight: bold;
 }
 
-.payments-table tr:last-child td {
+.transactions-table tr:last-child td {
     border-bottom: none;
 }
 
@@ -664,7 +664,7 @@
 }
 
 /* Контейнер таблицы с горизонтальной прокруткой */
-.payments-table-container {
+.transactions-table-container {
     overflow-x: auto;
     max-width: 100%;
     margin-bottom: 1rem;
@@ -674,20 +674,20 @@
 }
 
 /* Фиксированная ширина для столбцов */
-.payments-table {
+.transactions-table {
     width: 100%;
     min-width: 800px; /* Минимальная ширина таблицы */
     border-collapse: collapse;
 }
 
-.payments-table th,
-.payments-table td {
+.transactions-table th,
+.transactions-table td {
     padding: 0.75rem 1rem;
     text-align: left;
     border-bottom: 1px solid #eee;
 }
 
-.payments-table th {
+.transactions-table th {
     background-color: #f5f5f5;
     font-weight: bold;
     position: sticky;
@@ -721,7 +721,7 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     position: relative;
 }
-.payment-details {
+.transaction-details {
     margin-top: 1rem;
 }
 
@@ -758,7 +758,7 @@
     margin-bottom: 15px;
 }
     
-#search-payment-input {
+#search-transaction-input {
      flex: 1;
      max-width: 400px;
      padding: 8px 12px;
@@ -768,4 +768,4 @@
 
 .icon-dashboard::before { content: "📊"; margin-right: 0.5rem; }
 .icon-users::before { content: "👥"; margin-right: 0.5rem; }
-.icon-payments::before { content: "💰"; margin-right: 0.5rem; }
+.icon-transactions::before { content: "💰"; margin-right: 0.5rem; }

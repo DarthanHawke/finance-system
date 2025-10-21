@@ -17,7 +17,7 @@ func main() {
 	cfg := config.Configuration{
 		RabbitMQ: config.RabbitMQ{
 			URL:       "amqp://guest:guest@rabbitmq:5672/",
-			QueueName: "payments",
+			QueueName: "transactions",
 		},
 	}
 

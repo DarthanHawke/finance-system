@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const amount = document.getElementById('transfer-amount').value;
         const description = document.getElementById('transfer-description').value;
         
-        fetch('/payments/transfer', {
+        fetch('/transactions/transfer', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const amount = document.getElementById('deposit-amount').value;
         const description = document.getElementById('deposit-description').value;
         
-        fetch('/payments/deposit', {
+        fetch('/transactions/deposit', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const amount = document.getElementById('convert-amount').value;
         const description = document.getElementById('convert-description').value;
         
-        fetch('/payments/convert', {
+        fetch('/transactions/convert', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateExchangeRate() {
         clearAmountFields();
         if (currentFromCurrency && currentToCurrency && currentFromCurrency !== currentToCurrency) {
-            fetch(`/payments/currency-rate/get?from=${currentFromCurrency}&to=${currentToCurrency}`, {
+            fetch(`/transactions/currency-rate/get?from=${currentFromCurrency}&to=${currentToCurrency}`, {
                 method: 'GET',
                 credentials: 'include'
             })

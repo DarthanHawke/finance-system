@@ -857,7 +857,7 @@
     word-break: break-all;
 }
 
-.payment-details-modal {
+.transaction-details-modal {
     position: fixed;
     top: 0;
     left: 0;
@@ -870,11 +870,11 @@
     z-index: 1002;
 }
 
-.payment-details-modal.active {
+.transaction-details-modal.active {
     display: flex;
 }
 
-.payment-details-modal-content {
+.transaction-details-modal-content {
     background: white;
     padding: 2rem;
     border-radius: 8px;
@@ -886,24 +886,24 @@
     overflow-y: auto;
 }
 
-.payment-detail {
+.transaction-detail {
     margin-bottom: 0.75rem;
     padding: 0.5rem;
     border-bottom: 1px solid #eee;
 }
 
-.payment-detail-label {
+.transaction-detail-label {
     font-weight: bold;
     display: inline-block;
     width: 120px;
     color: #555;
 }
 
-.payment-detail-value {
+.transaction-detail-value {
     word-break: break-all;
 }
 
-.payment-actions {
+.transaction-actions {
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px solid #eee;
@@ -930,7 +930,7 @@
     margin-right: 0.5rem;
 }
 
-.payment-details-modal {
+.transaction-details-modal {
     position: fixed;
     top: 0;
     left: 0;
@@ -943,11 +943,11 @@
     z-index: 1002;
 }
 
-.payment-details-modal.active {
+.transaction-details-modal.active {
     display: flex;
 }
 
-.payment-details-modal-content {
+.transaction-details-modal-content {
     background: white;
     padding: 2rem;
     border-radius: 8px;
@@ -959,24 +959,24 @@
     overflow-y: auto;
 }
 
-.payment-detail {
+.transaction-detail {
     margin-bottom: 0.75rem;
     padding: 0.5rem;
     border-bottom: 1px solid #eee;
 }
 
-.payment-detail-label {
+.transaction-detail-label {
     font-weight: bold;
     display: inline-block;
     width: 120px;
     color: #555;
 }
 
-.payment-detail-value {
+.transaction-detail-value {
     word-break: break-all;
 }
 
-.payment-actions {
+.transaction-actions {
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px solid #eee;

@@ -14,8 +14,8 @@ const (
 )
 
 const (
-	PaymentSystemEntity string = "paymentSystem"
-	PaymentEntity       string = "payment"
+	FinanceSystemEntity string = "financeSystem"
+	TransactionEntity   string = "transaction"
 	AccountEntity       string = "account"
 	CurrencyEntity      string = "currency"
 	UserEntity          string = "user"
@@ -24,25 +24,25 @@ const (
 )
 
 const (
-	PaymentCreate       string = "payment_create"
-	PaymentRead         string = "payment_read"
-	PaymentReadAll      string = "payment_read_all"
-	PaymentCancel       string = "payment_cancel"
-	PaymentConvert      string = "pyment_convert"
-	PaymentUpdateStatus string = "payment_update_status"
-	UserRead            string = "user_read"
-	UserReadAll         string = "user_read_all"
-	UserUpdate          string = "user_update"
-	AccountCreate       string = "account_create"
-	AccountRead         string = "account_read"
-	CurrencyRead        string = "currency_read"
-	CurrencyUpdate      string = "currency_update"
-	SessionTerminate    string = "session_terminate"
-	SessionManage       string = "session_manage"
-	RelationManage      string = "relation_manage"
-	RelationRead        string = "relation_read"
-	PermissionManage    string = "permission_manage"
-	PermissionRead      string = "permission_read"
+	TransactionCreate       string = "transaction_create"
+	TransactionRead         string = "transaction_read"
+	TransactionReadAll      string = "transaction_read_all"
+	TransactionCancel       string = "transaction_cancel"
+	TransactionConvert      string = "pyment_convert"
+	TransactionUpdateStatus string = "transaction_update_status"
+	UserRead                string = "user_read"
+	UserReadAll             string = "user_read_all"
+	UserUpdate              string = "user_update"
+	AccountCreate           string = "account_create"
+	AccountRead             string = "account_read"
+	CurrencyRead            string = "currency_read"
+	CurrencyUpdate          string = "currency_update"
+	SessionTerminate        string = "session_terminate"
+	SessionManage           string = "session_manage"
+	RelationManage          string = "relation_manage"
+	RelationRead            string = "relation_read"
+	PermissionManage        string = "permission_manage"
+	PermissionRead          string = "permission_read"
 )
 
 // Entity представляет сущность в системе ReBAC

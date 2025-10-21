@@ -22,7 +22,7 @@ type EventRepository struct {
 func NewEventRepository(db *Database, logger *zap.Logger) *EventRepository {
 	return &EventRepository{
 		db:     db,
-		logger: logger.With(zap.String("component", "payment_service")),
+		logger: logger.With(zap.String("component", "transaction_service")),
 	}
 }
 
@@ -31,13 +31,13 @@ func (r *EventRepository) CreateEvent(ctx context.Context, req *models.CreateEve
 	const op = "repository.event.CreateEvent"
 
 	const query = `
-		INSERT INTO events (id, payment_id, type, status, source, created_at, payload)
+		INSERT INTO events (id, transaction_id, type, status, source, created_at, payload)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	_, err := r.db.ExecContext(ctx, query,
 		req.ID,
-		req.PaymentID,
+		req.TransactionID,
 		req.Type,
 		req.Status,
 		req.Source,
@@ -60,7 +60,7 @@ func (r *EventRepository) GetPendingEvents(ctx context.Context, req *models.GetE
 	const op = "repository.event.GetPendingEvents"
 
 	const query = `
-		SELECT id, payment_id, type, status, source, created_at, payload,
+		SELECT id, transaction_id, type, status, source, created_at, payload,
 		FROM events 
 		WHERE status = $1 
 		AND (processed_at IS NULL OR processed_at < $2)

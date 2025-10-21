@@ -59,9 +59,9 @@ type GetAccountsResponse struct {
 }
 
 type BalanceRequest struct {
-	Code      string    `db:"code" json:"сode" validate:"required"`
-	Amount    float64   `db:"amount" json:"amount" validate:"required,gt=0"`
-	PaymentID uuid.UUID `json:"payment_id,omitempty"`
+	Code          string    `db:"code" json:"сode" validate:"required"`
+	Amount        float64   `db:"amount" json:"amount" validate:"required,gt=0"`
+	TransactionID uuid.UUID `json:"transaction_id,omitempty"`
 }
 
 type UpdateAccountRequest struct {
