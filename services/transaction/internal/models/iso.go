@@ -33,23 +33,12 @@ const (
 const (
 	RCSuccess                 = "00" // Approved
 	RCReferToIssuer           = "01" // Refer to issuer
-	RCInvalidMerchant         = "03" // Invalid merchant
-	RCDoNotHonor              = "05" // Do not honor
 	RCInvalidTransaction      = "12" // Invalid transaction
 	RCInvalidAmount           = "13" // Invalid amount
 	RCInvalidCard             = "14" // Invalid card
-	RCNoSuchIssuer            = "15" // No such issuer
-	RCFormatError             = "30" // Format error
-	RCLostCard                = "41" // Lost card
-	RCStolenCard              = "43" // Stolen card
 	RCInsufficientFunds       = "51" // Insufficient funds
-	RCExpiredCard             = "54" // Expired card
 	RCInvalidPIN              = "55" // Invalid PIN
 	RCTransactionNotPermitted = "57" // Transaction not permitted
-	RCExceedWithdrawalLimit   = "61" // Exceed withdrawal limit
-	RCSecurityViolation       = "63" // Security violation
-	RCExceedActivityLimit     = "65" // Exceed activity limit
-	RCPINTryExceed            = "75" // PIN try exceed
 	RCTimeout                 = "91" // Timeout
 	RCSystemError             = "96" // System error
 )
@@ -109,10 +98,14 @@ type ISO8583Payload struct {
 	ErrorMessage string          `json:"error_message,omitempty"`
 }
 
+type ExternalRequestPayload struct {
+	ISOMessage *ISO8583Message `json:"iso_message"`
+}
+
 // CurrencyInfo информация о валюте
 type CurrencyInfo struct {
 	Code     string
-	Decimals int // количество знаков после запятой
+	Decimals int
 	Name     string
 }
 

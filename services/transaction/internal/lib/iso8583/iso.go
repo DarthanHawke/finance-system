@@ -339,8 +339,6 @@ func (iso *ISO8583) getErrorCode(reason string) string {
 		return models.RCTimeout
 	case strings.Contains(reason, "invalid_card"):
 		return models.RCInvalidCard
-	case strings.Contains(reason, "expired"):
-		return models.RCExpiredCard
 	case strings.Contains(reason, "pin"):
 		return models.RCInvalidPIN
 	default:

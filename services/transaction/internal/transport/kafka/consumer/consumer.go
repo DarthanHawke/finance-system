@@ -242,6 +242,8 @@ func (c *Consumer) processMessage(ctx context.Context, topic string, message kaf
 // routeEvent направляет событие соответствующему обработчику
 func (c *Consumer) routeEvent(ctx context.Context, event *models.Event) error {
 	switch event.Type {
+	case models.EventTransactionResponse:
+		return c.handler.HandleTransactionResponse(ctx, event)
 	case models.EventFreezeResponse:
 		return c.handler.HandleFreezeResponse(ctx, event)
 	case models.EventReserveResponse:

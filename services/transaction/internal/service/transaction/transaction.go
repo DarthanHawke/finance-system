@@ -17,6 +17,7 @@ import (
 type TransactionService struct {
 	transactionManager TransactionManager
 	eventManager       EventManager
+	iso8583Manager     Iso8583Manager
 	logger             *zap.Logger
 }
 
@@ -24,11 +25,13 @@ type TransactionService struct {
 func NewTransactionService(
 	transactionManager TransactionManager,
 	eventManager EventManager,
+	iso8583Manager Iso8583Manager,
 	logger *zap.Logger,
 ) *TransactionService {
 	return &TransactionService{
 		transactionManager: transactionManager,
 		eventManager:       eventManager,
+		iso8583Manager:     iso8583Manager,
 		logger:             logger.With(zap.String("component", "transaction_service")),
 	}
 }
@@ -43,6 +46,13 @@ type TransactionManager interface {
 // EventManager определяет методы управления платежами
 type EventManager interface {
 	CreateEvent(ctx context.Context, req *models.CreateEventRequest) error
+}
+
+// Iso8583Manager определяет методы управления транзакциями в формате iso8583
+type Iso8583Manager interface {
+	CreateTransactionFromISO(msg *models.ISO8583Message) (*models.CreateTransactionRequest, error)
+	CreateFinancialRequest(transaction *models.Transaction) (*models.ISO8583Message, error)
+	CreateFinancialResponse(transaction *models.Transaction, success bool, reason string) (*models.ISO8583Message, error)
 }
 
 // ==================== ОСНОВНЫЕ ОБРАБОТЧИКИ ====================
@@ -75,7 +85,6 @@ func (s *TransactionService) HandleTransactionResponse(ctx context.Context, resp
 	case models.AccountInternal:
 		if event, err = s.createFreezeEvent(transaction.Transaction); err != nil {
 			return fmt.Errorf("%s: %w", op, err)
-
 		}
 	case models.AccountExternal:
 		if event, err = s.createReserveEvent(transaction.Transaction); err != nil {
@@ -85,7 +94,6 @@ func (s *TransactionService) HandleTransactionResponse(ctx context.Context, resp
 		eventType := "unknow operation"
 		return fmt.Errorf("%s: %s", op, eventType)
 	}
-	// TODO Stan, procesing code, auth code
 
 	if err := s.transactionManager.CreateTransaction(ctx, transaction, event); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
@@ -306,7 +314,7 @@ func (s *TransactionService) HandleWithdrawResponse(ctx context.Context, resp *m
 				return fmt.Errorf("%s: %w", op, err)
 			}
 		case models.AccountExternal:
-			if event, err = s.createExternalRollbackEvent(transaction.Transaction); err != nil {
+			if event, err = s.createExternalRollbackEvent(transaction.Transaction, resp); err != nil {
 				return fmt.Errorf("%s: %w", op, err)
 			}
 		}
@@ -326,7 +334,7 @@ func (s *TransactionService) HandleWithdrawResponse(ctx context.Context, resp *m
 			return fmt.Errorf("%s: %w", op, err)
 		}
 	case models.AccountExternal:
-		if event, err = s.createExternalCommitEvent(transaction.Transaction); err != nil {
+		if event, err = s.createExternalCommitEvent(transaction.Transaction, resp); err != nil {
 			return fmt.Errorf("%s: %w", op, err)
 		}
 	}
@@ -381,7 +389,7 @@ func (s *TransactionService) HandleDepositResponse(ctx context.Context, resp *mo
 				return fmt.Errorf("%s: %w", op, err)
 			}
 		case models.AccountExternal:
-			if event, err = s.createExternalRollbackEvent(transaction.Transaction); err != nil {
+			if event, err = s.createExternalRollbackEvent(transaction.Transaction, resp); err != nil {
 				return fmt.Errorf("%s: %w", op, err)
 			}
 		}
@@ -396,7 +404,7 @@ func (s *TransactionService) HandleDepositResponse(ctx context.Context, resp *mo
 	if transaction.SenderType == models.AccountExternal {
 		var event *models.CreateEventRequest
 
-		if event, err = s.createExternalCommitEvent(transaction.Transaction); err != nil {
+		if event, err = s.createExternalCommitEvent(transaction.Transaction, resp); err != nil {
 			return fmt.Errorf("%s: %w", op, err)
 		}
 
@@ -617,7 +625,7 @@ func (s *TransactionService) HandleRefundResponse(ctx context.Context, resp *mod
 			return fmt.Errorf("%s: %w", op, err)
 		}
 	case models.AccountExternal:
-		if event, err = s.createExternalRollbackEvent(transaction.Transaction); err != nil {
+		if event, err = s.createExternalRollbackEvent(transaction.Transaction, resp); err != nil {
 			return fmt.Errorf("%s: %w", op, err)
 		}
 	}
@@ -739,9 +747,12 @@ func (s *TransactionService) createReserveEvent(req *models.Transaction) (*model
 
 // createExternalEvent - создает событие для обращения к "внешнему платёжному шлюзу"
 func (s *TransactionService) createExternalEvent(req *models.Transaction) (*models.CreateEventRequest, error) {
+	isoPayload, err := s.iso8583Manager.CreateFinancialRequest(req)
+	if err != nil {
+		return nil, err
+	}
 	payload := models.ExternalRequestPayload{
-		// TODO: ISOmessge
-		ISOMessage: "Здесь будет ISO message",
+		ISOMessage: isoPayload,
 	}
 
 	return s.createEvent(req.ID, models.EventExternalRequest, payload)
@@ -771,10 +782,25 @@ func (s *TransactionService) createDepositeEvent(req *models.Transaction) (*mode
 
 // createExternalCommitEvent - создает событие для обращения к "внешнему платёжному шлюзу"
 // с подтвержденем успешной транзакции
-func (s *TransactionService) createExternalCommitEvent(req *models.Transaction) (*models.CreateEventRequest, error) {
-	payload := models.ExternalRequestPayload{
-		// TODO: ISOmessge
-		ISOMessage: "Здесь будет ISO message",
+func (s *TransactionService) createExternalCommitEvent(
+	req *models.Transaction,
+	resp *models.Event,
+) (*models.CreateEventRequest, error) {
+	var payloadResp *models.BalanceResponsePayload
+	if err := json.Unmarshal(resp.Payload, &payloadResp); err != nil {
+		return nil, err
+	}
+
+	isoPayload, err := s.iso8583Manager.CreateFinancialResponse(req, payloadResp.Success, payloadResp.Reason)
+	if err != nil {
+		return nil, err
+	}
+
+	payload := models.ISO8583Payload{
+		ISOMessage:   isoPayload,
+		Success:      payloadResp.Success,
+		ErrorCode:    isoPayload.ResponseCode,
+		ErrorMessage: payloadResp.Reason,
 	}
 
 	return s.createEvent(req.ID, models.EventExternalCommit, payload)
@@ -803,12 +829,26 @@ func (s *TransactionService) createUnreserveEvent(req *models.Transaction) (*mod
 }
 
 // createExternalRollbackEvent - создает событие для обращения к "внешнему платёжному шлюзу"
-func (s *TransactionService) createExternalRollbackEvent(req *models.Transaction) (*models.CreateEventRequest, error) {
-	payload := models.ExternalRequestPayload{
-		// TODO: ISOmessge
-		ISOMessage: "Здесь будет ISO message",
+func (s *TransactionService) createExternalRollbackEvent(
+	req *models.Transaction,
+	resp *models.Event,
+) (*models.CreateEventRequest, error) {
+	var payloadResp *models.BalanceResponsePayload
+	if err := json.Unmarshal(resp.Payload, &payloadResp); err != nil {
+		return nil, err
 	}
 
+	isoPayload, err := s.iso8583Manager.CreateFinancialResponse(req, payloadResp.Success, payloadResp.Reason)
+	if err != nil {
+		return nil, err
+	}
+
+	payload := models.ISO8583Payload{
+		ISOMessage:   isoPayload,
+		Success:      payloadResp.Success,
+		ErrorCode:    isoPayload.ResponseCode,
+		ErrorMessage: payloadResp.Reason,
+	}
 	return s.createEvent(req.ID, models.EventExternalRollback, payload)
 }
 
@@ -827,11 +867,19 @@ func (s *TransactionService) createRefandEvent(req *models.Transaction) (*models
 
 // getTransactionPayload - возвращает payload из события создания платежа
 func (s *TransactionService) getTransactionPayload(resp *models.Event) (*models.CreateTransactionRequest, error) {
+	const op = "service.transaction.getTransactionPayload"
+
 	var payloadResp *models.CreateTransactionRequest
-	if err := json.Unmarshal(resp.Payload, &payloadResp); err != nil {
-		return nil, err
+	if err := json.Unmarshal(resp.Payload, &payloadResp); err == nil {
+		return payloadResp, nil
 	}
-	return payloadResp, nil
+
+	var payloadIsoResp *models.ISO8583Payload
+	if err := json.Unmarshal(resp.Payload, &payloadIsoResp); err == nil {
+		return s.iso8583Manager.CreateTransactionFromISO(payloadIsoResp.ISOMessage)
+	}
+
+	return nil, fmt.Errorf("%s: %s", op, "Unknow Transaction Type")
 }
 
 // isSuccessBalanceResponse - проверяет успешность ответа операций с балансом счета

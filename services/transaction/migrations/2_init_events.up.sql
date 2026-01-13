@@ -8,7 +8,7 @@ CREATE TABLE events (
     id              UUID PRIMARY KEY,
 
     -- ID платежа
-    transaction_id      UUID NOT NULL REFERENCES transactions(id),
+    transaction_id  UUID NOT NULL REFERENCES transactions(id),
 
     -- Тип события
     type            VARCHAR(50) NOT NULL,

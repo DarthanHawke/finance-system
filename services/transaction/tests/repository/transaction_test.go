@@ -102,13 +102,16 @@ func TestTransactionRepository_CreateTransaction(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		r := new(t)
 		transactionID := generateTestUUID(t)
+		eventID := generateTestUUID(t)
 		now := time.Now()
+		expectedPayload := `{"amount":1500,"currency":"RUB","sender":"RUB80311173817","recipient":"RUB123456789"}`
+
+		r.MockDB.ExpectBegin()
 
 		r.MockDB.ExpectExec("INSERT INTO transactions").
 			WithArgs(
 				transactionID,
 				"transfer",
-				"outgoing",
 				1500.0,
 				"RUB",
 				"internal",
@@ -128,32 +131,60 @@ func TestTransactionRepository_CreateTransaction(t *testing.T) {
 				now,
 			).WillReturnResult(sqlmock.NewResult(1, 1))
 
+		r.MockDB.ExpectExec("INSERT INTO events").
+			WithArgs(
+				eventID,
+				transactionID,
+				"transaction_created",
+				"pending",
+				"transaction-service",
+				now,
+				[]byte(expectedPayload),
+			).WillReturnResult(sqlmock.NewResult(1, 1))
+
+		r.MockDB.ExpectCommit()
+
 		r.MockCache.DeleteFunc = func(ctx context.Context, key string) error {
 			assert.Equal(t, fmt.Sprintf("account_transactions:%s", "RUB80311173817"), key)
 			assert.Equal(t, fmt.Sprintf("account_transactions:%s", "RUB123456789"), key)
 			return nil
 		}
 
-		err := r.Repo.CreateTransaction(context.Background(), models.CreateTransactionRequest{
-			ID:                   transactionID,
-			Type:                 "transfer",
-			Direction:            "outgoing",
-			Amount:               1500.0,
-			Currency:             "RUB",
-			SenderType:           "internal",
-			SenderAccountCode:    "RUB80311173817",
-			SenderPhone:          "",
-			SenderCardNumber:     "",
-			RecipientType:        "internal",
-			RecipientAccountCode: "RUB123456789",
-			RecipientPhone:       "",
-			RecipientCardNumber:  "",
-			ProcessingCode:       "123456",
-			Stan:                 "789012",
-			AuthorizationCode:    "",
-			Description:          "Dep to casino",
-			Status:               "pending",
-		})
+		err := r.Repo.CreateTransaction(context.Background(),
+			&models.CreateTransactionRequest{
+				Transaction: &models.Transaction{
+					ID:                   transactionID,
+					Type:                 "transfer",
+					Amount:               1500.0,
+					Currency:             "RUB",
+					SenderType:           "internal",
+					SenderAccountCode:    "RUB80311173817",
+					SenderPhone:          "",
+					SenderCardNumber:     "",
+					RecipientType:        "internal",
+					RecipientAccountCode: "RUB123456789",
+					RecipientPhone:       "",
+					RecipientCardNumber:  "",
+					ProcessingCode:       "123456",
+					Stan:                 "789012",
+					AuthorizationCode:    "",
+					Description:          "Dep to casino",
+					Status:               "pending",
+					CreatedAt:            now,
+					UpdatedAt:            now,
+				},
+			},
+			&models.CreateEventRequest{
+				Event: &models.Event{
+					ID:            eventID,
+					TransactionID: transactionID,
+					Type:          "transaction_created",
+					Status:        "pending",
+					Source:        "transaction-service",
+					CreatedAt:     now,
+					Payload:       []byte(expectedPayload),
+				},
+			})
 
 		assert.NoError(t, err)
 		assert.NoError(t, r.MockDB.ExpectationsWereMet())
@@ -162,13 +193,16 @@ func TestTransactionRepository_CreateTransaction(t *testing.T) {
 	t.Run("database error", func(t *testing.T) {
 		r := new(t)
 		transactionID := generateTestUUID(t)
+		eventID := generateTestUUID(t)
 		now := time.Now()
+		expectedPayload := `{"amount":1500,"currency":"RUB","sender":"RUB80311173817","recipient":"RUB123456789"}`
+
+		r.MockDB.ExpectBegin()
 
 		r.MockDB.ExpectExec("INSERT INTO transactions").
 			WithArgs(
 				transactionID,
 				"transfer",
-				"outgoing",
 				1500.0,
 				"RUB",
 				"internal",
@@ -188,26 +222,43 @@ func TestTransactionRepository_CreateTransaction(t *testing.T) {
 				now,
 			).WillReturnError(errors.New("database error"))
 
-		err := r.Repo.CreateTransaction(context.Background(), models.CreateTransactionRequest{
-			ID:                   transactionID,
-			Type:                 "transfer",
-			Direction:            "outgoing",
-			Amount:               1500.0,
-			Currency:             "RUB",
-			SenderType:           "internal",
-			SenderAccountCode:    "RUB80311173817",
-			SenderPhone:          "",
-			SenderCardNumber:     "",
-			RecipientType:        "internal",
-			RecipientAccountCode: "RUB123456789",
-			RecipientPhone:       "",
-			RecipientCardNumber:  "",
-			ProcessingCode:       "123456",
-			Stan:                 "789012",
-			AuthorizationCode:    "",
-			Description:          "Dep to casino",
-			Status:               "pending",
-		})
+		r.MockDB.ExpectRollback()
+
+		err := r.Repo.CreateTransaction(context.Background(),
+			&models.CreateTransactionRequest{
+				Transaction: &models.Transaction{
+					ID:                   transactionID,
+					Type:                 "transfer",
+					Amount:               1500.0,
+					Currency:             "RUB",
+					SenderType:           "internal",
+					SenderAccountCode:    "RUB80311173817",
+					SenderPhone:          "",
+					SenderCardNumber:     "",
+					RecipientType:        "internal",
+					RecipientAccountCode: "RUB123456789",
+					RecipientPhone:       "",
+					RecipientCardNumber:  "",
+					ProcessingCode:       "123456",
+					Stan:                 "789012",
+					AuthorizationCode:    "",
+					Description:          "Dep to casino",
+					Status:               "pending",
+					CreatedAt:            now,
+					UpdatedAt:            now,
+				},
+			},
+			&models.CreateEventRequest{
+				Event: &models.Event{
+					ID:            eventID,
+					TransactionID: transactionID,
+					Type:          "transaction_created",
+					Status:        "pending",
+					Source:        "transaction-service",
+					CreatedAt:     now,
+					Payload:       []byte(expectedPayload),
+				},
+			})
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "database error")
@@ -222,14 +273,13 @@ func TestTransactionRepository_GetTransaction(t *testing.T) {
 		transactionID := generateTestUUID(t)
 
 		rows := sqlmock.NewRows([]string{
-			"id", "type", "direction", "amount", "currency",
+			"id", "type", "amount", "currency",
 			"sender_type", "sender_account_code", "sender_phone", "sender_card_number",
 			"recipient_type", "recipient_account_code", "recipient_phone", "recipient_card_number",
 			"description", "status", "created_at", "updated_at",
 		}).AddRow(
 			transactionID,
 			"transfer",
-			"outgoing",
 			1500.0,
 			"RUB",
 			"internal",
@@ -246,7 +296,7 @@ func TestTransactionRepository_GetTransaction(t *testing.T) {
 			now,
 		)
 
-		r.MockDB.ExpectQuery(`SELECT id, type, direction, amount, currency, 
+		r.MockDB.ExpectQuery(`SELECT id, type, amount, currency, 
 				sender_type, sender_account_code, sender_phone, sender_card_number,
 				recipient_type, recipient_account_code, recipient_phone, recipient_card_number,
 				description, status, created_at, updated_at
@@ -255,7 +305,7 @@ func TestTransactionRepository_GetTransaction(t *testing.T) {
 			WithArgs(transactionID).
 			WillReturnRows(rows)
 
-		result, err := r.Repo.GetTransaction(context.Background(), models.GetTransactionRequest{
+		result, err := r.Repo.GetTransaction(context.Background(), &models.GetTransactionRequest{
 			ID: transactionID,
 		})
 
@@ -272,7 +322,7 @@ func TestTransactionRepository_GetTransaction(t *testing.T) {
 		r := new(t)
 		transactionID := generateTestUUID(t)
 
-		r.MockDB.ExpectQuery(`SELECT id, type, direction, amount, currency, 
+		r.MockDB.ExpectQuery(`SELECT id, type, amount, currency, 
 				sender_type, sender_account_code, sender_phone, sender_card_number,
 				recipient_type, recipient_account_code, recipient_phone, recipient_card_number,
 				description, status, created_at, updated_at
@@ -281,7 +331,7 @@ func TestTransactionRepository_GetTransaction(t *testing.T) {
 			WithArgs(transactionID).
 			WillReturnError(sql.ErrNoRows)
 
-		_, err := r.Repo.GetTransaction(context.Background(), models.GetTransactionRequest{
+		_, err := r.Repo.GetTransaction(context.Background(), &models.GetTransactionRequest{
 			ID: transactionID,
 		})
 
@@ -302,7 +352,6 @@ func TestTransactionRepository_GetTransactions(t *testing.T) {
 				{
 					ID:                   transactionIDOne,
 					Type:                 "transfer",
-					Direction:            "outgoing",
 					Amount:               1500.0,
 					Currency:             "RUB",
 					SenderType:           "internal",
@@ -315,7 +364,6 @@ func TestTransactionRepository_GetTransactions(t *testing.T) {
 				{
 					ID:                   transactionIDTwo,
 					Type:                 "transfer",
-					Direction:            "incoming",
 					Amount:               240.0,
 					Currency:             "RUB",
 					SenderType:           "internal",
@@ -336,7 +384,7 @@ func TestTransactionRepository_GetTransactions(t *testing.T) {
 			return string(expectedData), nil
 		}
 
-		result, err := r.Repo.GetTransactions(context.Background(), models.GetTransactionsRequest{
+		result, err := r.Repo.GetTransactions(context.Background(), &models.GetTransactionsRequest{
 			AccountCode: "RUB80311173817",
 			Limit:       10,
 			Offset:      0,
@@ -375,14 +423,13 @@ func TestTransactionRepository_GetTransactions(t *testing.T) {
 
 		now := time.Now()
 		rows := sqlmock.NewRows([]string{
-			"id", "type", "direction", "amount", "currency",
+			"id", "type", "amount", "currency",
 			"sender_type", "sender_account_code", "sender_phone", "sender_card_number",
 			"recipient_type", "recipient_account_code", "recipient_phone", "recipient_card_number",
 			"description", "status", "created_at", "updated_at",
 		}).AddRow(
 			transactionIDOne,
 			"transfer",
-			"outgoing",
 			1500.0,
 			"RUB",
 			"internal",
@@ -400,7 +447,6 @@ func TestTransactionRepository_GetTransactions(t *testing.T) {
 		).AddRow(
 			transactionIDTwo,
 			"transfer",
-			"incoming",
 			240.0,
 			"RUB",
 			"internal",
@@ -417,7 +463,7 @@ func TestTransactionRepository_GetTransactions(t *testing.T) {
 			now,
 		)
 
-		r.MockDB.ExpectQuery(`SELECT id, type, direction, amount, currency, 
+		r.MockDB.ExpectQuery(`SELECT id, type, amount, currency, 
 				sender_type, sender_account_code, sender_phone, sender_card_number,
 				recipient_type, recipient_account_code, recipient_phone, recipient_card_number,
 				description, status, created_at, updated_at
@@ -427,7 +473,7 @@ func TestTransactionRepository_GetTransactions(t *testing.T) {
 			WithArgs("RUB80311173817", 10, 0).
 			WillReturnRows(rows)
 
-		result, err := r.Repo.GetTransactions(context.Background(), models.GetTransactionsRequest{
+		result, err := r.Repo.GetTransactions(context.Background(), &models.GetTransactionsRequest{
 			AccountCode: "RUB80311173817",
 			Limit:       10,
 			Offset:      0,
@@ -447,7 +493,7 @@ func TestTransactionRepository_GetTransactions(t *testing.T) {
 			return "", errors.New("cache miss")
 		}
 
-		r.MockDB.ExpectQuery(`SELECT id, type, direction, amount, currency, 
+		r.MockDB.ExpectQuery(`SELECT id, type, amount, currency, 
 				sender_type, sender_account_code, sender_phone, sender_card_number,
 				recipient_type, recipient_account_code, recipient_phone, recipient_card_number,
 				description, status, created_at, updated_at
@@ -457,7 +503,7 @@ func TestTransactionRepository_GetTransactions(t *testing.T) {
 			WithArgs("RUB80311173817", 10, 0).
 			WillReturnError(sql.ErrNoRows)
 
-		_, err := r.Repo.GetTransactions(context.Background(), models.GetTransactionsRequest{
+		_, err := r.Repo.GetTransactions(context.Background(), &models.GetTransactionsRequest{
 			AccountCode: "RUB80311173817",
 			Limit:       10,
 			Offset:      0,
@@ -482,7 +528,7 @@ func TestTransactionRepository_UpdateTransactionStatus(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(0, 1))
 		r.MockDB.ExpectCommit()
 
-		err := r.Repo.UpdateTransactionStatus(context.Background(), models.UpdateTransactionStatusRequest{
+		err := r.Repo.UpdateTransactionStatus(context.Background(), &models.UpdateTransactionStatusRequest{
 			ID:                   transactionID,
 			SenderAccountCode:    "RUB80311173817",
 			RecipientAccountCode: "RUB12345678",

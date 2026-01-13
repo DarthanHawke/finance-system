@@ -28,6 +28,8 @@ const (
 
 // Типы событий для Kafka
 const (
+	EventTransactionResponse = "transaction.response"
+
 	EventFreezeRequest    = "freeze.request"
 	EventFreezeResponse   = "freeze.response"
 	EventUnfreezeRequest  = "unfreeze.request"
@@ -78,10 +80,6 @@ type BalanceResponsePayload struct {
 
 type UpdateAccountPayload struct {
 	Code string `db:"code" json:"сode" validate:"required"`
-}
-
-type ExternalRequestPayload struct {
-	ISOMessage string `json:"iso_message"`
 }
 
 type CreateEventRequest struct {

@@ -8,7 +8,7 @@ CREATE TABLE transactions (
     id                          UUID PRIMARY KEY,
 
     -- Тип платежа: purchase, withdrawal, transfer, payment
-    type                VARCHAR(20) NOT NULL,
+    type                        VARCHAR(20) NOT NULL,
     -- Сумма платежа
     amount                      DECIMAL(12, 2) NOT NULL CHECK (amount > 0),
     -- Валюта платежа в формате ISO 4217
