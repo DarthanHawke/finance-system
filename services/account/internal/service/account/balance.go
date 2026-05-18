@@ -327,7 +327,7 @@ func (s *BalanceService) HandleBlockAccount(ctx context.Context, event *models.E
 	}
 
 	var payloadReq *models.UpdateAccountRequest
-	if err := json.Unmarshal(event.Payload, payloadReq); err != nil {
+	if err := json.Unmarshal(event.Payload, &payloadReq); err != nil {
 		return err
 	}
 

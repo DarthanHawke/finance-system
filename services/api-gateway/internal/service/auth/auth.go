@@ -1,5 +1,6 @@
 package auth
 
+/*
 import (
 	"client-service/internal/models"
 	"context"
@@ -141,3 +142,4 @@ func (s *AuthService) GetAllSessions(ctx context.Context, userID uuid.UUID) ([]m
 
 	return sessions, nil
 }
+*/

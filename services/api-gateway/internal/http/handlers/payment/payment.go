@@ -1,5 +1,6 @@
 package transaction
 
+/*
 import (
 	"client-service/internal/models"
 	"context"
@@ -515,3 +516,4 @@ func (h *TransactionHandler) GetCurrencyRate(w http.ResponseWriter, r *http.Requ
 		Rate:         rate,
 	})
 }
+*/

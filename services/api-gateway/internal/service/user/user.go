@@ -1,5 +1,6 @@
 package user
 
+/*
 import (
 	"client-service/internal/models"
 	"context"
@@ -131,3 +132,4 @@ func (s *UserService) UpdatePassword(ctx context.Context, req models.UpdatePassw
 
 	return nil
 }
+*/

@@ -1,5 +1,6 @@
 package role
 
+/*
 import (
 	"client-service/internal/models"
 	"context"
@@ -262,3 +263,4 @@ func (s *RoleService) GetPermissionsForRelationType(ctx context.Context, relatio
 
 	return permissions, nil
 }
+*/

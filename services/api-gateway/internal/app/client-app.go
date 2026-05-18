@@ -1,5 +1,6 @@
 package app
 
+/*
 import (
 	httpapp "client-service/internal/app/http"
 	accountclient "client-service/internal/clients/grpc/billing/account"
@@ -86,3 +87,4 @@ func New(
 		HTTPServer: httpServer,
 	}
 }
+*/

@@ -1,5 +1,6 @@
 package account
 
+/*
 import (
 	"client-service/internal/clients/grpc/interceptor"
 	"client-service/internal/models"
@@ -145,3 +146,4 @@ func (c *AccountClient) GetBalance(ctx context.Context, accountID string) (float
 
 	return response.GetBalance(), nil
 }
+*/

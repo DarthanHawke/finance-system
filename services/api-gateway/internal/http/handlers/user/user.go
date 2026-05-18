@@ -1,5 +1,6 @@
 package user
 
+/*
 import (
 	"client-service/internal/models"
 	"context"
@@ -272,3 +273,4 @@ func (h *UserHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"update password": "success"})
 }
+*/

@@ -1,5 +1,6 @@
 package transaction
 
+/*
 import (
 	"client-service/internal/models"
 	"context"
@@ -255,3 +256,4 @@ func (s *TransactionService) GetCurrencyRate(
 
 	return rate, nil
 }
+*/

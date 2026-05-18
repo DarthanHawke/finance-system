@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	clientapp "client-service/internal/app"
 	"client-service/internal/config"
@@ -97,3 +98,4 @@ func main() {
 	}
 	log.Info("Gracefully stopped")
 }
+*/

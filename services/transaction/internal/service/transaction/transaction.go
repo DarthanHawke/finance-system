@@ -182,6 +182,7 @@ func (s *TransactionService) HandleReserveResponse(ctx context.Context, resp *mo
 		// размораживаем средства отправителя,
 		// если тип отправителя внешний - значит это пополнение,
 		// никаких изменений в состоянии не произошло, просто отменяем платёж
+		// и сообщаем во внешнюю систему об ошибке
 		switch transaction.SenderType {
 		case models.AccountInternal:
 			if event, err = s.createUnfreezeEvent(transaction.Transaction); err != nil {
@@ -193,6 +194,9 @@ func (s *TransactionService) HandleReserveResponse(ctx context.Context, resp *mo
 		case models.AccountExternal:
 			if err := s.cancelTransaction(ctx, resp); err != nil {
 				return fmt.Errorf("%s: compensating action failed: %w", op, err)
+			}
+			if event, err = s.createExternalRollbackEvent(transaction.Transaction, resp); err != nil {
+				return fmt.Errorf("%s: %w", op, err)
 			}
 		}
 		return nil

@@ -1,5 +1,6 @@
 package role
 
+/*
 import (
 	"client-service/internal/models"
 	"context"
@@ -342,3 +343,4 @@ func (h *RoleHandler) GetUserRole(w http.ResponseWriter, r *http.Request) {
 
 	render.JSON(w, r, models.UserRoleResponse{Role: role})
 }
+*/

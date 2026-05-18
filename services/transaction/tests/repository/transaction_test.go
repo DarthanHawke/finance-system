@@ -1,4 +1,4 @@
-// Пакет repository_test - тесты для пакета repository
+// пакет repository_test - тесты для пакета repository
 package repository_test
 
 import (
@@ -58,7 +58,7 @@ func new(t *testing.T) *TestTransactionRepository {
 // MockRedisCache реализует RedisCacheManager для тестов
 type MockRedisCache struct {
 	GetFunc            func(ctx context.Context, key string) (string, error)
-	SetWithTTLFunc     func(ctx context.Context, key string, value any) error
+	SetFunc            func(ctx context.Context, key string, value any) error
 	DeleteFunc         func(ctx context.Context, key string) error
 	DeleteByPrefixFunc func(ctx context.Context, prefix string) error
 }
@@ -70,9 +70,9 @@ func (m *MockRedisCache) Get(ctx context.Context, key string) (string, error) {
 	return "", nil
 }
 
-func (m *MockRedisCache) SetWithTTL(ctx context.Context, key string, value any) error {
-	if m.SetWithTTLFunc != nil {
-		return m.SetWithTTLFunc(ctx, key, value)
+func (m *MockRedisCache) Set(ctx context.Context, key string, value any) error {
+	if m.SetFunc != nil {
+		return m.SetFunc(ctx, key, value)
 	}
 	return nil
 }
@@ -406,10 +406,10 @@ func TestTransactionRepository_GetTransactions(t *testing.T) {
 			return "", errors.New("cache miss")
 		}
 
-		r.MockCache.SetWithTTLFunc = func(ctx context.Context, key string, value any) error {
+		r.MockCache.SetFunc = func(ctx context.Context, key string, value any) error {
 			assert.Equal(t, fmt.Sprintf("account_transactions:%s:limit:%d:offset:%d", "RUB80311173817", 10, 0), key)
 
-			// Проверяем, что в кэш сохраняются правильные данные
+			// проверяем, что в кэш сохраняются правильные данные
 			dataStr, ok := value.(string)
 			assert.True(t, ok)
 

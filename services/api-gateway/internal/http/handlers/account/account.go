@@ -1,5 +1,6 @@
 package account
 
+/*
 import (
 	"client-service/internal/models"
 	"context"
@@ -175,3 +176,4 @@ func (h *AccountHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 
 	render.JSON(w, r, models.GetBalanceResponse{Balance: balance})
 }
+*/

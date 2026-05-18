@@ -83,7 +83,7 @@ type GetTransactionResponse struct {
 type GetTransactionsRequest struct {
 	AccountCode string `json:"code" validate:"required"`
 	Limit       int    `db:"limit" json:"limit" validate:"required"`
-	Offset      int    `db:"limit" json:"offset" validate:"required"`
+	Offset      int    `db:"offset" json:"offset" validate:"required"`
 }
 
 type GetTransactionsResponse struct {

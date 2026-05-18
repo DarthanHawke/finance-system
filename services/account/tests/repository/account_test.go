@@ -4,9 +4,7 @@ package repository_test
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -24,10 +22,9 @@ import (
 
 // TestAccountRepository содержит все зависимости для тестов
 type TestAccountRepository struct {
-	Repo      *repository.AccountRepository
-	DB        *repository.Database
-	MockDB    sqlmock.Sqlmock
-	MockCache *MockRedisCache
+	Repo   *repository.AccountRepository
+	DB     *repository.Database
+	MockDB sqlmock.Sqlmock
 }
 
 // new создает TestAccountRepository
@@ -38,57 +35,19 @@ func new(t *testing.T) *TestAccountRepository {
 	sqlxDB := sqlx.NewDb(db, "sqlmock")
 	database := &repository.Database{DB: sqlxDB}
 
-	mockCache := &MockRedisCache{}
 	logger := zap.NewNop()
 
-	repo := repository.NewAccountRepository(database, mockCache, logger)
+	repo := repository.NewAccountRepository(database, logger)
 
 	t.Cleanup(func() {
 		db.Close()
 	})
 
 	return &TestAccountRepository{
-		Repo:      repo,
-		DB:        database,
-		MockDB:    mock,
-		MockCache: mockCache,
+		Repo:   repo,
+		DB:     database,
+		MockDB: mock,
 	}
-}
-
-// MockRedisCache реализует RedisCacheManager для тестов
-type MockRedisCache struct {
-	GetFunc            func(ctx context.Context, key string) (string, error)
-	SetWithTTLFunc     func(ctx context.Context, key string, value any) error
-	DeleteFunc         func(ctx context.Context, key string) error
-	DeleteByPrefixFunc func(ctx context.Context, prefix string) error
-}
-
-func (m *MockRedisCache) Get(ctx context.Context, key string) (string, error) {
-	if m.GetFunc != nil {
-		return m.GetFunc(ctx, key)
-	}
-	return "", nil
-}
-
-func (m *MockRedisCache) SetWithTTL(ctx context.Context, key string, value any) error {
-	if m.SetWithTTLFunc != nil {
-		return m.SetWithTTLFunc(ctx, key, value)
-	}
-	return nil
-}
-
-func (m *MockRedisCache) Delete(ctx context.Context, key string) error {
-	if m.DeleteFunc != nil {
-		return m.DeleteFunc(ctx, key)
-	}
-	return nil
-}
-
-func (m *MockRedisCache) DeleteByPrefix(ctx context.Context, prefix string) error {
-	if m.DeleteByPrefixFunc != nil {
-		return m.DeleteByPrefixFunc(ctx, prefix)
-	}
-	return nil
 }
 
 // generateTestUUID - генерим uuid
@@ -108,12 +67,7 @@ func TestAccountRepository_CreateAccount(t *testing.T) {
 			WithArgs("RUB80311173817", "Casino dep account", userID, "RUB", now, now).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
-		r.MockCache.DeleteFunc = func(ctx context.Context, key string) error {
-			assert.Equal(t, fmt.Sprintf("user_accounts:%s", userID), key)
-			return nil
-		}
-
-		err := r.Repo.CreateAccount(context.Background(), models.CreateAccountRequest{
+		err := r.Repo.CreateAccount(context.Background(), &models.CreateAccountRequest{
 			Code:     "RUB80311173817",
 			Name:     "Casino dep account",
 			UserID:   userID,
@@ -133,7 +87,7 @@ func TestAccountRepository_CreateAccount(t *testing.T) {
 			WithArgs("RUB80311173817", "Casino dep account", userID, "USD", now, now).
 			WillReturnError(errors.New("database error"))
 
-		err := r.Repo.CreateAccount(context.Background(), models.CreateAccountRequest{
+		err := r.Repo.CreateAccount(context.Background(), &models.CreateAccountRequest{
 			Code:     "RUB80311173817",
 			Name:     "Casino dep account",
 			UserID:   userID,
@@ -154,20 +108,20 @@ func TestAccountRepository_GetAccount(t *testing.T) {
 		userID := generateTestUUID(t)
 		rows := sqlmock.NewRows([]string{
 			"code", "name", "user_id", "currency",
-			"balance", "blocked_funds", "status", "created_at", "updated_at",
+			"balance", "frozen_balance", "reserve_balance", "status", "created_at", "updated_at",
 		}).AddRow(
 			"USD0101010101", "Credit account", userID, "USD",
-			1000.42, 0, "active", now, now,
+			1000.42, 0, 0, "active", now, now,
 		)
 
 		r.MockDB.ExpectQuery(`SELECT code, name, user_id, currency, 
-					balance, blocked_funds, status, created_at, updated_at
+					balance, frozen_balance, reserve_balance, status, created_at, updated_at
          FROM accounts
          WHERE code = \$1`).
 			WithArgs("USD0101010101").
 			WillReturnRows(rows)
 
-		result, err := r.Repo.GetAccount(context.Background(), models.GetAccountRequest{
+		result, err := r.Repo.GetAccount(context.Background(), &models.GetAccountRequest{
 			Code: "USD0101010101",
 		})
 
@@ -183,13 +137,13 @@ func TestAccountRepository_GetAccount(t *testing.T) {
 		r := new(t)
 
 		r.MockDB.ExpectQuery(`SELECT code, name, user_id, currency, 
-					 balance, blocked_funds, status, created_at, updated_at
+					 balance, frozen_balance, reserve_balance, status, created_at, updated_at
          FROM accounts
          WHERE code = \$1`).
 			WithArgs("USD0101010101").
 			WillReturnError(sql.ErrNoRows)
 
-		_, err := r.Repo.GetAccount(context.Background(), models.GetAccountRequest{
+		_, err := r.Repo.GetAccount(context.Background(), &models.GetAccountRequest{
 			Code: "USD0101010101",
 		})
 
@@ -200,98 +154,27 @@ func TestAccountRepository_GetAccount(t *testing.T) {
 }
 
 func TestAccountRepository_GetAccounts(t *testing.T) {
-	t.Run("success from cache", func(t *testing.T) {
-		r := new(t)
-		userID := generateTestUUID(t)
-
-		expectedAccounts := models.GetAccountsResponse{
-			Accounts: []models.Account{
-				{
-					Code:         "RUB12345678",
-					Name:         "Account 1",
-					UserID:       userID,
-					Currency:     "RUB",
-					Balance:      2356,
-					BlockedFunds: 0,
-					Status:       "active",
-					CreatedAt:    time.Date(2025, 9, 3, 12, 5, 0, 0, time.UTC),
-					UpdatedAt:    time.Date(2025, 9, 3, 12, 7, 0, 0, time.UTC),
-				},
-				{
-					Code:         "USD12345678",
-					Name:         "Account 2",
-					UserID:       userID,
-					Currency:     "USD",
-					Balance:      765,
-					BlockedFunds: 0,
-					Status:       "blocked",
-					CreatedAt:    time.Date(2025, 9, 3, 12, 8, 0, 0, time.UTC),
-					UpdatedAt:    time.Date(2025, 9, 3, 12, 9, 0, 0, time.UTC),
-				},
-			},
-		}
-
-		expectedData, err := json.Marshal(expectedAccounts)
-		require.NoError(t, err)
-
-		r.MockCache.GetFunc = func(ctx context.Context, key string) (string, error) {
-			assert.Equal(t, fmt.Sprintf("user_accounts:%s:limit:%d:offset:%d", userID, 10, 0), key)
-			return string(expectedData), nil
-		}
-
-		result, err := r.Repo.GetAccounts(context.Background(), models.GetAccountsRequest{
-			UserID: userID,
-			Limit:  10,
-			Offset: 0,
-		})
-
-		assert.NoError(t, err)
-		assert.Len(t, result.Accounts, 2)
-		assert.Equal(t, "RUB12345678", result.Accounts[0].Code)
-		assert.Equal(t, "USD12345678", result.Accounts[1].Code)
-		assert.NoError(t, r.MockDB.ExpectationsWereMet())
-	})
-
 	t.Run("success from database", func(t *testing.T) {
 		r := new(t)
 		userID := generateTestUUID(t)
 
-		r.MockCache.GetFunc = func(ctx context.Context, key string) (string, error) {
-			return "", errors.New("cache miss")
-		}
-
-		r.MockCache.SetWithTTLFunc = func(ctx context.Context, key string, value any) error {
-			assert.Equal(t, fmt.Sprintf("user_accounts:%s:limit:%d:offset:%d", userID, 10, 0), key)
-
-			// Проверяем, что в кэш сохраняются правильные данные
-			dataStr, ok := value.(string)
-			assert.True(t, ok)
-
-			var cachedResponse models.GetAccountsResponse
-			err := json.Unmarshal([]byte(dataStr), &cachedResponse)
-			assert.NoError(t, err)
-			assert.Len(t, cachedResponse.Accounts, 2)
-
-			return nil
-		}
-
 		now := time.Now()
 		rows := sqlmock.NewRows([]string{
 			"code", "name", "user_id", "currency", "balance",
-			"blocked_funds", "status", "created_at", "updated_at",
+			"frozen_balance", "reserve_balance", "status", "created_at", "updated_at",
 		}).
-			AddRow("RUB12345678", "Account 1", userID, "RUB", 4125.0, 0, "active", now, now).
-			AddRow("USD12345678", "Account 2", userID, "USD", 123.0, 0, "blocked", now, now)
+			AddRow("RUB12345678", "Account 1", userID, "RUB", 4125.0, 0, 0, "active", now, now).
+			AddRow("USD12345678", "Account 2", userID, "USD", 123.0, 0, 0, "blocked", now, now)
 
 		r.MockDB.ExpectQuery(`SELECT code, name, user_id, currency, balance,
-		       blocked_funds, status, created_at, updated_at
+		       frozen_balance, reserve_balance, status, created_at, updated_at
 		FROM accounts 
 		WHERE user_id = \$1
 		LIMIT \$2 OFFSET \$3`).
 			WithArgs(userID, 10, 0).
 			WillReturnRows(rows)
 
-		result, err := r.Repo.GetAccounts(context.Background(), models.GetAccountsRequest{
+		result, err := r.Repo.GetAccounts(context.Background(), &models.GetAccountsRequest{
 			UserID: userID,
 			Limit:  10,
 			Offset: 0,
@@ -308,19 +191,15 @@ func TestAccountRepository_GetAccounts(t *testing.T) {
 		r := new(t)
 		userID := generateTestUUID(t)
 
-		r.MockCache.GetFunc = func(ctx context.Context, key string) (string, error) {
-			return "", errors.New("cache miss")
-		}
-
 		r.MockDB.ExpectQuery(`SELECT code, name, user_id, currency, balance, 
-		       blocked_funds, status, created_at, updated_at
+		       frozen_balance, reserve_balance, status, created_at, updated_at
 		FROM accounts 
 		WHERE user_id = \$1
 		LIMIT \$2 OFFSET \$3`).
 			WithArgs(userID, 10, 0).
 			WillReturnError(sql.ErrNoRows)
 
-		_, err := r.Repo.GetAccounts(context.Background(), models.GetAccountsRequest{
+		_, err := r.Repo.GetAccounts(context.Background(), &models.GetAccountsRequest{
 			UserID: userID,
 			Limit:  10,
 			Offset: 0,
@@ -332,26 +211,54 @@ func TestAccountRepository_GetAccounts(t *testing.T) {
 	})
 }
 
-func TestAccountRepository_BlockFunds(t *testing.T) {
+func TestAccountRepository_FreezeBalance(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		r := new(t)
-		userID := generateTestUUID(t)
+		eventID := generateTestUUID(t)
+		transactionID := generateTestUUID(t)
+		now := time.Now()
+		expectedPayload := `{"code":"RUB12345678","amount":"6.6","currency":"RUB"}`
 
 		r.MockDB.ExpectBegin()
 		r.MockDB.ExpectExec(`UPDATE accounts 
-        SET blocked_funds = blocked_funds \+ \$1, 
-            balance = balance - \$1,
-            updated_at = \$2
-        WHERE code = \$3 AND user_id = \$4 AND balance >= \$1 AND status = 'active'`).
-			WithArgs(6.6, sqlmock.AnyArg(), "RUB12345678", userID).
+		SET frozen_balance = frozen_balance \+ \$1, 
+		    balance = balance \- \$1,
+		    updated_at = \$2
+		WHERE code = \$3 
+			AND balance >= \$1 
+			AND status = 'active'`).
+			WithArgs(6.6, sqlmock.AnyArg(), "RUB12345678").
 			WillReturnResult(sqlmock.NewResult(0, 1))
+		r.MockDB.ExpectExec("INSERT INTO events").
+			WithArgs(
+				eventID,
+				transactionID,
+				"freeze.request",
+				"pending",
+				"transaction-service",
+				now,
+				[]byte(expectedPayload),
+			).WillReturnResult(sqlmock.NewResult(1, 1))
+
 		r.MockDB.ExpectCommit()
 
-		err := r.Repo.BlockFunds(context.Background(), models.FundsRequest{
-			UserID: userID,
-			Code:   "RUB12345678",
-			Amount: 6.6,
-		})
+		err := r.Repo.FreezeBalance(context.Background(),
+			&models.BalanceRequest{
+				Code:          "RUB12345678",
+				Amount:        6.6,
+				TransactionID: transactionID,
+			},
+			&models.CreateEventRequest{
+				Event: &models.Event{
+					ID:            eventID,
+					TransactionID: transactionID,
+					Type:          "freeze.request",
+					Status:        "pending",
+					Source:        "transaction-service",
+					CreatedAt:     now,
+					Payload:       []byte(expectedPayload),
+				},
+			})
 
 		assert.NoError(t, err)
 		assert.NoError(t, r.MockDB.ExpectationsWereMet())
@@ -359,75 +266,239 @@ func TestAccountRepository_BlockFunds(t *testing.T) {
 
 	t.Run("insufficient funds", func(t *testing.T) {
 		r := new(t)
-		userID := generateTestUUID(t)
+		eventID := generateTestUUID(t)
+		transactionID := generateTestUUID(t)
+		now := time.Now()
+		expectedPayload := `{"code":"RUB12345678","amount":"6.6","currency":"RUB"}`
 
 		r.MockDB.ExpectBegin()
 		r.MockDB.ExpectExec(`UPDATE accounts 
-        SET blocked_funds = blocked_funds \+ \$1, 
-            balance = balance - \$1,
-            updated_at = \$2
-        WHERE code = \$3 AND user_id = \$4 AND balance >= \$1 AND status = 'active'`).
-			WithArgs(6.6, sqlmock.AnyArg(), "RUB12345678", userID).
+		SET frozen_balance = frozen_balance \+ \$1, 
+		    balance = balance \- \$1,
+		    updated_at = \$2
+		WHERE code = \$3 
+			AND balance >= \$1 
+			AND status = 'active'`).
+			WithArgs(6.6, sqlmock.AnyArg(), "RUB12345678").
 			WillReturnResult(sqlmock.NewResult(0, 0))
 		r.MockDB.ExpectRollback()
 
-		err := r.Repo.BlockFunds(context.Background(), models.FundsRequest{
-			UserID: userID,
-			Code:   "RUB12345678",
-			Amount: 6.6,
-		})
+		err := r.Repo.FreezeBalance(context.Background(),
+			&models.BalanceRequest{
+				Code:          "RUB12345678",
+				Amount:        6.6,
+				TransactionID: transactionID,
+			},
+			&models.CreateEventRequest{
+				Event: &models.Event{
+					ID:            eventID,
+					TransactionID: transactionID,
+					Type:          "freeze.request",
+					Status:        "pending",
+					Source:        "transaction-service",
+					CreatedAt:     now,
+					Payload:       []byte(expectedPayload),
+				},
+			})
 
 		assert.Error(t, err)
-		assert.True(t, errors.Is(err, apperr.ErrInsufficientFunds), "Expected ErrInsufficientFunds, got: %v", err)
+		assert.True(t, errors.Is(err, apperr.ErrAccountUpdateFailed), "Expected ErrAccountUpdateFailed, got: %v", err)
 		assert.NoError(t, r.MockDB.ExpectationsWereMet())
 	})
 }
 
-func TestAccountRepository_UnblockFunds(t *testing.T) {
+func TestAccountRepository_UnfreezeBalance(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		r := new(t)
-		userID := generateTestUUID(t)
+		eventID := generateTestUUID(t)
+		transactionID := generateTestUUID(t)
+		now := time.Now()
+		expectedPayload := `{"code":"RUB12345678","amount":"6.6","currency":"RUB"}`
 
 		r.MockDB.ExpectBegin()
 		r.MockDB.ExpectExec(`UPDATE accounts 
-		SET blocked_funds = blocked_funds \- \$1, 
+		SET frozen_balance = frozen_balance \- \$1, 
 		    balance = balance \+ \$1,
 		    updated_at = \$2
-		WHERE code = \$3 AND user_id = \$4 AND blocked_funds >= \$1 AND status IN \('active', 'blocked'\)`).
-			WithArgs(6.6, sqlmock.AnyArg(), "RUB12345678", userID).
+		WHERE code = \$3 
+			AND frozen_balance >= \$1 
+			AND status IN \('active', 'blocked'\)`).
+			WithArgs(6.6, sqlmock.AnyArg(), "RUB12345678").
 			WillReturnResult(sqlmock.NewResult(0, 1))
+		r.MockDB.ExpectExec("INSERT INTO events").
+			WithArgs(
+				eventID,
+				transactionID,
+				"unfreeze.request",
+				"pending",
+				"transaction-service",
+				now,
+				[]byte(expectedPayload),
+			).WillReturnResult(sqlmock.NewResult(1, 1))
+
 		r.MockDB.ExpectCommit()
 
-		err := r.Repo.UnblockFunds(context.Background(), models.FundsRequest{
-			UserID: userID,
-			Code:   "RUB12345678",
-			Amount: 6.6,
-		})
+		err := r.Repo.UnfreezeBalance(context.Background(),
+			&models.BalanceRequest{
+				Code:          "RUB12345678",
+				Amount:        6.6,
+				TransactionID: transactionID,
+			},
+			&models.CreateEventRequest{
+				Event: &models.Event{
+					ID:            eventID,
+					TransactionID: transactionID,
+					Type:          "unfreeze.request",
+					Status:        "pending",
+					Source:        "transaction-service",
+					CreatedAt:     now,
+					Payload:       []byte(expectedPayload),
+				},
+			})
 
 		assert.NoError(t, err)
 		assert.NoError(t, r.MockDB.ExpectationsWereMet())
 	})
 }
 
-func TestAccountRepository_DepositFunds(t *testing.T) {
+func TestAccountRepository_ReserveDeposit(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		r := new(t)
-		userID := generateTestUUID(t)
+		eventID := generateTestUUID(t)
+		transactionID := generateTestUUID(t)
+		now := time.Now()
+		expectedPayload := `{"code":"RUB12345678","amount":"6.6","currency":"RUB"}`
 
 		r.MockDB.ExpectBegin()
 		r.MockDB.ExpectExec(`UPDATE accounts 
-		SET balance = balance \+ \$1,
-		    updated_at = \$2
-		WHERE code = \$3 AND user_id = \$4 AND status = 'active'`).
-			WithArgs(6.6, sqlmock.AnyArg(), "RUB12345678", userID).
+        SET reserve_balance = reserve_balance \+ \$1, 
+            updated_at = \$2
+        WHERE code = \$3 
+            AND status = 'active'`).
+			WithArgs(6.6, sqlmock.AnyArg(), "RUB12345678").
 			WillReturnResult(sqlmock.NewResult(0, 1))
+		r.MockDB.ExpectExec("INSERT INTO events").
+			WithArgs(
+				eventID,
+				transactionID,
+				"reserve.request",
+				"pending",
+				"transaction-service",
+				now,
+				[]byte(expectedPayload),
+			).WillReturnResult(sqlmock.NewResult(1, 1))
+
 		r.MockDB.ExpectCommit()
 
-		err := r.Repo.DepositFunds(context.Background(), models.FundsRequest{
-			UserID: userID,
-			Code:   "RUB12345678",
-			Amount: 6.6,
-		})
+		err := r.Repo.ReserveDeposit(context.Background(),
+			&models.BalanceRequest{
+				Code:          "RUB12345678",
+				Amount:        6.6,
+				TransactionID: transactionID,
+			},
+			&models.CreateEventRequest{
+				Event: &models.Event{
+					ID:            eventID,
+					TransactionID: transactionID,
+					Type:          "reserve.request",
+					Status:        "pending",
+					Source:        "transaction-service",
+					CreatedAt:     now,
+					Payload:       []byte(expectedPayload),
+				},
+			})
+
+		assert.NoError(t, err)
+		assert.NoError(t, r.MockDB.ExpectationsWereMet())
+	})
+
+	t.Run("err", func(t *testing.T) {
+		r := new(t)
+		eventID := generateTestUUID(t)
+		transactionID := generateTestUUID(t)
+		now := time.Now()
+		expectedPayload := `{"code":"RUB12345678","amount":"6.6","currency":"RUB"}`
+
+		r.MockDB.ExpectBegin()
+		r.MockDB.ExpectExec(`UPDATE accounts 
+        SET reserve_balance = reserve_balance \+ \$1, 
+            updated_at = \$2
+        WHERE code = \$3 
+            AND status = 'active'`).
+			WithArgs(6.6, sqlmock.AnyArg(), "RUB12345678").
+			WillReturnResult(sqlmock.NewResult(0, 0))
+		r.MockDB.ExpectRollback()
+
+		err := r.Repo.ReserveDeposit(context.Background(),
+			&models.BalanceRequest{
+				Code:          "RUB12345678",
+				Amount:        6.6,
+				TransactionID: transactionID,
+			},
+			&models.CreateEventRequest{
+				Event: &models.Event{
+					ID:            eventID,
+					TransactionID: transactionID,
+					Type:          "reserve.request",
+					Status:        "pending",
+					Source:        "transaction-service",
+					CreatedAt:     now,
+					Payload:       []byte(expectedPayload),
+				},
+			})
+
+		assert.Error(t, err)
+		assert.NoError(t, r.MockDB.ExpectationsWereMet())
+	})
+}
+
+func TestAccountRepository_UnreserveDeposit(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		r := new(t)
+		eventID := generateTestUUID(t)
+		transactionID := generateTestUUID(t)
+		now := time.Now()
+		expectedPayload := `{"code":RUB12345678,"amount":6.6,"currency":"RUB"}`
+
+		r.MockDB.ExpectBegin()
+		r.MockDB.ExpectExec(`UPDATE accounts 
+        SET reserve_balance = reserve_balance - \$1,
+            updated_at = \$2
+        WHERE code = \$3 
+            AND reserve_balance >= \$1
+            AND status IN \('active', 'blocked'\)`).
+			WithArgs(6.6, sqlmock.AnyArg(), "RUB12345678").
+			WillReturnResult(sqlmock.NewResult(0, 1))
+		r.MockDB.ExpectExec("INSERT INTO events").
+			WithArgs(
+				eventID,
+				transactionID,
+				"unreserve.request",
+				"pending",
+				"transaction-service",
+				now,
+				[]byte(expectedPayload),
+			).WillReturnResult(sqlmock.NewResult(1, 1))
+
+		r.MockDB.ExpectCommit()
+
+		err := r.Repo.UnreserveDeposit(context.Background(),
+			&models.BalanceRequest{
+				Code:          "RUB12345678",
+				Amount:        6.6,
+				TransactionID: transactionID,
+			},
+			&models.CreateEventRequest{
+				Event: &models.Event{
+					ID:            eventID,
+					TransactionID: transactionID,
+					Type:          "unreserve.request",
+					Status:        "pending",
+					Source:        "transaction-service",
+					CreatedAt:     now,
+					Payload:       []byte(expectedPayload),
+				},
+			})
 
 		assert.NoError(t, err)
 		assert.NoError(t, r.MockDB.ExpectationsWereMet())
@@ -437,56 +508,156 @@ func TestAccountRepository_DepositFunds(t *testing.T) {
 func TestAccountRepository_WithdrawFunds(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		r := new(t)
-		userID := generateTestUUID(t)
+		eventID := generateTestUUID(t)
+		transactionID := generateTestUUID(t)
+		now := time.Now()
+		expectedPayload := `{"code":RUB12345678,"amount":6.6,"currency":"RUB"}`
 
 		r.MockDB.ExpectBegin()
 		r.MockDB.ExpectExec(`UPDATE accounts 
-        SET blocked_funds = blocked_funds \- \$1,
+        SET frozen_balance = frozen_balance \- \$1,
             updated_at = \$2
-        WHERE code = \$3 AND user_id = \$4 AND blocked_funds >= \$1 AND status = 'active'`).
-			WithArgs(6.6, sqlmock.AnyArg(), "RUB12345678", userID).
+        WHERE code = \$3 
+			AND frozen_balance >= \$1
+			AND status = 'active'`).
+			WithArgs(6.6, sqlmock.AnyArg(), "RUB12345678").
 			WillReturnResult(sqlmock.NewResult(0, 1))
+		r.MockDB.ExpectExec("INSERT INTO events").
+			WithArgs(
+				eventID,
+				transactionID,
+				"withdraw.request",
+				"pending",
+				"transaction-service",
+				now,
+				[]byte(expectedPayload),
+			).WillReturnResult(sqlmock.NewResult(1, 1))
+
 		r.MockDB.ExpectCommit()
 
-		err := r.Repo.WithdrawFunds(context.Background(), models.FundsRequest{
-			UserID: userID,
-			Code:   "RUB12345678",
-			Amount: 6.6,
-		})
+		err := r.Repo.WithdrawBalance(context.Background(),
+			&models.BalanceRequest{
+				Code:          "RUB12345678",
+				Amount:        6.6,
+				TransactionID: transactionID,
+			},
+			&models.CreateEventRequest{
+				Event: &models.Event{
+					ID:            eventID,
+					TransactionID: transactionID,
+					Type:          "withdraw.request",
+					Status:        "pending",
+					Source:        "transaction-service",
+					CreatedAt:     now,
+					Payload:       []byte(expectedPayload),
+				},
+			})
 
 		assert.NoError(t, err)
 		assert.NoError(t, r.MockDB.ExpectationsWereMet())
 	})
 }
 
-func TestAccountRepository_BlockAccount(t *testing.T) {
+func TestAccountRepository_DepositFunds(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		r := new(t)
-		userID := generateTestUUID(t)
+		eventID := generateTestUUID(t)
+		transactionID := generateTestUUID(t)
+		now := time.Now()
+		expectedPayload := `{"code":"RUB12345678","amount":"6.6","currency":"RUB"}`
+
+		r.MockDB.ExpectBegin()
+		r.MockDB.ExpectExec(`UPDATE accounts 
+		SET reserve_balance = reserve_balance \- \$1,
+			balance = balance \+ \$1,
+		    updated_at = \$2
+		WHERE code = \$3 
+			AND reserve_balance >= \$1
+			AND status = 'active'`).
+			WithArgs(6.6, sqlmock.AnyArg(), "RUB12345678").
+			WillReturnResult(sqlmock.NewResult(0, 1))
+		r.MockDB.ExpectExec("INSERT INTO events").
+			WithArgs(
+				eventID,
+				transactionID,
+				"deposit.request",
+				"pending",
+				"transaction-service",
+				now,
+				[]byte(expectedPayload),
+			).WillReturnResult(sqlmock.NewResult(1, 1))
+
+		r.MockDB.ExpectCommit()
+
+		err := r.Repo.DepositBalance(context.Background(),
+			&models.BalanceRequest{
+				Code:          "RUB12345678",
+				Amount:        6.6,
+				TransactionID: transactionID,
+			},
+			&models.CreateEventRequest{
+				Event: &models.Event{
+					ID:            eventID,
+					TransactionID: transactionID,
+					Type:          "deposit.request",
+					Status:        "pending",
+					Source:        "transaction-service",
+					CreatedAt:     now,
+					Payload:       []byte(expectedPayload),
+				},
+			})
+
+		assert.NoError(t, err)
+		assert.NoError(t, r.MockDB.ExpectationsWereMet())
+	})
+}
+
+func TestAccountRepository_BlockAccountWithEvent(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		r := new(t)
+		eventID := generateTestUUID(t)
+		transactionID := generateTestUUID(t)
+		now := time.Now()
+		expectedPayload := `{"code":"RUB12345678","amount":"6.6","currency":"RUB"}`
 
 		r.MockDB.ExpectBegin()
 		r.MockDB.ExpectExec(`
 		UPDATE accounts 
 		SET status = \$1, 
 		    updated_at = \$2,
-			balance = balance \+ blocked_funds,
-			blocked_funds = 0
+			balance = balance \+ frozen_balance,
+			frozen_balance = 0
 		WHERE code = \$3 
-			AND user_id = \$4 
 	`).
-			WithArgs(models.Blocked, sqlmock.AnyArg(), "RUB12345678", userID).
+			WithArgs(models.Blocked, sqlmock.AnyArg(), "RUB12345678").
 			WillReturnResult(sqlmock.NewResult(0, 1))
+		r.MockDB.ExpectExec("INSERT INTO events").
+			WithArgs(
+				eventID,
+				transactionID,
+				"blockaccount.request",
+				"pending",
+				"transaction-service",
+				now,
+				[]byte(expectedPayload),
+			).WillReturnResult(sqlmock.NewResult(1, 1))
+
 		r.MockDB.ExpectCommit()
 
-		r.MockCache.DeleteFunc = func(ctx context.Context, key string) error {
-			assert.Equal(t, fmt.Sprintf("user_accounts:%s", userID), key)
-			return nil
-		}
-
-		err := r.Repo.BlockAccount(context.Background(), models.UpdateAccountRequest{
-			UserID: userID,
-			Code:   "RUB12345678",
-		})
+		err := r.Repo.BlockAccountWithEvent(context.Background(), &models.UpdateAccountRequest{
+			Code: "RUB12345678",
+		},
+			&models.CreateEventRequest{
+				Event: &models.Event{
+					ID:            eventID,
+					TransactionID: transactionID,
+					Type:          "blockaccount.request",
+					Status:        "pending",
+					Source:        "transaction-service",
+					CreatedAt:     now,
+					Payload:       []byte(expectedPayload),
+				},
+			})
 
 		assert.NoError(t, err)
 		assert.NoError(t, r.MockDB.ExpectationsWereMet())
@@ -496,30 +667,21 @@ func TestAccountRepository_BlockAccount(t *testing.T) {
 func TestAccountRepository_CloseAccount(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		r := new(t)
-		userID := generateTestUUID(t)
 
 		r.MockDB.ExpectBegin()
-		r.MockDB.ExpectExec(`
-		UPDATE accounts 
+		r.MockDB.ExpectExec(`UPDATE accounts 
 		SET status = \$1, 
 		    updated_at = \$2,
 		WHERE code = \$3 
-			AND user_id = \$4 
 			AND balance = 0
-    		AND blocked_funds = 0
-	`).
-			WithArgs(models.Closed, sqlmock.AnyArg(), "RUB12345678", userID).
+    		AND frozen_balance = 0
+			AND reserve_balance = 0`).
+			WithArgs(models.Closed, sqlmock.AnyArg(), "RUB12345678").
 			WillReturnResult(sqlmock.NewResult(0, 1))
 		r.MockDB.ExpectCommit()
 
-		r.MockCache.DeleteFunc = func(ctx context.Context, key string) error {
-			assert.Equal(t, fmt.Sprintf("user_accounts:%s", userID), key)
-			return nil
-		}
-
-		err := r.Repo.CloseAccount(context.Background(), models.UpdateAccountRequest{
-			UserID: userID,
-			Code:   "RUB12345678",
+		err := r.Repo.CloseAccount(context.Background(), &models.UpdateAccountRequest{
+			Code: "RUB12345678",
 		})
 
 		assert.NoError(t, err)

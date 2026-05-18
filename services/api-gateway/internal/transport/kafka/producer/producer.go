@@ -109,7 +109,7 @@ func (p *Producer) Produce(ctx context.Context, topic, key string, event any) er
 		Headers: []kafka.Header{
 			{
 				Key:   "source",
-				Value: []byte("account-service"),
+				Value: []byte("api-gateway-service"),
 			},
 			{
 				Key:   "content-type",
@@ -183,7 +183,7 @@ func (p *Producer) ProduceDLQ(ctx context.Context, key string, event any, eventE
 		Headers: []kafka.Header{
 			{
 				Key:   "source",
-				Value: []byte("account-service"),
+				Value: []byte("api-gateway-service"),
 			},
 			{
 				Key:   "content-type",

@@ -4,7 +4,7 @@ go 1.23.6
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/DarthanHawke/protos-finance-system v0.9.5
+	github.com/DarthanHawke/protos-finance-system v0.9.8
 	github.com/golang-migrate/migrate/v4 v4.18.3
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2
@@ -37,6 +37,7 @@ require (
 	github.com/spf13/afero v1.14.0 // indirect
 	github.com/spf13/cast v1.9.2 // indirect
 	github.com/spf13/pflag v1.0.7 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect

@@ -26,7 +26,7 @@ type TransactionRepository struct {
 // RedisCacheManager интерфейс с методами для кэша
 type RedisCacheManager interface {
 	Get(ctx context.Context, key string) (string, error)
-	SetWithTTL(ctx context.Context, key string, value any) error
+	Set(ctx context.Context, key string, value any) error
 	Delete(ctx context.Context, key string) error
 	DeleteByPrefix(ctx context.Context, prefix string) error
 }
@@ -196,7 +196,7 @@ func (r *TransactionRepository) GetTransactions(
 		)
 		return resp, nil
 	}
-	if err := r.cache.SetWithTTL(ctx, cacheKey, string(data)); err != nil {
+	if err := r.cache.Set(ctx, cacheKey, string(data)); err != nil {
 		r.logger.Warn("failed to set cache key with data",
 			zap.String("op", op),
 			zap.String("cachekey", cacheKey),

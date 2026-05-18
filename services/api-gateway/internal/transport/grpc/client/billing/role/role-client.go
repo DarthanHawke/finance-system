@@ -1,5 +1,6 @@
 package role
 
+/*
 import (
 	"client-service/internal/clients/grpc/interceptor"
 	"client-service/internal/models"
@@ -318,3 +319,4 @@ func (c *RoleClient) GetPermissionsForRelationType(
 
 	return permissions, nil
 }
+*/

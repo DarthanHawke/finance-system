@@ -1,5 +1,6 @@
 package account
 
+/*
 import (
 	"client-service/internal/models"
 	"context"
@@ -110,3 +111,4 @@ func (s *AccountService) GetBalance(ctx context.Context, req models.GetBalanceRe
 
 	return balance, nil
 }
+*/

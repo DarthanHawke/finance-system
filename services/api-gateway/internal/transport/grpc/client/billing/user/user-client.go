@@ -1,5 +1,6 @@
 package user
 
+/*
 import (
 	"client-service/internal/clients/grpc/interceptor"
 	"client-service/internal/models"
@@ -152,3 +153,4 @@ func (c *UserClient) UpdatePassword(ctx context.Context, password string) error 
 
 	return nil
 }
+*/

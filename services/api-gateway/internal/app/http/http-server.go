@@ -1,5 +1,6 @@
 package http
 
+/*
 import (
 	accounthandler "client-service/internal/http/handlers/account"
 	authhandler "client-service/internal/http/handlers/auth"
@@ -123,3 +124,4 @@ func serveHTML(file string) http.HandlerFunc {
 		http.ServeFile(w, r, file)
 	}
 }
+*/

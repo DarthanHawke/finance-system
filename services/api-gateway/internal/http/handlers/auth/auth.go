@@ -1,5 +1,6 @@
 package auth
 
+/*
 import (
 	authCookie "client-service/internal/http/cookie"
 	"client-service/internal/models"
@@ -281,3 +282,4 @@ func (h *AuthHandler) GetAllSessions(w http.ResponseWriter, r *http.Request) {
 
 	render.JSON(w, r, sessions)
 }
+*/

@@ -1,11 +1,10 @@
 package grpcapp
 
-/*
 import (
 	"crypto/tls"
 	"fmt"
 	"net"
-	grpctransaction "transaction-service/internal/grpc/transaction"
+	grpctransaction "transaction-service/internal/transport/grpc/server"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -22,11 +21,11 @@ func New(
 	logger *zap.Logger,
 	gRPCport int,
 	tlsConfig *tls.Config,
-	paymantService grpctransaction.Transaction,
+	transactionService grpctransaction.Transaction,
 ) *App {
 	creds := credentials.NewTLS(tlsConfig)
 	gRPCServer := grpc.NewServer(grpc.Creds(creds))
-	grpctransaction.NewTransactionServer(gRPCServer, paymantService)
+	grpctransaction.NewTransactionServer(gRPCServer, transactionService)
 	return &App{
 		logger:     logger,
 		gRPCServer: gRPCServer,
@@ -61,4 +60,3 @@ func (a *App) Stop() {
 	a.logger.Info("Stopping gRPC server")
 	a.gRPCServer.GracefulStop()
 }
-*/

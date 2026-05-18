@@ -1,5 +1,6 @@
 package middleware
 
+/*
 import (
 	authCookie "client-service/internal/http/cookie"
 	"client-service/internal/models"
@@ -86,3 +87,4 @@ func isPublicRoute(path string) bool {
 	}
 	return slices.Contains(publicRoutes, path)
 }
+*/

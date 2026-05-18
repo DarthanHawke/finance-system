@@ -1,5 +1,6 @@
 package transaction
 
+/*
 import (
 	"client-service/internal/clients/grpc/interceptor"
 	"client-service/internal/models"
@@ -311,3 +312,4 @@ func (c *TransactionClient) GetCurrencyRate(
 
 	return response.GetRate(), nil
 }
+*/

@@ -1,5 +1,6 @@
 package auth
 
+/*
 import (
 	"client-service/internal/clients/grpc/interceptor"
 	"client-service/internal/models"
@@ -169,3 +170,4 @@ func (c *AuthClient) GetAllSessions(ctx context.Context, userID uuid.UUID) ([]mo
 
 	return sessions, nil
 }
+*/
