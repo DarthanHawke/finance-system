@@ -7,15 +7,16 @@ import (
 )
 
 type Configuration struct {
-	Env        string `mapstructure:"ENV" env-default:"prod"`
-	GRPSServer `mapstructure:",squash"`
-	TLS        `mapstructure:",squash"`
-	DataBase   `mapstructure:",squash"`
-	RabbitMQ   `mapstructure:",squash"`
-	Redis      `mapstructure:",squash"`
+	Env               string `mapstructure:"ENV" env-default:"prod"`
+	ISO8583ConfigPath string `mapstructure:"ISO8583_CONFIG_PATH" env-default:"iso8583.example"`
+	GRPCServer        `mapstructure:",squash"`
+	TLS               `mapstructure:",squash"`
+	DataBase          `mapstructure:",squash"`
+	Redis             `mapstructure:",squash"`
+	Kafka             `mapstructure:",squash"`
 }
 
-type GRPSServer struct {
+type GRPCServer struct {
 	Port    int `mapstructure:"SERVER_PORT" env-default:"50058"`
 	Timeout int `mapstructure:"SERVER_TIMEOUT" env-default:"10"`
 }
@@ -38,15 +39,38 @@ type DataBase struct {
 	Key      string `mapstructure:"DB_KEY" env-default:""`
 }
 
-type RabbitMQ struct {
-	URL       string `mapstructure:"RABBITMQ_URL" env-default:"amqp://guest:guest@localhost:5672/"`
-	QueueName string `mapstructure:"RABBITMQ_QUEUE" env-default:"transactions"`
-}
-
 type Redis struct {
 	Addr     string `mapstructure:"REDIS_ADDR"`
 	Password string `mapstructure:"REDIS_PASSWORD"`
 	DB       int    `mapstructure:"REDIS_DB"`
+}
+
+type Kafka struct {
+	Brokers                  string  `mapstructure:"KAFKA_BROKERS" env-default:"localhost:9092"`
+	ConsumerTopics           string  `mapstructure:"KAFKA_CONSUMER_TOPICS"`
+	ConsumerGroupID          string  `mapstructure:"KAFKA_CONSUMER_GROUP_ID" env-default:"transaction-service"`
+	ConsumerMinBytes         int     `mapstructure:"KAFKA_CONSUMER_MIN_BYTES" env-default:"1"`
+	ConsumerMaxBytes         int     `mapstructure:"KAFKA_CONSUMER_MAX_BYTES" env-default:"10e6"`
+	ConsumerMaxWait          int     `mapstructure:"KAFKA_CONSUMER_MAX_WAIT" env-default:"500"`
+	ConsumerCommitInterval   int     `mapstructure:"KAFKA_CONSUMER_COMMIT_INTERVAL" env-default:"1000"`
+	ConsumerSessionTimeout   int     `mapstructure:"KAFKA_CONSUMER_SESSION_TIMEOUT" env-default:"10000"`
+	ConsumerRebalanceTimeout int     `mapstructure:"KAFKA_CONSUMER_REBALANCE_TIMEOUT" env-default:"60000"`
+	ConsumerStartOffset      int64   `mapstructure:"KAFKA_CONSUMER_START_OFFSET" env-default:"-1"`
+	ConsumerConcurrency      int     `mapstructure:"KAFKA_CONSUMER_CONCURRENCY" env-default:"1"`
+	ProducerTopic            string  `mapstructure:"KAFKA_PRODUCER_TOPIC" env-default:"transaction-commands"`
+	ProducerBatchSize        int     `mapstructure:"KAFKA_PRODUCER_BATCH_SIZE" env-default:"100"`
+	ProducerBatchTimeout     int     `mapstructure:"KAFKA_PRODUCER_BATCH_TIMEOUT" env-default:"100"`
+	ProducerRequiredAcks     int     `mapstructure:"KAFKA_PRODUCER_REQUIRED_ACKS" env-default:"-1"`
+	ProducerMaxAttempts      int     `mapstructure:"KAFKA_PRODUCER_MAX_ATTEMPTS" env-default:"3"`
+	ProducerWriteTimeout     int     `mapstructure:"KAFKA_PRODUCER_WRITE_TIMEOUT" env-default:"5000"`
+	DLQTopic                 string  `mapstructure:"KAFKA_DLQ_TOPIC" env-default:"dlq"`
+	DLQBatchSize             int     `mapstructure:"KAFKA_DLQ_BATCH_SIZE" env-default:"10"`
+	DLQBatchTimeout          int     `mapstructure:"KAFKA_DLQ_BATCH_TIMEOUT" env-default:"100"`
+	DLQMaxAttempts           int     `mapstructure:"KAFKA_DLQ_MAX_ATTEMPTS" env-default:"1"`
+	RetryMaxAttempts         int     `mapstructure:"KAFKA_RETRY_MAX_ATTEMPTS" env-default:"3"`
+	RetryInitialWait         int     `mapstructure:"KAFKA_RETRY_INITIAL_WAIT" env-default:"100"`
+	RetryMaxWait             int     `mapstructure:"KAFKA_RETRY_MAX_WAIT" env-default:"5000"`
+	RetryMultiplier          float64 `mapstructure:"KAFKA_RETRY_MULTIPLIER" env-default:"2.0"`
 }
 
 func (c DataBase) DSN() string {

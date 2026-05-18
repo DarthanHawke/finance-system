@@ -1,13 +1,7 @@
 package grpcapp
 
-/*
 import (
-	grpcaccount "billing-service/internal/grpc/account"
-	grpcauth "billing-service/internal/grpc/auth"
-	"billing-service/internal/grpc/interceptor"
-	grpcrole "billing-service/internal/grpc/role"
-	grpctransaction "billing-service/internal/grpc/transaction"
-	grpcuser "billing-service/internal/grpc/user"
+	grpcaccount "account-service/internal/transport/grpc/server"
 
 	"crypto/tls"
 	"fmt"
@@ -28,21 +22,12 @@ func New(
 	logger *zap.Logger,
 	gRPCport int,
 	tlsConfig *tls.Config,
-	authInterceptor *interceptor.AuthInterceptor,
-	authService grpcauth.Auth,
-	transactionService grpctransaction.Transaction,
 	accountService grpcaccount.Account,
-	userService grpcuser.User,
-	roleService grpcrole.Role,
 
 ) *App {
 	creds := credentials.NewTLS(tlsConfig)
-	gRPCServer := grpc.NewServer(grpc.UnaryInterceptor(authInterceptor.Unary()), grpc.Creds(creds))
-	grpcauth.NewAuthServer(gRPCServer, authService)
-	grpctransaction.NewTransactionServer(gRPCServer, transactionService)
+	gRPCServer := grpc.NewServer(grpc.Creds(creds))
 	grpcaccount.NewAccountServer(gRPCServer, accountService)
-	grpcuser.NewUserServer(gRPCServer, userService)
-	grpcrole.NewRoleServer(gRPCServer, roleService)
 	return &App{
 		logger:     logger,
 		gRPCServer: gRPCServer,
@@ -77,4 +62,3 @@ func (a *App) Stop() {
 	a.logger.Info("Stopping gRPC server")
 	a.gRPCServer.GracefulStop()
 }
-*/

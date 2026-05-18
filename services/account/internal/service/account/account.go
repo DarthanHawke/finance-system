@@ -34,11 +34,11 @@ func NewAccountService(
 
 // AccountManager определяет методы управления счетами
 type AccountManager interface {
-	CreateAccount(ctx context.Context, req models.CreateAccountRequest) error
-	GetAccount(ctx context.Context, req models.GetAccountRequest) (models.GetAccountResponse, error)
-	GetAccounts(ctx context.Context, req models.GetAccountsRequest) (models.GetAccountsResponse, error)
-	BlockAccount(ctx context.Context, req models.UpdateAccountRequest) error
-	CloseAccount(ctx context.Context, req models.UpdateAccountRequest) error
+	CreateAccount(ctx context.Context, req *models.CreateAccountRequest) error
+	GetAccount(ctx context.Context, req *models.GetAccountRequest) (models.GetAccountResponse, error)
+	GetAccounts(ctx context.Context, req *models.GetAccountsRequest) (models.GetAccountsResponse, error)
+	BlockAccount(ctx context.Context, req *models.UpdateAccountRequest) error
+	CloseAccount(ctx context.Context, req *models.UpdateAccountRequest) error
 }
 
 // IbanGenerator определяет метод генерации IBAN
@@ -47,7 +47,7 @@ type IbanGenerator interface {
 }
 
 // CreateAccount создает новый счет пользователя
-func (s *AccountService) CreateAccount(ctx context.Context, req models.CreateAccountRequest) error {
+func (s *AccountService) CreateAccount(ctx context.Context, req *models.CreateAccountRequest) error {
 	const op = "service.account.CreateAccount"
 
 	logger := s.logger.With(
@@ -93,7 +93,7 @@ func (s *AccountService) CreateAccount(ctx context.Context, req models.CreateAcc
 // GetAccount возвращает полную информацию о счете
 func (s *AccountService) GetAccount(
 	ctx context.Context,
-	req models.GetAccountRequest,
+	req *models.GetAccountRequest,
 ) (models.GetAccountResponse, error) {
 	const op = "service.account.GetAccount"
 
@@ -122,7 +122,7 @@ func (s *AccountService) GetAccount(
 // GetAccounts возвращает все счета пользователя
 func (s *AccountService) GetAccounts(
 	ctx context.Context,
-	req models.GetAccountsRequest,
+	req *models.GetAccountsRequest,
 ) (models.GetAccountsResponse, error) {
 	const op = "service.account.GetAccounts"
 
@@ -147,7 +147,7 @@ func (s *AccountService) GetAccounts(
 }
 
 // BlockAccount размораживает средства и блокирует счет для проведения любых операций
-func (s *AccountService) BlockAccount(ctx context.Context, req models.UpdateAccountRequest) error {
+func (s *AccountService) BlockAccount(ctx context.Context, req *models.UpdateAccountRequest) error {
 	const op = "service.account.BlockAccount"
 
 	logger := s.logger.With(
@@ -171,7 +171,7 @@ func (s *AccountService) BlockAccount(ctx context.Context, req models.UpdateAcco
 }
 
 // CloseAccount закрывает счет если баланс нулевой
-func (s *AccountService) CloseAccount(ctx context.Context, req models.UpdateAccountRequest) error {
+func (s *AccountService) CloseAccount(ctx context.Context, req *models.UpdateAccountRequest) error {
 	const op = "service.account.CloseAccount"
 
 	logger := s.logger.With(

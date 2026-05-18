@@ -22,8 +22,8 @@ type Consumer struct {
 	wg      sync.WaitGroup
 }
 
-// ConsumerConfig содержит конфигурацию для Kafka Consumer
-type ConsumerConfig struct {
+// Config содержит конфигурацию для Kafka Consumer
+type Config struct {
 	Brokers          []string
 	GroupID          string
 	MinBytes         int
@@ -54,7 +54,7 @@ type EventHandler interface {
 // NewConsumer создает новый экземпляр Kafka Consumer
 func NewConsumer(
 	topics []string,
-	config ConsumerConfig,
+	config *Config,
 	handler EventHandler,
 	logger *zap.Logger,
 ) *Consumer {

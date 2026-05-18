@@ -49,8 +49,8 @@ type RetryConfig struct {
 
 // NewProducer создает новый экземпляр Kafka Producer
 func NewProducer(
-	config Config,
-	dlqConfig DLQConfig,
+	config *Config,
+	dlqConfig *DLQConfig,
 	retryConfig *RetryConfig,
 	logger *zap.Logger,
 ) *Producer {

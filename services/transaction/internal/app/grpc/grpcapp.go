@@ -1,10 +1,11 @@
 package grpcapp
 
 import (
+	grpctransaction "transaction-service/internal/transport/grpc/server"
+
 	"crypto/tls"
 	"fmt"
 	"net"
-	grpctransaction "transaction-service/internal/transport/grpc/server"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

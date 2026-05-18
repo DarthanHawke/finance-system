@@ -23,7 +23,7 @@ type Consumer struct {
 }
 
 // ConsumerConfig содержит конфигурацию для Kafka Consumer
-type ConsumerConfig struct {
+type Config struct {
 	Brokers          []string
 	GroupID          string
 	MinBytes         int
@@ -51,7 +51,7 @@ type EventHandler interface {
 // NewConsumer создает новый экземпляр Kafka Consumer
 func NewConsumer(
 	topics []string,
-	config ConsumerConfig,
+	config *Config,
 	handler EventHandler,
 	logger *zap.Logger,
 ) *Consumer {

@@ -20,7 +20,7 @@ type OutboxProcessor struct {
 
 type Config struct {
 	BatchSize    int
-	handlePeriod time.Duration
+	HandlePeriod time.Duration
 }
 
 type Producer interface {
@@ -37,14 +37,14 @@ func NewOutboxProcessor(
 	outboxManager OutboxManager,
 	producer Producer,
 	logger *zap.Logger,
-	config Config,
+	config *Config,
 ) *OutboxProcessor {
 	return &OutboxProcessor{
 		outboxManager: outboxManager,
 		producer:      producer,
 		logger:        logger.With(zap.String("component", "outbox_processor")),
 		batchSize:     config.BatchSize,
-		handlePeriod:  config.handlePeriod,
+		handlePeriod:  config.HandlePeriod,
 	}
 }
 

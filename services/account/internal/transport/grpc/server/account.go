@@ -14,11 +14,11 @@ import (
 )
 
 type Account interface {
-	CreateAccount(ctx context.Context, req models.CreateAccountRequest) error
-	GetAccount(ctx context.Context, req models.GetAccountRequest) (models.GetAccountResponse, error)
-	GetAccounts(ctx context.Context, req models.GetAccountsRequest) (models.GetAccountsResponse, error)
-	BlockAccount(ctx context.Context, req models.UpdateAccountRequest) error
-	CloseAccount(ctx context.Context, req models.UpdateAccountRequest) error
+	CreateAccount(ctx context.Context, req *models.CreateAccountRequest) error
+	GetAccount(ctx context.Context, req *models.GetAccountRequest) (models.GetAccountResponse, error)
+	GetAccounts(ctx context.Context, req *models.GetAccountsRequest) (models.GetAccountsResponse, error)
+	BlockAccount(ctx context.Context, req *models.UpdateAccountRequest) error
+	CloseAccount(ctx context.Context, req *models.UpdateAccountRequest) error
 }
 
 type AccountServerAPI struct {
@@ -44,7 +44,7 @@ func (s *AccountServerAPI) CreateAccount(
 	if req.GetName() == "" {
 		return nil, status.Error(codes.InvalidArgument, "name is required")
 	}
-	err = s.account.CreateAccount(ctx, models.CreateAccountRequest{
+	err = s.account.CreateAccount(ctx, &models.CreateAccountRequest{
 		Name:     req.GetName(),
 		UserID:   userID,
 		Currency: req.GetCurrency(),
@@ -64,7 +64,7 @@ func (s *AccountServerAPI) GetAccount(
 		return nil, status.Error(codes.InvalidArgument, "account code is required")
 	}
 
-	account, err := s.account.GetAccount(ctx, models.GetAccountRequest{
+	account, err := s.account.GetAccount(ctx, &models.GetAccountRequest{
 		Code: req.GetCode(),
 	})
 	if err != nil {
@@ -101,7 +101,7 @@ func (s *AccountServerAPI) GetUserAccounts(
 		}
 	}
 
-	accounts, err := s.account.GetAccounts(ctx, models.GetAccountsRequest{
+	accounts, err := s.account.GetAccounts(ctx, &models.GetAccountsRequest{
 		UserID: userID,
 		Limit:  int(req.GetLimit()),
 		Offset: int(req.GetOffcet()),
@@ -137,7 +137,7 @@ func (s *AccountServerAPI) BlockAccount(
 		return nil, status.Error(codes.InvalidArgument, "account code is required")
 	}
 
-	err := s.account.BlockAccount(ctx, models.UpdateAccountRequest{
+	err := s.account.BlockAccount(ctx, &models.UpdateAccountRequest{
 		Code: req.GetCode(),
 	})
 	if err != nil {
@@ -154,7 +154,7 @@ func (s *AccountServerAPI) CloseAccount(
 		return nil, status.Error(codes.InvalidArgument, "account code is required")
 	}
 
-	err := s.account.CloseAccount(ctx, models.UpdateAccountRequest{
+	err := s.account.CloseAccount(ctx, &models.UpdateAccountRequest{
 		Code: req.GetCode(),
 	})
 	if err != nil {
