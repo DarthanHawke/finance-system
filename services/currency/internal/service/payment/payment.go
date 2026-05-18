@@ -1,5 +1,6 @@
 package transaction
 
+/* legacy code
 import (
 	billingerr "billing-service/internal/lib/errors"
 	"billing-service/internal/models"
@@ -220,3 +221,4 @@ func (s *TransactionService) GetCurrencyRate(
 
 	return rate, nil
 }
+*/

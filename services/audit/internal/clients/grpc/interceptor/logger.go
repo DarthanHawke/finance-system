@@ -1,5 +1,6 @@
 package interceptor
 
+/* legacy code
 import (
 	"context"
 
@@ -41,3 +42,4 @@ func InterceptorLogger(l *zap.Logger) grpclog.Logger {
 		}
 	})
 }
+*/

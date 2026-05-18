@@ -1,5 +1,6 @@
 package models
 
+/* legacy code
 import (
 	"time"
 
@@ -40,3 +41,4 @@ type CurrencyAccount struct {
 	CreatedAt     time.Time `db:"created_at" json:"created_at,omitempty"`
 	UpdatedAt     time.Time `db:"updated_at" json:"updated_at,omitempty"`
 }
+*/

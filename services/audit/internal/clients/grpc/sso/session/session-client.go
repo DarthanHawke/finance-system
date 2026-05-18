@@ -1,5 +1,6 @@
 package session
 
+/* legacy code
 import (
 	"billing-service/internal/clients/grpc/interceptor"
 	"billing-service/internal/models"
@@ -154,3 +155,4 @@ func (c *SessionClient) GetAll(ctx context.Context, userID uuid.UUID) ([]models.
 
 	return sessions, nil
 }
+*/

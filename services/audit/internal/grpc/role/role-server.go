@@ -1,5 +1,6 @@
 package role
 
+/* legacy code
 import (
 	"billing-service/internal/models"
 	"context"
@@ -280,3 +281,4 @@ func (s *RoleServerAPI) GetPermissionsForRelationType(
 
 	return &blnggrpc.GetPermissionsForRelationTypeResponse{Permissions: protoPermissions}, nil
 }
+*/

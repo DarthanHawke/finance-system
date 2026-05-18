@@ -1,5 +1,6 @@
 package main
 
+/* legacy code
 import (
 	"billing-service/internal/config"
 	"billing-service/internal/lib/logger"
@@ -49,3 +50,4 @@ func main() {
 	}
 
 }
+*/

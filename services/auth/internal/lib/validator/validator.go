@@ -1,5 +1,6 @@
 package validator
 
+/* legacy code
 import (
 	ssoerrors "auth-service/internal/lib/errors"
 
@@ -47,3 +48,4 @@ func ValidatePassword(password string) error {
 
 	return nil
 }
+*/

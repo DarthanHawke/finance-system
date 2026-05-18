@@ -1,5 +1,6 @@
 package transaction
 
+/* legacy code
 import (
 	"billing-service/internal/clients/grpc/interceptor"
 	"billing-service/internal/models"
@@ -147,3 +148,4 @@ func (c *TransactionClient) CancelTransaction(ctx context.Context, transactionID
 
 	return nil
 }
+*/

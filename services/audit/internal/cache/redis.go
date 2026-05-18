@@ -1,5 +1,6 @@
 package cache
 
+/* legacy code
 import (
 	"context"
 	"time"
@@ -83,3 +84,4 @@ func (r *RedisCache) DeleteByPrefix(ctx context.Context, prefix string) error {
 func (r *RedisCache) Close() error {
 	return r.client.Close()
 }
+*/

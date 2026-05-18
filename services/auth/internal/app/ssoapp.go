@@ -1,5 +1,6 @@
 package ssoapp
 
+/* legacy code
 import (
 	grpcapp "auth-service/internal/app/grpc"
 	"auth-service/internal/lib/hash"
@@ -41,3 +42,4 @@ func New(
 		GRPCServer: gRPCApp,
 	}
 }
+*/

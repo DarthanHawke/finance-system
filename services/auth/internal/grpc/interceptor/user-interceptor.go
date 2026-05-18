@@ -1,5 +1,6 @@
 package interceptor
 
+/* legacy code
 import (
 	"auth-service/internal/models"
 	"context"
@@ -31,3 +32,4 @@ func IPUserAgentInterceptor(
 
 	return handler(ctx, req)
 }
+*/

@@ -1,5 +1,6 @@
 package user
 
+/* legacy code
 import (
 	billingerr "billing-service/internal/lib/errors"
 	"billing-service/internal/models"
@@ -282,3 +283,4 @@ func (s *UserService) UpdatePassword(ctx context.Context, password string) error
 
 	return nil
 }
+*/

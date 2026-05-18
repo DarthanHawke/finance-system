@@ -1,5 +1,6 @@
 package models
 
+/* legacy code
 import (
 	"time"
 
@@ -27,3 +28,4 @@ const (
 	IPKey        contextKey = "user_ip"
 	UserAgentKey contextKey = "user_agent"
 )
+*/

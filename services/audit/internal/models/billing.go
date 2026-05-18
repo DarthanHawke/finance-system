@@ -1,5 +1,6 @@
 package models
 
+/* legacy code
 import (
 	"time"
 
@@ -32,3 +33,4 @@ type SessionBlacklist struct {
 	CacheKey string
 	TTL      time.Duration
 }
+*/

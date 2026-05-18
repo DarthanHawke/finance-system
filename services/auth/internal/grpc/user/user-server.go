@@ -1,5 +1,6 @@
 package user
 
+/* legacy code
 import (
 	ssoerrors "auth-service/internal/lib/errors"
 	"auth-service/internal/models"
@@ -193,3 +194,4 @@ func (s *UserServerAPI) UpdatePassword(
 
 	return nil, nil
 }
+*/

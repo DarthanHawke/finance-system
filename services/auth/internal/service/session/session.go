@@ -1,5 +1,6 @@
 package session
 
+/* legacy code
 import (
 	ssoerrors "auth-service/internal/lib/errors"
 	"context"
@@ -245,3 +246,4 @@ func (s *SessionService) GetUserSessions(ctx context.Context, userID uuid.UUID) 
 	)
 	return sessions, nil
 }
+*/

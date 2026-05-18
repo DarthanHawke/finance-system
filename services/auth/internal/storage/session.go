@@ -1,5 +1,6 @@
 package storage
 
+/* legacy code
 import (
 	ssoerrors "auth-service/internal/lib/errors"
 	"auth-service/internal/models"
@@ -35,15 +36,15 @@ func (sessionDB *SessionDataBase) CreateSession(
 	return sessionDB.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		_, err := tx.ExecContext(ctx, `
 			INSERT INTO sessions (
-				id, 
-				user_id, 
-				refresh_token_hash, 
-				user_ip, 
-				user_agent, 
+				id,
+				user_id,
+				refresh_token_hash,
+				user_ip,
+				user_agent,
 				expires_at,
 				created_at
 			) VALUES (
-				gen_random_uuid(), 
+				gen_random_uuid(),
 				$1, $2, $3, $4, $5, NOW()
 			)`,
 			userID,
@@ -70,12 +71,12 @@ func (sessionDB *SessionDataBase) GetSessionByToken(
 
 	var session models.Session
 	err := sessionDB.db.GetContext(ctx, &session, `
-        SELECT 
-            id, 
-            user_id, 
-            refresh_token_hash, 
-            user_ip, 
-            user_agent, 
+        SELECT
+            id,
+            user_id,
+            refresh_token_hash,
+            user_ip,
+            user_agent,
             expires_at,
 			created_at
         FROM sessions
@@ -103,11 +104,11 @@ func (sessionDB *SessionDataBase) GetUserSessions(
 
 	var sessions []models.Session
 	err := sessionDB.db.SelectContext(ctx, &sessions, `
-        SELECT 
-            id, 
-            user_id, 
-            user_ip, 
-            user_agent, 
+        SELECT
+            id,
+            user_id,
+            user_ip,
+            user_agent,
             expires_at,
 			created_at
         FROM sessions
@@ -129,7 +130,7 @@ func (sessionDB *SessionDataBase) DeleteSession(ctx context.Context, sessionID u
 
 	return sessionDB.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		result, err := tx.ExecContext(ctx, `
-			DELETE FROM sessions 
+			DELETE FROM sessions
 			WHERE id = $1`,
 			sessionID,
 		)
@@ -158,7 +159,7 @@ func (sessionDB *SessionDataBase) DeleteAllUserSessions(ctx context.Context, use
 	return sessionDB.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		// Сначала удаляем все refresh токены пользователя
 		_, err := tx.ExecContext(ctx, `
-			DELETE FROM sessions 
+			DELETE FROM sessions
 			WHERE user_id = $1`,
 			userID,
 		)
@@ -170,3 +171,4 @@ func (sessionDB *SessionDataBase) DeleteAllUserSessions(ctx context.Context, use
 		return nil
 	})
 }
+*/

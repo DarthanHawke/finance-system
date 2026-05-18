@@ -1,5 +1,6 @@
 package repository
 
+/* legacy code
 import (
 	billingerr "billing-service/internal/lib/errors"
 	"billing-service/internal/models"
@@ -131,7 +132,7 @@ func (r *AccountRepository) GetUserAccounts(ctx context.Context, userID uuid.UUI
 	err = r.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		return tx.SelectContext(ctx, &accounts,
 			`SELECT account_code, account_name, user_id, currency, balance, blocked_amount, created_at, updated_at
-             FROM currency_accounts 
+             FROM currency_accounts
              WHERE user_id = $1
              ORDER BY created_at`,
 			userID)
@@ -166,7 +167,7 @@ func (r *AccountRepository) GetBalance(ctx context.Context, account_code string)
 
 	err = r.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		return tx.GetContext(ctx, &balance,
-			`SELECT balance FROM currency_accounts 
+			`SELECT balance FROM currency_accounts
              WHERE account_code = $1`,
 			account_code)
 	})
@@ -182,3 +183,4 @@ func (r *AccountRepository) GetBalance(ctx context.Context, account_code string)
 	_ = r.cache.Set(ctx, cacheKey, fmt.Sprintf("%.2f", balance))
 	return balance, nil
 }
+*/

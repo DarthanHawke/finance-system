@@ -1,5 +1,6 @@
 package models
 
+/* legacy code
 import (
 	"time"
 
@@ -38,3 +39,4 @@ type TransactionCreateRequest struct {
 	Currency    string  `json:"currency" validate:"required,oneof=USD EUR RUB"`
 	Description string  `json:"description,omitempty" validate:"max=255"`
 }
+*/

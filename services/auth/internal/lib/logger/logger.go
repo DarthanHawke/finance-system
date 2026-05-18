@@ -1,5 +1,6 @@
 package logger
 
+/* legacy code
 import (
 	"os"
 
@@ -39,3 +40,4 @@ func SetupLogger() *zap.Logger {
 	// zap.AddCaller() - добавляем к каждому сообщению имя файла, номер строки и название функции вызывающей zap
 	return zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
 }
+*/

@@ -1,5 +1,6 @@
 package account
 
+/* legacy code
 import (
 	billingerr "billing-service/internal/lib/errors"
 	"errors"
@@ -298,3 +299,4 @@ func (s *AccountService) GetBalance(ctx context.Context, accountCode string) (fl
 
 	return balance, nil
 }
+*/

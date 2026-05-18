@@ -1,5 +1,6 @@
 package ssoerrors
 
+/* legacy code
 import "errors"
 
 var (
@@ -41,3 +42,4 @@ var (
 	ErrPermissionName        = errors.New("permission name cannot be empty")
 	ErrPermissionHasRoles    = errors.New("permission has user")
 )
+*/

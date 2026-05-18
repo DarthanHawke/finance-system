@@ -1,5 +1,6 @@
 package interceptor
 
+/* legacy code
 import (
 	"billing-service/internal/models"
 	"context"
@@ -93,3 +94,4 @@ func isPublicMethod(method string) bool {
 	}
 	return slices.Contains(publicMethods, method)
 }
+*/

@@ -1,5 +1,6 @@
 package role
 
+/* legacy code
 import (
 	"billing-service/internal/clients/grpc/interceptor"
 	"billing-service/internal/models"
@@ -437,3 +438,4 @@ func (c *RoleClient) GetEntityRelations(
 
 	return relations, nil
 }
+*/

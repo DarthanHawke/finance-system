@@ -1,5 +1,6 @@
 package grpcapp
 
+/* legacy code
 import (
 	"auth-service/internal/grpc/interceptor"
 	grpcsession "auth-service/internal/grpc/session"
@@ -64,3 +65,4 @@ func (a *App) Stop() {
 	a.logger.Info("Stopping gRPC server")
 	a.gRPCServer.GracefulStop()
 }
+*/

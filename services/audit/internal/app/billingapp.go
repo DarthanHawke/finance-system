@@ -1,5 +1,6 @@
 package billingapp
 
+/* legacy code
 import (
 	grpcapp "billing-service/internal/app/grpc"
 	"billing-service/internal/cache"
@@ -104,3 +105,4 @@ func New(
 		GRPCServer: gRPCApp,
 	}
 }
+*/

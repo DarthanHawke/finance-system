@@ -1,5 +1,6 @@
 package user
 
+/* legacy code
 import (
 	"billing-service/internal/clients/grpc/interceptor"
 	"billing-service/internal/models"
@@ -199,3 +200,4 @@ func (c *UserClient) UpdatePassword(ctx context.Context, userID uuid.UUID, passw
 
 	return nil
 }
+*/

@@ -1,5 +1,6 @@
 package jwt
 
+/* legacy code
 import (
 	billingerr "billing-service/internal/lib/errors"
 	"billing-service/internal/models"
@@ -99,3 +100,4 @@ func (g *TokenValidator) ValidateAccessToken(tokenString string) (*models.Access
 
 	return nil, billingerr.ErrInavlidToken
 }
+*/

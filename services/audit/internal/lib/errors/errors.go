@@ -1,5 +1,6 @@
 package storage
 
+/* legacy code
 import "errors"
 
 // account errors
@@ -75,3 +76,4 @@ var (
 	ErrGetPermissions   = errors.New("failed to get permissions")
 	ErrGetRelations     = errors.New("failed to get relations")
 )
+*/

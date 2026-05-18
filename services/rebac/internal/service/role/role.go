@@ -1,5 +1,6 @@
 package role
 
+/* legacy code
 import (
 	"context"
 	"errors"
@@ -602,3 +603,4 @@ func (s *RoleService) GetEntityRelations(
 	)
 	return relations, nil
 }
+*/

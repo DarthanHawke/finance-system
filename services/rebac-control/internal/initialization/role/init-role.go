@@ -1,5 +1,6 @@
 package initialization
 
+/* legacy code
 import (
 	"billing-service/internal/config"
 	billingerr "billing-service/internal/lib/errors"
@@ -310,3 +311,4 @@ func (i *Initializer) createSystemUsers(ctx context.Context, systemUsers []confi
 	}
 	return nil
 }
+*/

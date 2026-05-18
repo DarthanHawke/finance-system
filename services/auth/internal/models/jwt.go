@@ -1,5 +1,6 @@
 package models
 
+/* legacy code
 import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -18,3 +19,4 @@ type RefreshTokenClaims struct {
 	TokenType string `json:"token_type"`
 	jwt.RegisteredClaims
 }
+*/

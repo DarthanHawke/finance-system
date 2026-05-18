@@ -1,5 +1,6 @@
 package config
 
+/* legacy code
 import (
 	"fmt"
 	"time"
@@ -89,3 +90,4 @@ func LoadConfig(env string) (config *Configuration, err error) {
 
 	return config, nil
 }
+*/

@@ -1,5 +1,6 @@
 package events
 
+/* legacy code
 import (
 	"github.com/streadway/amqp"
 )
@@ -56,3 +57,4 @@ func (r *RabbitMQListener) Close() {
 	r.channel.Close()
 	r.conn.Close()
 }
+*/

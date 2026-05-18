@@ -1,5 +1,6 @@
 package grpcapp
 
+/* legacy code
 import (
 	grpcaccount "billing-service/internal/grpc/account"
 	grpcauth "billing-service/internal/grpc/auth"
@@ -76,3 +77,4 @@ func (a *App) Stop() {
 	a.logger.Info("Stopping gRPC server")
 	a.gRPCServer.GracefulStop()
 }
+*/

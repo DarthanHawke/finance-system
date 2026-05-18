@@ -1,5 +1,6 @@
 package account
 
+/* legacy code
 import (
 	"billing-service/internal/models"
 	"context"
@@ -116,3 +117,4 @@ func (s *AccountServerAPI) GetBalance(ctx context.Context, req *blnggrpc.GetBala
 
 	return &blnggrpc.GetBalanceResponse{Balance: balance}, nil
 }
+*/

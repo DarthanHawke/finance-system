@@ -1,5 +1,6 @@
 package service
 
+/* legacy code
 import (
 	"context"
 	"encoding/json"
@@ -55,3 +56,4 @@ func (s *NotificationService) processMessage(msg amqp.Delivery) {
 
 	s.logger.Printf("Transaction id: %v, status: %s", payload.ID, payload.Status)
 }
+*/

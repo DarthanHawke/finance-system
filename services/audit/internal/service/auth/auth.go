@@ -1,5 +1,6 @@
 package auth
 
+/* legacy code
 import (
 	billingerr "billing-service/internal/lib/errors"
 	"billing-service/internal/models"
@@ -355,3 +356,4 @@ func (s *AuthService) GetAllSessions(ctx context.Context, targetID uuid.UUID) ([
 
 	return sessions, nil
 }
+*/

@@ -1,5 +1,6 @@
 package user
 
+/* legacy code
 import (
 	"billing-service/internal/models"
 	"context"
@@ -163,3 +164,4 @@ func (s *UserServerAPI) UpdatePassword(
 
 	return &emptypb.Empty{}, nil
 }
+*/

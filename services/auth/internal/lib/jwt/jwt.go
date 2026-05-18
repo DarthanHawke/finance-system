@@ -1,5 +1,6 @@
 package jwt
 
+/* legacy code
 import (
 	"auth-service/internal/models"
 	"crypto/rsa"
@@ -123,3 +124,4 @@ func (g *TokenGenerator) GenerateRefreshToken() (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	return token.SignedString(g.keys.privateKey)
 }
+*/

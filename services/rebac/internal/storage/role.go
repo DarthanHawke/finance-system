@@ -1,5 +1,6 @@
 package storage
 
+/* legacy code
 import (
 	"context"
 	"database/sql"
@@ -61,10 +62,10 @@ func (roleDB *RoleDataBase) checkPermissionPaths(
 			SELECT r.source_id, r.target_id, r.relation_type, ARRAY[r.source_id, r.target_id], 1
 			FROM relations r
 			WHERE r.source_id = $1
-			
+
 			UNION
-			
-			SELECT r.source_id, r.target_id, r.relation_type, 
+
+			SELECT r.source_id, r.target_id, r.relation_type,
 				ap.path || r.target_id, ap.depth + 1
 			FROM relations r
 			JOIN access_path ap ON r.source_id = ap.target
@@ -173,7 +174,7 @@ func (roleDB *RoleDataBase) CreateRelation(
 		// Проверяем, не существует ли уже такое отношение
 		err = tx.GetContext(ctx, &exists, `
 			SELECT EXISTS(
-				SELECT 1 FROM relations 
+				SELECT 1 FROM relations
 				WHERE source_id = $1 AND target_id = $2 AND relation_type = $3
 			)`, sourceID, targetID, relationType)
 		if err != nil {
@@ -207,7 +208,7 @@ func (roleDB *RoleDataBase) DeleteRelation(
 
 	return roleDB.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		query := `
-			DELETE FROM relations 
+			DELETE FROM relations
 			WHERE source_id = $1 AND target_id = $2 AND relation_type = $3
 		`
 		result, err := tx.ExecContext(ctx, query, sourceID, targetID, relationType)
@@ -279,7 +280,7 @@ func (roleDB *RoleDataBase) AssignPermission(ctx context.Context, permissionID u
 		// Проверяем, не назначено ли уже это разрешение
 		err = tx.GetContext(ctx, &exists, `
 			SELECT EXISTS(
-				SELECT 1 FROM permission_assignments 
+				SELECT 1 FROM permission_assignments
 				WHERE relation_type = $1 AND permission_id = $2
 			)`, relationType, permissionID)
 		if err != nil {
@@ -319,7 +320,7 @@ func (roleDB *RoleDataBase) RevokePermission(ctx context.Context, permissionID u
 		// Проверяем, существует ли такое назначение
 		err = tx.GetContext(ctx, &exists, `
             SELECT EXISTS(
-                SELECT 1 FROM permission_assignments 
+                SELECT 1 FROM permission_assignments
                 WHERE relation_type = $1 AND permission_id = $2
             )`, relationType, permissionID)
 		if err != nil {
@@ -331,7 +332,7 @@ func (roleDB *RoleDataBase) RevokePermission(ctx context.Context, permissionID u
 
 		// Отзываем разрешение
 		query := `
-            DELETE FROM permission_assignments 
+            DELETE FROM permission_assignments
             WHERE relation_type = $1 AND permission_id = $2
         `
 		result, err := tx.ExecContext(ctx, query, relationType, permissionID)
@@ -401,8 +402,8 @@ func (roleDB *RoleDataBase) GetUserRelations(ctx context.Context, userID uuid.UU
 
 	var relations []models.Relation
 	query := `
-		SELECT id, source_id, target_id, relation_type, created_at 
-		FROM relations 
+		SELECT id, source_id, target_id, relation_type, created_at
+		FROM relations
 		WHERE source_id = $1 OR target_id = $1
 	`
 	err := roleDB.db.SelectContext(ctx, &relations, query, userID)
@@ -492,3 +493,4 @@ func (roleDB *RoleDataBase) GetEntityRelations(ctx context.Context, entityID uui
 
 	return relations, nil
 }
+*/

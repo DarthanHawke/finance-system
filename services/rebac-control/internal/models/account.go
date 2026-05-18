@@ -1,6 +1,7 @@
 // Пакет models содержит различные dto'шки, модельки, константы
 package models
 
+/* legacy code
 import (
 	"time"
 
@@ -63,3 +64,4 @@ type UpdateStatusRequest struct {
 	Code   string    `db:"code" json:"сode" validate:"required"`
 	Status string    `db:"status" json:"status" validate:"required,oneof=active blocked closed"`
 }
+*/

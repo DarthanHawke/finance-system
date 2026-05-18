@@ -1,5 +1,6 @@
 package user
 
+/* legacy code
 import (
 	ssoerrors "auth-service/internal/lib/errors"
 	"auth-service/internal/lib/validator"
@@ -324,3 +325,4 @@ func (s *UserService) GetAllUsers(
 	)
 	return users, nil
 }
+*/

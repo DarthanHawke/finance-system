@@ -1,5 +1,6 @@
 package role
 
+/* legacy code
 import (
 	billingerr "billing-service/internal/lib/errors"
 
@@ -602,3 +603,4 @@ func (s *RoleService) GetUserRole(ctx context.Context) (string, error) {
 
 	return unknown, err
 }
+*/

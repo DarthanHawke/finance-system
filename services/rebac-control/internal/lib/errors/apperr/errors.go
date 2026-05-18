@@ -1,6 +1,7 @@
 // Пакет apperr реализует пользовательский тип для обёртки над предопределёнными ошибками
 package apperr
 
+/* legacy code
 type AppError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
@@ -23,3 +24,4 @@ var (
 	// ErrInvalidAmount - неккоректная сумма
 	ErrInvalidAmount = &AppError{Code: "INVALID_AMOUNT", Message: "Invalid amount"}
 )
+*/

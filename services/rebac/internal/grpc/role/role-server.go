@@ -1,5 +1,6 @@
 package role
 
+/* legacy code
 import (
 	"context"
 	"errors"
@@ -412,3 +413,4 @@ func (s *RoleServerAPI) GetEntityRelations(
 
 	return &ssogrpc.GetEntityRelationsResponse{Relations: protoRelations}, nil
 }
+*/

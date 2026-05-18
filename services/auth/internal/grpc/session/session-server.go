@@ -1,5 +1,6 @@
 package session
 
+/* legacy code
 import (
 	"auth-service/internal/models"
 	"context"
@@ -139,3 +140,4 @@ func (s *SessionServerAPI) GetAll(
 
 	return &ssogrpc.GetAllResponse{Session: protoSessnions}, nil
 }
+*/

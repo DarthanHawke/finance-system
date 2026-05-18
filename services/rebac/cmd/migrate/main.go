@@ -1,5 +1,6 @@
 package main
 
+/* legacy code
 import (
 	"os"
 	"rebac-service/internal/config"
@@ -49,3 +50,4 @@ func main() {
 	}
 
 }
+*/

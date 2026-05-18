@@ -1,5 +1,6 @@
 package main
 
+/* legacy code
 import (
 	"context"
 	"log"
@@ -48,3 +49,4 @@ func main() {
 	<-quit
 	log.Println("Shutting down notification service...")
 }
+*/

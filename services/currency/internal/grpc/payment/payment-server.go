@@ -1,5 +1,6 @@
 package transaction
 
+/* legacy code
 import (
 	"context"
 
@@ -75,3 +76,4 @@ func (s *TransactionServerAPI) UpdateCurrencyRate(ctx context.Context, req *blng
 
 	return &emptypb.Empty{}, nil
 }
+*/

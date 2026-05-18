@@ -1,5 +1,6 @@
 package models
 
+/* legacy code
 import (
 	"time"
 
@@ -36,3 +37,4 @@ type PermissionAssignment struct {
 	PermissionID uuid.UUID `db:"permission_id"`
 	CreatedAt    time.Time `db:"created_at"`
 }
+*/

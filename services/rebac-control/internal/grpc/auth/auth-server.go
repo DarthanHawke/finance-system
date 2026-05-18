@@ -1,5 +1,6 @@
 package auth
 
+/* legacy code
 import (
 	"billing-service/internal/models"
 	"context"
@@ -186,3 +187,4 @@ func (s *AuthServerAPI) GetAllSessions(
 
 	return &blnggrpc.GetAllSessionsResponse{Session: protoSessions}, nil
 }
+*/

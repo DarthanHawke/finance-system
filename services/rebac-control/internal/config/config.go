@@ -1,5 +1,6 @@
 package config
 
+/* legacy code
 import (
 	"fmt"
 	"time"
@@ -130,3 +131,4 @@ func LoadSystemUsers(yaml string) (config *SystemUsers, err error) {
 
 	return config, nil
 }
+*/

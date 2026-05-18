@@ -1,6 +1,7 @@
 // Пакет repository реализовывает работу с базами данных
 package repository
 
+/* legacy code
 import (
 	"context"
 	"fmt"
@@ -55,3 +56,4 @@ func (db *Database) WithTransaction(ctx context.Context, fn func(*sqlx.Tx) error
 	}
 	return nil
 }
+*/

@@ -1,5 +1,6 @@
 package iban
 
+/* legacy code
 import (
 	"errors"
 	"fmt"
@@ -242,3 +243,4 @@ func isDigits(s string) bool {
 	}
 	return true
 }
+*/

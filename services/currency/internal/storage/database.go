@@ -1,5 +1,6 @@
 package storage
 
+/* legacy code
 import (
 	"context"
 	"fmt"
@@ -54,3 +55,4 @@ func (db *Database) WithTransaction(ctx context.Context, fn func(*sqlx.Tx) error
 	}
 	return tx.Commit()
 }
+*/

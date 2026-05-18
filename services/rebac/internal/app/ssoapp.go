@@ -1,5 +1,6 @@
 package ssoapp
 
+/* legacy code
 import (
 	"crypto/tls"
 	grpcapp "rebac-service/internal/app/grpc"
@@ -34,3 +35,4 @@ func New(
 		GRPCServer: gRPCApp,
 	}
 }
+*/

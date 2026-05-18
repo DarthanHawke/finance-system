@@ -1,5 +1,6 @@
 package repository
 
+/* legacy code
 import (
 	billingerr "billing-service/internal/lib/errors"
 	"billing-service/internal/models"
@@ -51,7 +52,7 @@ func (r *TransactionRepository) Transfer(
 		// 1. Проверяем, не выполнялась ли уже эта операция
 		var existingOpID uuid.UUID
 		err := tx.GetContext(ctx, &existingOpID,
-			`SELECT operation_id FROM balance_operations 
+			`SELECT operation_id FROM balance_operations
              WHERE operation_id = $1 FOR UPDATE`,
 			operationID)
 		if err == nil {
@@ -113,7 +114,7 @@ func (r *TransactionRepository) Transfer(
 
 		// 5. Помечаем операцию как успешную
 		_, err = tx.ExecContext(ctx,
-			`UPDATE balance_operations 
+			`UPDATE balance_operations
              SET status = 'COMPLETED', processed_at = NOW()
              WHERE operation_id = $1`,
 			operationID)
@@ -156,7 +157,7 @@ func (r *TransactionRepository) Deposit(
 		// Проверяем, не выполнялась ли уже эта операция
 		var existingOpID uuid.UUID
 		err := tx.GetContext(ctx, &existingOpID,
-			`SELECT operation_id FROM balance_operations 
+			`SELECT operation_id FROM balance_operations
              WHERE operation_id = $1 FOR UPDATE`,
 			operationID)
 		if err == nil {
@@ -169,7 +170,7 @@ func (r *TransactionRepository) Deposit(
 		// Получаем информацию о счете
 		var currency string
 		err = tx.QueryRowContext(ctx,
-			`SELECT user_id, currency FROM currency_accounts 
+			`SELECT user_id, currency FROM currency_accounts
      WHERE account_code = $1 FOR UPDATE`,
 			accountCode).Scan(&userID, &currency)
 		if err != nil {
@@ -181,7 +182,7 @@ func (r *TransactionRepository) Deposit(
 		// Обновляем баланс
 		var newBalance float64
 		err = tx.GetContext(ctx, &newBalance,
-			`UPDATE currency_accounts 
+			`UPDATE currency_accounts
              SET balance = balance + $1, updated_at = NOW()
              WHERE account_code = $2
              RETURNING balance`,
@@ -193,8 +194,8 @@ func (r *TransactionRepository) Deposit(
 		// Записываем операцию в историю
 		_, err = tx.ExecContext(ctx,
 			`INSERT INTO balance_operations (
-                operation_id, account_code, user_id, currency, amount, 
-                new_balance, operation_type, status, 
+                operation_id, account_code, user_id, currency, amount,
+                new_balance, operation_type, status,
                 transaction_id, description, processed_at
              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
 			operationID, accountCode, userID, currency, amount, newBalance,
@@ -231,7 +232,7 @@ func (r *TransactionRepository) Withdraw(
 		// 1. Проверяем, не выполнялась ли уже эта операция
 		var existingOpID uuid.UUID
 		err := tx.GetContext(ctx, &existingOpID,
-			`SELECT operation_id FROM balance_operations 
+			`SELECT operation_id FROM balance_operations
              WHERE operation_id = $1 FOR UPDATE`,
 			operationID)
 		if err == nil {
@@ -245,8 +246,8 @@ func (r *TransactionRepository) Withdraw(
 		var currency string
 		var balance float64
 		err = tx.QueryRowContext(ctx,
-			`SELECT user_id, currency, balance 
-     FROM currency_accounts 
+			`SELECT user_id, currency, balance
+     FROM currency_accounts
      WHERE account_code = $1 FOR UPDATE`,
 			accountCode,
 		).Scan(&userID, &currency, &balance)
@@ -265,7 +266,7 @@ func (r *TransactionRepository) Withdraw(
 		// 4. Списание средств
 		var newBalance float64
 		err = tx.GetContext(ctx, &newBalance,
-			`UPDATE currency_accounts 
+			`UPDATE currency_accounts
              SET balance = balance - $1, updated_at = NOW()
              WHERE account_code = $2
              RETURNING balance`,
@@ -277,8 +278,8 @@ func (r *TransactionRepository) Withdraw(
 		// 5. Записываем операцию
 		_, err = tx.ExecContext(ctx,
 			`INSERT INTO balance_operations (
-                operation_id, account_code, user_id, currency, amount, 
-                new_balance, operation_type, status, 
+                operation_id, account_code, user_id, currency, amount,
+                new_balance, operation_type, status,
                 transaction_id, description, processed_at
              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
 			operationID,
@@ -321,7 +322,7 @@ func (r *TransactionRepository) withdrawInTx(tx *sqlx.Tx,
 	var userID uuid.UUID
 	var currency string
 	err := tx.QueryRowContext(context.Background(),
-		`SELECT user_id, currency FROM currency_accounts 
+		`SELECT user_id, currency FROM currency_accounts
      WHERE account_code = $1 FOR UPDATE`,
 		accountCode,
 	).Scan(&userID, &currency)
@@ -335,7 +336,7 @@ func (r *TransactionRepository) withdrawInTx(tx *sqlx.Tx,
 	// Проверяем достаточность средств
 	var currentBalance float64
 	err = tx.GetContext(context.Background(), &currentBalance,
-		`SELECT balance FROM currency_accounts 
+		`SELECT balance FROM currency_accounts
          WHERE account_code = $1 FOR UPDATE`,
 		accountCode)
 	if err != nil {
@@ -349,7 +350,7 @@ func (r *TransactionRepository) withdrawInTx(tx *sqlx.Tx,
 	// Обновляем баланс
 	var newBalance float64
 	err = tx.GetContext(context.Background(), &newBalance,
-		`UPDATE currency_accounts 
+		`UPDATE currency_accounts
          SET balance = balance - $1, updated_at = NOW()
          WHERE account_code = $2
          RETURNING balance`,
@@ -361,8 +362,8 @@ func (r *TransactionRepository) withdrawInTx(tx *sqlx.Tx,
 	// Записываем операцию в историю
 	_, err = tx.ExecContext(context.Background(),
 		`INSERT INTO balance_operations (
-            operation_id, account_code, user_id, currency, amount, 
-            new_balance, operation_type, status, 
+            operation_id, account_code, user_id, currency, amount,
+            new_balance, operation_type, status,
             transaction_id, description, processed_at
          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
 		operationID, accountCode, userID, currency, amount, newBalance,
@@ -381,7 +382,7 @@ func (r *TransactionRepository) depositInTx(tx *sqlx.Tx,
 	var userID uuid.UUID
 	var currency string
 	err := tx.QueryRowContext(context.Background(),
-		`SELECT user_id, currency FROM currency_accounts 
+		`SELECT user_id, currency FROM currency_accounts
      WHERE account_code = $1 FOR UPDATE`,
 		accountCode,
 	).Scan(&userID, &currency)
@@ -395,7 +396,7 @@ func (r *TransactionRepository) depositInTx(tx *sqlx.Tx,
 	// Обновляем баланс
 	var newBalance float64
 	err = tx.GetContext(context.Background(), &newBalance,
-		`UPDATE currency_accounts 
+		`UPDATE currency_accounts
          SET balance = balance + $1, updated_at = NOW()
          WHERE account_code = $2
          RETURNING balance`,
@@ -407,8 +408,8 @@ func (r *TransactionRepository) depositInTx(tx *sqlx.Tx,
 	// Записываем операцию в историю
 	_, err = tx.ExecContext(context.Background(),
 		`INSERT INTO balance_operations (
-            operation_id, account_code, user_id, currency, amount, 
-            new_balance, operation_type, status, 
+            operation_id, account_code, user_id, currency, amount,
+            new_balance, operation_type, status,
             transaction_id, description, processed_at
          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
 		operationID, accountCode, userID, currency, amount, newBalance,
@@ -422,7 +423,7 @@ func (r *TransactionRepository) GetTransactionsByUser(ctx context.Context, userI
 
 	stmt, err := r.db.Prepare(`
         SELECT DISTINCT transaction_id
-        FROM balance_operations 
+        FROM balance_operations
         WHERE user_id = $1 AND transaction_id IS NOT NULL
     `)
 	if err != nil {
@@ -467,7 +468,7 @@ func (r *TransactionRepository) UpdateCurrencyRate(
 		_, err := tx.ExecContext(ctx,
 			`INSERT INTO currency_rates (from_currency, to_currency, rate)
 			 VALUES ($1, $2, $3)
-			 ON CONFLICT (from_currency, to_currency) 
+			 ON CONFLICT (from_currency, to_currency)
 			 DO UPDATE SET rate = EXCLUDED.rate, updated_at = NOW()`,
 			fromCurrency, toCurrency, rate)
 		return err
@@ -516,7 +517,7 @@ func (r *TransactionRepository) ConvertCurrency(
 		// Проверяем, не выполнялась ли уже эта операция
 		var existingOpID uuid.UUID
 		err := tx.GetContext(ctx, &existingOpID,
-			`SELECT operation_id FROM balance_operations 
+			`SELECT operation_id FROM balance_operations
              WHERE operation_id = $1 FOR UPDATE`,
 			operationID)
 		if err == nil {
@@ -529,7 +530,7 @@ func (r *TransactionRepository) ConvertCurrency(
 		// 1. Записываем начальное состояние саги
 		_, err = tx.ExecContext(ctx,
 			`INSERT INTO balance_operations (
-                operation_id, account_code, user_id, currency, amount, 
+                operation_id, account_code, user_id, currency, amount,
                 new_balance, operation_type, status, description
              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 			operationID, fromAccount.AccountCode, fromAccount.UserID, fromAccount.Currency, amount, fromAccount.Balance,
@@ -543,7 +544,7 @@ func (r *TransactionRepository) ConvertCurrency(
 		if err := r.withdrawInTx(tx, withdrawOpID, fromAccount.AccountCode, amount, uuid.Nil, "Convert to "+toAccount.Currency); err != nil {
 			// Записываем неудачу
 			_, _ = tx.ExecContext(ctx,
-				`UPDATE balance_operations SET status = 'FAILED' 
+				`UPDATE balance_operations SET status = 'FAILED'
                  WHERE operation_id = $1`,
 				operationID)
 			return err
@@ -556,7 +557,7 @@ func (r *TransactionRepository) ConvertCurrency(
 
 			// Записываем неудачу
 			_, _ = tx.ExecContext(ctx,
-				`UPDATE balance_operations SET status = 'FAILED' 
+				`UPDATE balance_operations SET status = 'FAILED'
                  WHERE operation_id = $1`,
 				operationID)
 			return err
@@ -564,7 +565,7 @@ func (r *TransactionRepository) ConvertCurrency(
 
 		// 4. Помечаем операцию как завершенную
 		_, err = tx.ExecContext(ctx,
-			`UPDATE balance_operations SET status = 'COMPLETED', processed_at = NOW() 
+			`UPDATE balance_operations SET status = 'COMPLETED', processed_at = NOW()
              WHERE operation_id = $1`,
 			operationID)
 		return err
@@ -593,10 +594,10 @@ func (r *TransactionRepository) GetPendingOperations(
 
 	err := r.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		return tx.SelectContext(ctx, &operations,
-			`SELECT id, operation_id, account_code, user_id, currency, amount, 
-					new_balance, operation_type, status, transaction_id, 
+			`SELECT id, operation_id, account_code, user_id, currency, amount,
+					new_balance, operation_type, status, transaction_id,
 					description, created_at, processed_at
-			 FROM balance_operations 
+			 FROM balance_operations
 			 WHERE status = 'PENDING'
 			 ORDER BY created_at
 			 LIMIT $1`,
@@ -651,7 +652,7 @@ func (r *TransactionRepository) GetOperationHistory(
 
 		// 2. Получаем историю операций
 		err = tx.SelectContext(ctx, &operations,
-			`SELECT 
+			`SELECT
                 id, operation_id, account_code, currency, amount,
                 new_balance, operation_type, status,
                 transaction_id, description, created_at,
@@ -682,7 +683,7 @@ func (r *TransactionRepository) GetOperationHistory(
 
 func (r *TransactionRepository) markOperationFailed(tx *sqlx.Tx, operationID uuid.UUID, errorMsg string) error {
 	_, err := tx.ExecContext(context.Background(),
-		`UPDATE balance_operations 
+		`UPDATE balance_operations
          SET status = 'FAILED', description = description || '; ' || $2
          WHERE operation_id = $1`,
 		operationID, errorMsg)
@@ -730,7 +731,7 @@ func (r *TransactionRepository) GetCurrencyRate(ctx context.Context, fromCurrenc
 
 	err = r.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		return tx.GetContext(ctx, &rate,
-			`SELECT rate FROM currency_rates 
+			`SELECT rate FROM currency_rates
 			 WHERE from_currency = $1 AND to_currency = $2`,
 			fromCurrency, toCurrency)
 	})
@@ -746,3 +747,4 @@ func (r *TransactionRepository) GetCurrencyRate(ctx context.Context, fromCurrenc
 	_ = r.cache.Set(ctx, cacheKey, fmt.Sprintf("%.6f", rate))
 	return rate, nil
 }
+*/

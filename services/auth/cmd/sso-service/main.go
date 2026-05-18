@@ -1,5 +1,6 @@
 package main
 
+/* legacy code
 import (
 	ssoapp "auth-service/internal/app"
 	"auth-service/internal/config"
@@ -104,3 +105,4 @@ func main() {
 	application.GRPCServer.Stop()
 	log.Info("Gracefully stopped")
 }
+*/

@@ -1,5 +1,6 @@
 package storage
 
+/* legacy code
 import (
 	ssoerrors "auth-service/internal/lib/errors"
 	"auth-service/internal/models"
@@ -32,9 +33,9 @@ func (userDB *UserDataBase) CreateUser(ctx context.Context, email, passwordHash,
 	err := userDB.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		err := tx.QueryRowxContext(ctx, `
             INSERT INTO users
-                (email, password_hash, full_name, created_at, updated_at) 
+                (email, password_hash, full_name, created_at, updated_at)
             VALUES
-                ($1, $2, $3, NOW(), NOW()) 
+                ($1, $2, $3, NOW(), NOW())
             RETURNING id`,
 			email, passwordHash, fullName,
 		).Scan(&id)
@@ -62,13 +63,13 @@ func (userDB *UserDataBase) GetUserByID(ctx context.Context, userID uuid.UUID) (
 
 	var user models.User
 	err := userDB.db.GetContext(ctx, &user, `
-        SELECT 
+        SELECT
             id,
-            email, 
+            email,
 			password_hash,
-            full_name, 
-            created_at, 
-            updated_at 
+            full_name,
+            created_at,
+            updated_at
         FROM users WHERE id = $1
     `, userID)
 	if err != nil {
@@ -84,13 +85,13 @@ func (userDB *UserDataBase) GetUserByEmail(ctx context.Context, email string) (*
 
 	var user models.User
 	err := userDB.db.GetContext(ctx, &user, `
-        SELECT 
+        SELECT
             id,
-            email, 
+            email,
 			password_hash,
-            full_name, 
-            created_at, 
-            updated_at 
+            full_name,
+            created_at,
+            updated_at
         FROM users WHERE email = $1
     `, email)
 	if err != nil {
@@ -107,13 +108,13 @@ func (userDB *UserDataBase) GetListUsers(ctx context.Context, limit, offset int)
 	var users []models.User
 
 	query := `
-        SELECT 
+        SELECT
             id,
-            email, 
-            full_name, 
-            created_at, 
-            updated_at 
-        FROM users 
+            email,
+            full_name,
+            created_at,
+            updated_at
+        FROM users
         WHERE deleted_at IS NULL
         ORDER BY created_at DESC
     `
@@ -142,8 +143,8 @@ func (userDB *UserDataBase) UpdateUserEmail(ctx context.Context, userID uuid.UUI
 
 	return userDB.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		result, err := tx.ExecContext(ctx, `
-            UPDATE users 
-            SET email = $1, updated_at = NOW() 
+            UPDATE users
+            SET email = $1, updated_at = NOW()
             WHERE id = $2 AND deleted_at IS NULL`,
 			email, userID,
 		)
@@ -174,8 +175,8 @@ func (userDB *UserDataBase) UpdateUserName(ctx context.Context, userID uuid.UUID
 
 	return userDB.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		result, err := tx.ExecContext(ctx, `
-            UPDATE users 
-            SET full_name = $1, updated_at = NOW() 
+            UPDATE users
+            SET full_name = $1, updated_at = NOW()
             WHERE id = $2 AND deleted_at IS NULL`,
 			fullName, userID,
 		)
@@ -203,8 +204,8 @@ func (userDB *UserDataBase) UpdateUserPassword(ctx context.Context, userID uuid.
 
 	return userDB.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		result, err := tx.ExecContext(ctx, `
-            UPDATE users 
-            SET password_hash = $1, updated_at = NOW() 
+            UPDATE users
+            SET password_hash = $1, updated_at = NOW()
             WHERE id = $2 AND deleted_at IS NULL`,
 			newPasswordHash, userID,
 		)
@@ -286,3 +287,4 @@ func (userDB *UserDataBase) DeleteUser(ctx context.Context, userID uuid.UUID) er
 		return nil
 	})
 }
+*/

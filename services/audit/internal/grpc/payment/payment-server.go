@@ -1,5 +1,6 @@
 package transaction
 
+/* legacy code
 import (
 	"billing-service/internal/models"
 	"context"
@@ -267,3 +268,4 @@ func (s *TransactionServerAPI) UpdateCurrencyRate(ctx context.Context, req *blng
 
 	return &emptypb.Empty{}, nil
 }
+*/

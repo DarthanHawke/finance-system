@@ -1,5 +1,6 @@
 package models
 
+/* legacy code
 import (
 	"time"
 
@@ -15,3 +16,4 @@ type Session struct {
 	ExpiresAt        time.Time `json:"expires_at" db:"expires_at"`
 	CreatedAt        time.Time `json:"created_at" db:"created_at"`
 }
+*/

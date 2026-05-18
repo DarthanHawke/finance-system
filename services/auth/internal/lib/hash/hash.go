@@ -1,5 +1,6 @@
 package hash
 
+/* legacy code
 import (
 	"crypto/rand"
 	"crypto/sha256"
@@ -147,3 +148,4 @@ func (h *Argon2Hasher) HashToken(token string) string {
 	hash := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(hash[:])
 }
+*/
