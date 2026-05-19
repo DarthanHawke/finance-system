@@ -30,4 +30,4 @@ ENV APP_ENV=example \
 # Открываем порт
 EXPOSE $PORT
 
-CMD ["client-service"]
+CMD ["api-gateway-service"]

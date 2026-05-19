@@ -1,3 +1,4 @@
+// Пакет models содержит различные dto'шки, модельки, константы
 package models
 
 import (
@@ -6,53 +7,55 @@ import (
 	"github.com/google/uuid"
 )
 
-type BalanceOperation struct {
-	ID            uuid.UUID `json:"id"`
-	OperationID   uuid.UUID `json:"operation_id"`
-	AccountID     string    `json:"account_id"`
-	Currency      string    `json:"currency"`
-	Amount        float64   `json:"amount"`
-	NewBalance    float64   `json:"new_balance"`
-	OperationType string    `json:"operation_type"`
-	Status        string    `json:"status"`
-	TransactionID uuid.UUID `json:"transaction_id,omitempty"`
-	Description   string    `json:"description,omitempty"`
-	CreatedAt     time.Time `json:"created_at"`
-	ProcessedAt   time.Time `json:"processed_at,omitempty"`
-}
+// статусы счета:
+const (
+	// Active активный сччет
+	Active string = "active"
+	// Blocked заблокированный счет
+	Blocked string = "blocked"
+	// Closed закрытый счет
+	Closed string = "closed"
+)
 
-type CurrencyAccount struct {
-	ID            string    `db:"id" json:"id"`
-	Name          string    `db:"account_name" json:"account_name"`
-	UserID        uuid.UUID `db:"user_id" json:"user_id"`
-	Currency      string    `db:"currency" json:"currency"`
-	Balance       float64   `db:"balance" json:"balance"`
-	BlockedAmount float64   `db:"blocked_amount" json:"blocked_amount"`
-	CreatedAt     time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt     time.Time `db:"updated_at" json:"updated_at"`
+// Account - дтошка счёта
+type Account struct {
+	Code           string    `db:"code" json:"сode"`
+	Name           string    `db:"name" json:"name"`
+	UserID         uuid.UUID `db:"user_id" json:"user_id"`
+	Currency       string    `db:"currency" json:"currency"`
+	Balance        float64   `db:"balance" json:"balance"`
+	FrozenBalance  float64   `db:"frozen_balance" json:"frozen_balance"`
+	ReserveBalance float64   `db:"reserve_balance" json:"reserve_balance"`
+	Status         string    `db:"status" json:"status" validate:"required,oneof=active blocked closed"`
+	CreatedAt      time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt      time.Time `db:"updated_at" json:"updated_at"`
 }
 
 type CreateAccountRequest struct {
-	Currency string `json:"currency"`
-	Name     string `json:"account_name"`
-}
-
-type CreateAccountResponse struct {
-	AccountID string `json:"account_id"`
+	Code     string    `db:"code" json:"сode"`
+	Name     string    `db:"name" json:"name" validate:"required,min=1,max=100"`
+	UserID   uuid.UUID `db:"user_id" json:"user_id" validate:"required"`
+	Currency string    `db:"currency" json:"currency" validate:"required,oneof=USD EUR RUB"`
 }
 
 type GetAccountRequest struct {
-	AccountID string `json:"account_id"`
+	Code string `db:"code" json:"сode" validate:"required"`
 }
 
-type GetUserAccountsRequest struct {
-	UserID uuid.UUID `json:"user_id"`
+type GetAccountResponse struct {
+	*Account
 }
 
-type GetBalanceRequest struct {
-	AccountID string `json:"account_id"`
+type GetAccountsRequest struct {
+	UserID uuid.UUID `db:"user_id" json:"user_id" validate:"required"`
+	Limit  int       `db:"limit" json:"limit" validate:"required"`
+	Offset int       `db:"limit" json:"offset" validate:"required"`
 }
 
-type GetBalanceResponse struct {
-	Balance float64 `json:"balance"`
+type GetAccountsResponse struct {
+	Accounts []Account `json:"accounts"`
+}
+
+type UpdateAccountRequest struct {
+	Code string `db:"code" json:"сode" validate:"required"`
 }

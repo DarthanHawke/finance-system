@@ -13,7 +13,6 @@ import (
 
 type Producer struct {
 	writer      *kafka.Writer
-	dlqWriter   *kafka.Writer
 	retryConfig *RetryConfig
 	logger      *zap.Logger
 }
@@ -30,15 +29,6 @@ type Config struct {
 	RebalanceTimeout time.Duration
 }
 
-// DLQConfig содержит конфигурацию для DLQ
-type DLQConfig struct {
-	Brokers      []string
-	Topic        string
-	BatchSize    int
-	BatchTimeout time.Duration
-	MaxAttempts  int
-}
-
 // RetryConfig содержит конфигурацию для retry
 type RetryConfig struct {
 	MaxAttempts int
@@ -49,8 +39,7 @@ type RetryConfig struct {
 
 // NewProducer создает новый экземпляр Kafka Producer
 func NewProducer(
-	config Config,
-	dlqConfig DLQConfig,
+	config *Config,
 	retryConfig *RetryConfig,
 	logger *zap.Logger,
 ) *Producer {
@@ -67,20 +56,8 @@ func NewProducer(
 		Compression:            kafka.Snappy,
 	}
 
-	dlqWriter := &kafka.Writer{
-		Addr:                   kafka.TCP(dlqConfig.Brokers...),
-		Topic:                  dlqConfig.Topic,
-		Balancer:               &kafka.Hash{},
-		BatchSize:              dlqConfig.BatchSize,
-		BatchTimeout:           dlqConfig.BatchTimeout,
-		MaxAttempts:            dlqConfig.MaxAttempts,
-		AllowAutoTopicCreation: true,
-		Compression:            kafka.Snappy,
-	}
-
 	return &Producer{
 		writer:      writer,
-		dlqWriter:   dlqWriter,
 		retryConfig: retryConfig,
 		logger:      logger.With(zap.String("component", "kafka_producer")),
 	}
@@ -161,62 +138,6 @@ func (p *Producer) Produce(ctx context.Context, topic, key string, event any) er
 	return fmt.Errorf("%s: failed after %d attempts: %w", op, p.retryConfig.MaxAttempts, lastErr)
 }
 
-// ProduceDLQ отправляет сообщение в DLQ
-func (p *Producer) ProduceDLQ(ctx context.Context, key string, event any, eventError error) error {
-	const op = "kafka.producer.ProduceDLQ"
-
-	logger := p.logger.With(
-		zap.String("op", op),
-		zap.String("key", key),
-	)
-
-	eventBytes, err := json.Marshal(event)
-	if err != nil {
-		logger.Error("failed to marshal event for DLQ", zap.Error(err))
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	dlqMessage := kafka.Message{
-		Key:   []byte(key),
-		Value: eventBytes,
-		Time:  time.Now(),
-		Headers: []kafka.Header{
-			{
-				Key:   "source",
-				Value: []byte("api-gateway-service"),
-			},
-			{
-				Key:   "content-type",
-				Value: []byte("application/json"),
-			},
-			{
-				Key:   "dlq-timestamp",
-				Value: []byte(time.Now().Format(time.RFC3339)),
-			},
-			{
-				Key:   "error",
-				Value: []byte(eventError.Error()),
-			},
-		},
-	}
-
-	err = p.dlqWriter.WriteMessages(ctx, dlqMessage)
-	if err != nil {
-		logger.Error("failed to publish message to DLQ",
-			zap.Error(err),
-			zap.ByteString("message_key", dlqMessage.Key),
-		)
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	logger.Warn("event published to DLQ successfully",
-		zap.Int("message_size", len(dlqMessage.Value)),
-		zap.String("original_error", eventError.Error()),
-	)
-
-	return nil
-}
-
 // Close закрывает соединение с Kafka
 func (p *Producer) Close() error {
 	var errs []error
@@ -224,12 +145,6 @@ func (p *Producer) Close() error {
 	if p.writer != nil {
 		if err := p.writer.Close(); err != nil {
 			errs = append(errs, fmt.Errorf("failed to close main writer: %w", err))
-		}
-	}
-
-	if p.dlqWriter != nil {
-		if err := p.dlqWriter.Close(); err != nil {
-			errs = append(errs, fmt.Errorf("failed to close DLQ writer: %w", err))
 		}
 	}
 

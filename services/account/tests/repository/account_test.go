@@ -10,7 +10,7 @@ import (
 
 	"account-service/internal/lib/errors/apperr"
 	"account-service/internal/models"
-	"account-service/internal/repository"
+	repository "account-service/internal/repository/postgres"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
@@ -233,6 +233,7 @@ func TestAccountRepository_FreezeBalance(t *testing.T) {
 			WithArgs(
 				eventID,
 				transactionID,
+				"key",
 				"freeze.request",
 				"pending",
 				"transaction-service",
@@ -252,6 +253,7 @@ func TestAccountRepository_FreezeBalance(t *testing.T) {
 				Event: &models.Event{
 					ID:            eventID,
 					TransactionID: transactionID,
+					PartitionKey:  "key",
 					Type:          "freeze.request",
 					Status:        "pending",
 					Source:        "transaction-service",
@@ -293,6 +295,7 @@ func TestAccountRepository_FreezeBalance(t *testing.T) {
 				Event: &models.Event{
 					ID:            eventID,
 					TransactionID: transactionID,
+					PartitionKey:  "key",
 					Type:          "freeze.request",
 					Status:        "pending",
 					Source:        "transaction-service",
@@ -329,6 +332,7 @@ func TestAccountRepository_UnfreezeBalance(t *testing.T) {
 			WithArgs(
 				eventID,
 				transactionID,
+				"key",
 				"unfreeze.request",
 				"pending",
 				"transaction-service",
@@ -348,6 +352,7 @@ func TestAccountRepository_UnfreezeBalance(t *testing.T) {
 				Event: &models.Event{
 					ID:            eventID,
 					TransactionID: transactionID,
+					PartitionKey:  "key",
 					Type:          "unfreeze.request",
 					Status:        "pending",
 					Source:        "transaction-service",
@@ -381,6 +386,7 @@ func TestAccountRepository_ReserveDeposit(t *testing.T) {
 			WithArgs(
 				eventID,
 				transactionID,
+				"key",
 				"reserve.request",
 				"pending",
 				"transaction-service",
@@ -400,6 +406,7 @@ func TestAccountRepository_ReserveDeposit(t *testing.T) {
 				Event: &models.Event{
 					ID:            eventID,
 					TransactionID: transactionID,
+					PartitionKey:  "key",
 					Type:          "reserve.request",
 					Status:        "pending",
 					Source:        "transaction-service",
@@ -439,6 +446,7 @@ func TestAccountRepository_ReserveDeposit(t *testing.T) {
 				Event: &models.Event{
 					ID:            eventID,
 					TransactionID: transactionID,
+					PartitionKey:  "key",
 					Type:          "reserve.request",
 					Status:        "pending",
 					Source:        "transaction-service",
@@ -473,6 +481,7 @@ func TestAccountRepository_UnreserveDeposit(t *testing.T) {
 			WithArgs(
 				eventID,
 				transactionID,
+				"key",
 				"unreserve.request",
 				"pending",
 				"transaction-service",
@@ -492,6 +501,7 @@ func TestAccountRepository_UnreserveDeposit(t *testing.T) {
 				Event: &models.Event{
 					ID:            eventID,
 					TransactionID: transactionID,
+					PartitionKey:  "key",
 					Type:          "unreserve.request",
 					Status:        "pending",
 					Source:        "transaction-service",
@@ -526,6 +536,7 @@ func TestAccountRepository_WithdrawFunds(t *testing.T) {
 			WithArgs(
 				eventID,
 				transactionID,
+				"key",
 				"withdraw.request",
 				"pending",
 				"transaction-service",
@@ -545,6 +556,7 @@ func TestAccountRepository_WithdrawFunds(t *testing.T) {
 				Event: &models.Event{
 					ID:            eventID,
 					TransactionID: transactionID,
+					PartitionKey:  "key",
 					Type:          "withdraw.request",
 					Status:        "pending",
 					Source:        "transaction-service",
@@ -580,6 +592,7 @@ func TestAccountRepository_DepositFunds(t *testing.T) {
 			WithArgs(
 				eventID,
 				transactionID,
+				"key",
 				"deposit.request",
 				"pending",
 				"transaction-service",
@@ -599,6 +612,7 @@ func TestAccountRepository_DepositFunds(t *testing.T) {
 				Event: &models.Event{
 					ID:            eventID,
 					TransactionID: transactionID,
+					PartitionKey:  "key",
 					Type:          "deposit.request",
 					Status:        "pending",
 					Source:        "transaction-service",
@@ -635,6 +649,7 @@ func TestAccountRepository_BlockAccountWithEvent(t *testing.T) {
 			WithArgs(
 				eventID,
 				transactionID,
+				"key",
 				"blockaccount.request",
 				"pending",
 				"transaction-service",
@@ -651,6 +666,7 @@ func TestAccountRepository_BlockAccountWithEvent(t *testing.T) {
 				Event: &models.Event{
 					ID:            eventID,
 					TransactionID: transactionID,
+					PartitionKey:  "key",
 					Type:          "blockaccount.request",
 					Status:        "pending",
 					Source:        "transaction-service",

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"account-service/internal/models"
+	"account-service/internal/repository/redis"
 
 	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
@@ -16,10 +17,11 @@ import (
 
 // Consumer реализует Kafka consumer для обработки событий
 type Consumer struct {
-	readers map[string]*kafka.Reader
-	handler EventHandler
-	logger  *zap.Logger
-	wg      sync.WaitGroup
+	readers      map[string]*kafka.Reader
+	handler      EventHandler
+	deduplicator *redis.Deduplicator
+	logger       *zap.Logger
+	wg           sync.WaitGroup
 }
 
 // ConsumerConfig содержит конфигурацию для Kafka Consumer
@@ -53,6 +55,7 @@ func NewConsumer(
 	topics []string,
 	config *Config,
 	handler EventHandler,
+	deduplicator *redis.Deduplicator,
 	logger *zap.Logger,
 ) *Consumer {
 	readers := make(map[string]*kafka.Reader)
@@ -79,9 +82,10 @@ func NewConsumer(
 	}
 
 	return &Consumer{
-		readers: readers,
-		handler: handler,
-		logger:  logger.With(zap.String("component", "kafka_consumer")),
+		readers:      readers,
+		handler:      handler,
+		deduplicator: deduplicator,
+		logger:       logger.With(zap.String("component", "kafka_consumer")),
 	}
 }
 
@@ -221,6 +225,18 @@ func (c *Consumer) processMessage(ctx context.Context, topic string, message kaf
 		zap.String("event_type", event.Type),
 		zap.String("transaction_id", event.TransactionID.String()),
 	)
+
+	isDuplicate, err := c.deduplicator.IsDuplicate(ctx, event.ID.String())
+	if err != nil {
+		c.logger.Warn("dedup check failed", zap.Error(err))
+	}
+	if isDuplicate {
+		c.logger.Info("duplicate event, skipping",
+			zap.String("event_id", event.ID.String()),
+			zap.String("event_type", event.Type),
+		)
+		return nil
+	}
 
 	// Обрабатываем событие в зависимости от типа
 	if err := c.routeEvent(ctx, &event); err != nil {

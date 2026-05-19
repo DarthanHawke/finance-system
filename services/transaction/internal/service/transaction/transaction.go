@@ -3,6 +3,8 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -126,6 +128,7 @@ func (s *TransactionService) HandleFreezeResponse(ctx context.Context, resp *mod
 		if err := s.cancelTransaction(ctx, resp); err != nil {
 			return fmt.Errorf("%s: compensating action failed: %w", op, err)
 		}
+		return nil
 	}
 
 	transaction, err := s.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: resp.TransactionID})
@@ -691,7 +694,6 @@ func (s *TransactionService) HandleBlockAccountResponse(ctx context.Context, res
 
 	if !s.isSuccessBalanceResponse(resp) {
 		return fmt.Errorf("%s: faild to block account: %w", op, apperr.ErrEventUnsuccess)
-
 	}
 
 	req := &models.UpdateTransactionStatusRequest{
@@ -709,7 +711,7 @@ func (s *TransactionService) HandleBlockAccountResponse(ctx context.Context, res
 // ==================== СОЗДАНИЕ СОБЫТИЙ ====================
 
 // createEvent обертка для создания типа событий
-func (s *TransactionService) createEvent(transactionID uuid.UUID, eventType string, payload any) (*models.CreateEventRequest, error) {
+func (s *TransactionService) createEvent(transactionID uuid.UUID, accountcode, eventType string, payload any) (*models.CreateEventRequest, error) {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
@@ -719,6 +721,7 @@ func (s *TransactionService) createEvent(transactionID uuid.UUID, eventType stri
 		Event: &models.Event{
 			ID:            uuid.New(),
 			TransactionID: transactionID,
+			PartitionKey:  s.partitionKey(accountcode),
 			Type:          eventType,
 			CreatedAt:     time.Now(),
 			Source:        models.Source,
@@ -735,7 +738,7 @@ func (s *TransactionService) createFreezeEvent(req *models.Transaction) (*models
 		Currency:    req.Currency,
 	}
 
-	return s.createEvent(req.ID, models.EventFreezeRequest, payload)
+	return s.createEvent(req.ID, req.SenderAccountCode, models.EventFreezeRequest, payload)
 }
 
 // createReserveEvent - создает событие резерва средств получателя
@@ -746,7 +749,7 @@ func (s *TransactionService) createReserveEvent(req *models.Transaction) (*model
 		Currency:    req.Currency,
 	}
 
-	return s.createEvent(req.ID, models.EventReserveRequest, payload)
+	return s.createEvent(req.ID, req.RecipientAccountCode, models.EventReserveRequest, payload)
 }
 
 // createExternalEvent - создает событие для обращения к "внешнему платёжному шлюзу"
@@ -759,7 +762,7 @@ func (s *TransactionService) createExternalEvent(req *models.Transaction) (*mode
 		ISOMessage: isoPayload,
 	}
 
-	return s.createEvent(req.ID, models.EventExternalRequest, payload)
+	return s.createEvent(req.ID, req.RecipientAccountCode, models.EventExternalRequest, payload)
 }
 
 // createWithdrawEvent - создает событие списания средств отправителя
@@ -770,7 +773,7 @@ func (s *TransactionService) createWithdrawEvent(req *models.Transaction) (*mode
 		Currency:    req.Currency,
 	}
 
-	return s.createEvent(req.ID, models.EventWithdrawRequest, payload)
+	return s.createEvent(req.ID, req.SenderAccountCode, models.EventWithdrawRequest, payload)
 }
 
 // createDepositeEvent - создает событие пополнение средств получателя
@@ -781,7 +784,7 @@ func (s *TransactionService) createDepositeEvent(req *models.Transaction) (*mode
 		Currency:    req.Currency,
 	}
 
-	return s.createEvent(req.ID, models.EventDepositRequest, payload)
+	return s.createEvent(req.ID, req.RecipientAccountCode, models.EventDepositRequest, payload)
 }
 
 // createExternalCommitEvent - создает событие для обращения к "внешнему платёжному шлюзу"
@@ -807,7 +810,7 @@ func (s *TransactionService) createExternalCommitEvent(
 		ErrorMessage: payloadResp.Reason,
 	}
 
-	return s.createEvent(req.ID, models.EventExternalCommit, payload)
+	return s.createEvent(req.ID, req.RecipientAccountCode, models.EventExternalCommit, payload)
 }
 
 // createUnfreezeEvent - создает событие разморозки средств отправителя
@@ -818,7 +821,7 @@ func (s *TransactionService) createUnfreezeEvent(req *models.Transaction) (*mode
 		Currency:    req.Currency,
 	}
 
-	return s.createEvent(req.ID, models.EventUnfreezeRequest, payload)
+	return s.createEvent(req.ID, req.SenderAccountCode, models.EventUnfreezeRequest, payload)
 }
 
 // createUnreserveEvent - создает событие для отката создания резерва средств получателя
@@ -829,7 +832,7 @@ func (s *TransactionService) createUnreserveEvent(req *models.Transaction) (*mod
 		Currency:    req.Currency,
 	}
 
-	return s.createEvent(req.ID, models.EventUnreserveRequest, payload)
+	return s.createEvent(req.ID, req.RecipientAccountCode, models.EventUnreserveRequest, payload)
 }
 
 // createExternalRollbackEvent - создает событие для обращения к "внешнему платёжному шлюзу"
@@ -853,7 +856,7 @@ func (s *TransactionService) createExternalRollbackEvent(
 		ErrorCode:    isoPayload.ResponseCode,
 		ErrorMessage: payloadResp.Reason,
 	}
-	return s.createEvent(req.ID, models.EventExternalRollback, payload)
+	return s.createEvent(req.ID, req.RecipientAccountCode, models.EventExternalRollback, payload)
 }
 
 // createRefandEvent - создает событие возврата средств отправителя
@@ -864,7 +867,7 @@ func (s *TransactionService) createRefandEvent(req *models.Transaction) (*models
 		Currency:    req.Currency,
 	}
 
-	return s.createEvent(req.ID, models.EventRefundRequest, payload)
+	return s.createEvent(req.ID, req.SenderAccountCode, models.EventRefundRequest, payload)
 }
 
 // ==================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ====================
@@ -924,4 +927,10 @@ func (s *TransactionService) cancelTransaction(ctx context.Context, event *model
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	return nil
+}
+
+// хэш код для ключа партиции из номера счета
+func (s *TransactionService) partitionKey(accountCode string) string {
+	hash := sha256.Sum256([]byte(accountCode))
+	return "acc:" + hex.EncodeToString(hash[:8])
 }

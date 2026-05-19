@@ -93,6 +93,7 @@ func (s *BalanceService) createSuccessEvent(transactionID uuid.UUID, eventType s
 		Event: &models.Event{
 			ID:            uuid.New(),
 			TransactionID: transactionID,
+			PartitionKey:  "txn:" + transactionID.String(),
 			Type:          eventType,
 			CreatedAt:     time.Now(),
 			Source:        models.Source,

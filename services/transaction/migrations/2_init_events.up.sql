@@ -9,6 +9,9 @@ CREATE TABLE events (
 
     -- ID платежа
     transaction_id  UUID NOT NULL REFERENCES transactions(id),
+   
+    -- Ключ для партиционирования
+    partition_key  VARCHAR(64) NOT NULL,
 
     -- Тип события
     type            VARCHAR(50) NOT NULL,

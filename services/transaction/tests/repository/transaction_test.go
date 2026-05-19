@@ -12,7 +12,7 @@ import (
 
 	"transaction-service/internal/lib/errors/apperr"
 	"transaction-service/internal/models"
-	"transaction-service/internal/repository"
+	repository "transaction-service/internal/repository/postgres"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
@@ -135,6 +135,7 @@ func TestTransactionRepository_CreateTransaction(t *testing.T) {
 			WithArgs(
 				eventID,
 				transactionID,
+				"key",
 				"transaction_created",
 				"pending",
 				"transaction-service",
@@ -178,6 +179,7 @@ func TestTransactionRepository_CreateTransaction(t *testing.T) {
 				Event: &models.Event{
 					ID:            eventID,
 					TransactionID: transactionID,
+					PartitionKey:  "key",
 					Type:          "transaction_created",
 					Status:        "pending",
 					Source:        "transaction-service",
@@ -252,6 +254,7 @@ func TestTransactionRepository_CreateTransaction(t *testing.T) {
 				Event: &models.Event{
 					ID:            eventID,
 					TransactionID: transactionID,
+					PartitionKey:  "key",
 					Type:          "transaction_created",
 					Status:        "pending",
 					Source:        "transaction-service",

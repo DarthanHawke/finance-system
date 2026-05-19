@@ -14,7 +14,7 @@ RUN go mod download
 COPY . .
 
 # Сборка приложения
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /src/bin/billing-service ./cmd/billing-service
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /src/bin/account-service ./cmd/account-service
 
 # Миграции
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /src/bin/migrate ./cmd/migrate
@@ -22,7 +22,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /src/bin/migrate ./cmd
 FROM alpine:3.21
 
 # Копируем бинарник, миграции и env
-COPY --from=builder /src/bin/billing-service /usr/local/bin/
+COPY --from=builder /src/bin/account-service /usr/local/bin/
 COPY --from=builder /src/bin/migrate /usr/local/bin/
 COPY --from=builder /src/migrations ./migrations
 COPY --from=builder /src/security ./security
@@ -39,6 +39,6 @@ EXPOSE $PORT
 ENTRYPOINT [ "/bin/sh", "-c", \
     "echo 'Running migrations...' && \
     migrate && \
-    echo 'Starting billing service...' && \
-    billing-service" \
+    echo 'Starting account service...' && \
+    account-service" \
 ]

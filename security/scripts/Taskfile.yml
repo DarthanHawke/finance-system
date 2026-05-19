@@ -1,11 +1,11 @@
 version: '3'
 
 vars:
-  ROOT_DIR: "{{.TASKFILE_DIR}}/.."
+  ROOT_DIR: "{{.TASKFILE_DIR}}/../.."
   DAYS: "365"
   BITS: "4096"
   JWT_BITS: "2048"
-  SERVICES: ["transaction", "sso", "billing", "client"]
+  SERVICES: ["transaction", "auth", "account", "api-gateway"]
   CA_PASS: "secret"
 
 tasks:
@@ -14,9 +14,9 @@ tasks:
     cmds:
       - rm -rf "{{.ROOT_DIR}}/security/"*.{key,crt,csr,srl,pem, pfx}
       - rm -rf "{{.ROOT_DIR}}/services/transaction/security/"*.{key,crt,csr,srl,pem}
-      - rm -rf "{{.ROOT_DIR}}/services/sso/security/"*.{key,crt,csr,srl,pem}
-      - rm -rf "{{.ROOT_DIR}}/services/billing/security/"*.{key,crt,csr,srl,pem}
-      - rm -rf "{{.ROOT_DIR}}/services/client/security/"*.{key,crt,csr,srl,pem}
+      - rm -rf "{{.ROOT_DIR}}/services/auth/security/"*.{key,crt,csr,srl,pem}
+      - rm -rf "{{.ROOT_DIR}}/services/account/security/"*.{key,crt,csr,srl,pem}
+      - rm -rf "{{.ROOT_DIR}}/services/api-gateway/security/"*.{key,crt,csr,srl,pem}
       - echo "All certificates removed"
 
   generate-ca:
@@ -57,22 +57,22 @@ tasks:
           SERVICE: "transaction"
       - task: generate-cert
         vars:
-          SERVICE: "sso"
+          SERVICE: "auth"
       - task: generate-cert
         vars:
-          SERVICE: "billing"
+          SERVICE: "account"
       - task: generate-cert
         vars:
-          SERVICE: "client"
+          SERVICE: "api-gateway"
     generates:
       - "{{.ROOT_DIR}}/services/transaction/security/transaction.key"
       - "{{.ROOT_DIR}}/services/transaction/security/transaction.crt"
-      - "{{.ROOT_DIR}}/services/sso/security/sso.key"
-      - "{{.ROOT_DIR}}/services/sso/security/sso.crt"
-      - "{{.ROOT_DIR}}/services/billing/security/billing.key"
-      - "{{.ROOT_DIR}}/services/billing/security/billing.crt"
-      - "{{.ROOT_DIR}}/services/client/security/client.key"
-      - "{{.ROOT_DIR}}/services/client/security/client.crt"
+      - "{{.ROOT_DIR}}/services/auth/security/auth.key"
+      - "{{.ROOT_DIR}}/services/auth/security/auth.crt"
+      - "{{.ROOT_DIR}}/services/account/security/account.key"
+      - "{{.ROOT_DIR}}/services/account/security/account.crt"
+      - "{{.ROOT_DIR}}/services/api-gateway/security/api-gateway.key"
+      - "{{.ROOT_DIR}}/services/api-gateway/security/api-gateway.crt"
 
   generate-cert:
     desc: "Generate certificate"
@@ -99,22 +99,22 @@ tasks:
           -extensions v3_req
 
   gen-jwt-keys:
-    desc: "Generate JWT RSA keys for SSO and copy public key to Billing"
+    desc: "Generate JWT RSA keys for auth and copy public key to account"
     cmds:
-      - mkdir -p "{{.ROOT_DIR}}/services/sso/security"
-      - openssl genrsa -out "{{.ROOT_DIR}}/services/sso/security/private.pem" {{.JWT_BITS}}
-      - openssl rsa -in "{{.ROOT_DIR}}/services/sso/security/private.pem" -pubout -out "{{.ROOT_DIR}}/services/sso/security/public.pem"
-      - mkdir -p "{{.ROOT_DIR}}/services/billing/security"
-      - cp "{{.ROOT_DIR}}/services/sso/security/public.pem" "{{.ROOT_DIR}}/services/billing/security/public.pem"
+      - mkdir -p "{{.ROOT_DIR}}/services/auth/security"
+      - openssl genrsa -out "{{.ROOT_DIR}}/services/auth/security/private.pem" {{.JWT_BITS}}
+      - openssl rsa -in "{{.ROOT_DIR}}/services/auth/security/private.pem" -pubout -out "{{.ROOT_DIR}}/services/auth/security/public.pem"
+      - mkdir -p "{{.ROOT_DIR}}/services/account/security"
+      - cp "{{.ROOT_DIR}}/services/auth/security/public.pem" "{{.ROOT_DIR}}/services/account/security/public.pem"
     generates:
-      - "{{.ROOT_DIR}}/services/sso/security/private.pem"
-      - "{{.ROOT_DIR}}/services/sso/security/public.pem"
-      - "{{.ROOT_DIR}}/services/billing/security/public.pem"
+      - "{{.ROOT_DIR}}/services/auth/security/private.pem"
+      - "{{.ROOT_DIR}}/services/auth/security/public.pem"
+      - "{{.ROOT_DIR}}/services/account/security/public.pem"
 
   gen-postman:
     desc: "Generatepfx for postman"
     cmds:
-      - openssl pkcs12 -export -out "{{.ROOT_DIR}}/security/postman.pfx" -inkey "{{.ROOT_DIR}}/services/client/security/client.key" -in "{{.ROOT_DIR}}/services/client/security/client.crt" -certfile "{{.ROOT_DIR}}/security/ca.crt" -password pass:{{.CA_PASS}}
+      - openssl pkcs12 -export -out "{{.ROOT_DIR}}/security/postman.pfx" -inkey "{{.ROOT_DIR}}/services/api-gateway/security/api-gateway.key" -in "{{.ROOT_DIR}}/services/api-gateway/security/api-gateway.crt" -certfile "{{.ROOT_DIR}}/security/ca.crt" -password pass:{{.CA_PASS}}
   
   password-for-nginx:
     desc: "Copy password to file for nginx"
@@ -135,9 +135,9 @@ tasks:
     cmds:
       - echo "\n=== transaction ==="
       - openssl x509 -in "{{.ROOT_DIR}}/services/transaction/security/transaction.crt" -noout -text | grep -E "Subject:|Issuer:|Not Before|Not After"
-      - echo "\n=== sso ==="
-      - openssl x509 -in "{{.ROOT_DIR}}/services/sso/security/sso.crt" -noout -text | grep -E "Subject:|Issuer:|Not Before|Not After"
-      - echo "\n=== billing ==="
-      - openssl x509 -in "{{.ROOT_DIR}}/services/billing/security/billing.crt" -noout -text | grep -E "Subject:|Issuer:|Not Before|Not After"
-      - echo "\n=== client ==="
-      - openssl x509 -in "{{.ROOT_DIR}}/services/client/security/client.crt" -noout -text | grep -E "Subject:|Issuer:|Not Before|Not After"
+      - echo "\n=== auth ==="
+      - openssl x509 -in "{{.ROOT_DIR}}/services/auth/security/auth.crt" -noout -text | grep -E "Subject:|Issuer:|Not Before|Not After"
+      - echo "\n=== account ==="
+      - openssl x509 -in "{{.ROOT_DIR}}/services/account/security/account.crt" -noout -text | grep -E "Subject:|Issuer:|Not Before|Not After"
+      - echo "\n=== api-gateway ==="
+      - openssl x509 -in "{{.ROOT_DIR}}/services/api-gateway/security/api-gateway.crt" -noout -text | grep -E "Subject:|Issuer:|Not Before|Not After"

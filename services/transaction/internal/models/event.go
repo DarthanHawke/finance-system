@@ -60,6 +60,7 @@ const (
 type Event struct {
 	ID            uuid.UUID `db:"id" json:"id"`
 	TransactionID uuid.UUID `db:"transaction_id" json:"transaction_id"`
+	PartitionKey  string    `db:"partition_key" json:"partition_key"`
 	Type          string    `db:"type" json:"type"`
 	Status        string    `db:"status" json:"status"`
 	Source        string    `db:"source" json:"source"`

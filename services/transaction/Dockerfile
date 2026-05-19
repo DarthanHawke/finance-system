@@ -38,6 +38,6 @@ EXPOSE $PORT
 ENTRYPOINT [ "/bin/sh", "-c", \
     "echo 'Running migrations...' && \
     migrate && \
-    echo 'Starting SSO service...' && \
+    echo 'Starting transaction service...' && \
     transaction-service" \
 ]
