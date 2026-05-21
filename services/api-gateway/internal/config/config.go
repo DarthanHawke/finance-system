@@ -12,7 +12,6 @@ type Configuration struct {
 	HTTPServer        `mapstructure:",squash"`
 	AccountClient     `mapstructure:",squash"`
 	TransactionClient `mapstructure:",squash"`
-	TLS               `mapstructure:",squash"`
 	Redis             `mapstructure:",squash"`
 	Kafka             `mapstructure:",squash"`
 }
@@ -21,22 +20,16 @@ type HTTPServer struct {
 	Port int `mapstructure:"SERVER_PORT" env-default:"8080"`
 }
 
-type TLS struct {
-	CA      string `mapstructure:"TLS_CA" env-default:"./security/CA.example.crt"`
-	TLSKey  string `mapstructure:"TLS_SERVER" env-default:"./security/server.example.key"`
-	TLSCert string `mapstructure:"TLS_CERT" env-default:"./security/server.example.crt"`
-}
-
 type AccountClient struct {
-	Address      string        `mapstructure:"CLIENT_BILLING_ADRESS" env-default:"sso-service:50052"`
-	Timeout      time.Duration `mapstructure:"CLIENT_BILLING_TIMEOUT" env-default:"10s"`
-	RetriesCount int           `mapstructure:"CLIENT_BILLING_RETRIES" env-default:"5"`
+	Address      string        `mapstructure:"CLIENT_ACCOUNT_ADRESS" env-default:"account-service:50052"`
+	Timeout      time.Duration `mapstructure:"CLIENT_ACCOUNT_TIMEOUT" env-default:"10s"`
+	RetriesCount int           `mapstructure:"CLIENT_ACCOUNT_RETRIES" env-default:"5"`
 }
 
 type TransactionClient struct {
-	Address      string        `mapstructure:"CLIENT_BILLING_ADRESS" env-default:"sso-service:50052"`
-	Timeout      time.Duration `mapstructure:"CLIENT_BILLING_TIMEOUT" env-default:"10s"`
-	RetriesCount int           `mapstructure:"CLIENT_BILLING_RETRIES" env-default:"5"`
+	Address      string        `mapstructure:"CLIENT_TRANSACTION_ADRESS" env-default:"sso-service:50052"`
+	Timeout      time.Duration `mapstructure:"CLIENT_TRANSACTION_TIMEOUT" env-default:"10s"`
+	RetriesCount int           `mapstructure:"CLIENT_TRANSACTION_RETRIES" env-default:"5"`
 }
 
 type Redis struct {

@@ -668,6 +668,7 @@ func (s *TransactionService) HandleBlockAccountRequest(ctx context.Context, req 
 			ID:            uuid.New(),
 			TransactionID: req.TransactionID,
 			Type:          models.EventBlockRequest,
+			Status:        models.EventStatusPending,
 			CreatedAt:     time.Now(),
 			Source:        models.Source,
 			Payload:       payloadBytes,
@@ -723,8 +724,9 @@ func (s *TransactionService) createEvent(transactionID uuid.UUID, accountcode, e
 			TransactionID: transactionID,
 			PartitionKey:  s.partitionKey(accountcode),
 			Type:          eventType,
-			CreatedAt:     time.Now(),
+			Status:        models.EventStatusPending,
 			Source:        models.Source,
+			CreatedAt:     time.Now(),
 			Payload:       payloadBytes,
 		},
 	}, nil
@@ -876,14 +878,14 @@ func (s *TransactionService) createRefandEvent(req *models.Transaction) (*models
 func (s *TransactionService) getTransactionPayload(resp *models.Event) (*models.CreateTransactionRequest, error) {
 	const op = "service.transaction.getTransactionPayload"
 
-	var payloadResp *models.CreateTransactionRequest
-	if err := json.Unmarshal(resp.Payload, &payloadResp); err == nil {
-		return payloadResp, nil
-	}
-
 	var payloadIsoResp *models.ISO8583Payload
 	if err := json.Unmarshal(resp.Payload, &payloadIsoResp); err == nil {
 		return s.iso8583Manager.CreateTransactionFromISO(payloadIsoResp.ISOMessage)
+	}
+
+	var payloadResp *models.CreateTransactionRequest
+	if err := json.Unmarshal(resp.Payload, &payloadResp); err == nil {
+		return payloadResp, nil
 	}
 
 	return nil, fmt.Errorf("%s: %s", op, "Unknow Transaction Type")

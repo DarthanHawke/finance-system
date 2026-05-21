@@ -10,7 +10,6 @@ type Configuration struct {
 	Env               string `mapstructure:"ENV" env-default:"prod"`
 	ISO8583ConfigPath string `mapstructure:"ISO8583_CONFIG_PATH" env-default:"iso8583.example"`
 	GRPCServer        `mapstructure:",squash"`
-	TLS               `mapstructure:",squash"`
 	DataBase          `mapstructure:",squash"`
 	Redis             `mapstructure:",squash"`
 	Kafka             `mapstructure:",squash"`
@@ -19,12 +18,6 @@ type Configuration struct {
 type GRPCServer struct {
 	Port    int `mapstructure:"SERVER_PORT" env-default:"50058"`
 	Timeout int `mapstructure:"SERVER_TIMEOUT" env-default:"10"`
-}
-
-type TLS struct {
-	CA      string `mapstructure:"TLS_CA" env-default:"./security/CA.example.crt"`
-	TLSKey  string `mapstructure:"TLS_SERVER" env-default:"./security/server.example.key"`
-	TLSCert string `mapstructure:"TLS_CERT" env-default:"./security/server.example.crt"`
 }
 
 type DataBase struct {
@@ -75,16 +68,13 @@ type Kafka struct {
 
 func (c DataBase) DSN() string {
 	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=%s&sslrootcert=%s&sslcert=%s&sslkey=%s",
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
 		c.User,
 		c.Password,
 		c.Host,
 		c.Port,
 		c.Name,
 		c.SSLMode,
-		c.RootCert,
-		c.Cert,
-		c.Key,
 	)
 }
 

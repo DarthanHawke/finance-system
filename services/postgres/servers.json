@@ -1,0 +1,22 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Transaction DB",
+      "Group": "Finance System",
+      "Host": "postgres-transaction",
+      "Port": 5432,
+      "MaintenanceDB": "postgres",
+      "Username": "postgres",
+      "SSLMode": "prefer"
+    },
+    "2": {
+      "Name": "Account DB",
+      "Group": "Finance System",
+      "Host": "postgres-account",
+      "Port": 5432,
+      "MaintenanceDB": "postgres",
+      "Username": "postgres",
+      "SSLMode": "prefer"
+    }
+  }
+}

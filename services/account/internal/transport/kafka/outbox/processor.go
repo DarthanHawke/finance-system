@@ -56,9 +56,9 @@ func (p *OutboxProcessor) StartProcessEvents(ctx context.Context) {
 	logger.Info("starting outbox processor")
 
 	ticker := time.NewTicker(p.handlePeriod)
-	defer ticker.Stop()
 
 	go func() {
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():

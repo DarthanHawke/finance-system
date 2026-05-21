@@ -1,0 +1,78 @@
+basePath: /
+definitions:
+  models.CreateExternalPaymentResponse:
+    properties:
+      message:
+        example: External payment initiated
+        type: string
+      status:
+        example: pending
+        type: string
+      transaction_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
+host: localhost:8081
+info:
+  contact: {}
+  description: API эмулирует получение и обработку внешних платежей ISO8583
+  title: External Payment Service API
+  version: "1.0"
+paths:
+  /api/v1/external-payment:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Инициирует внешний платёж и отправляет его в Transaction Service
+        через Kafka
+      parameters:
+      - description: Код счета отправителя
+        in: formData
+        name: sender_account_code
+        required: true
+        type: string
+      - description: Код счета получателя
+        in: formData
+        name: recipient_account_code
+        required: true
+        type: string
+      - description: Сумма платежа
+        in: formData
+        name: amount
+        required: true
+        type: number
+      - default: RUB
+        description: Валюта платежа
+        enum:
+        - RUB
+        - USD
+        - EUR
+        in: formData
+        name: currency
+        required: true
+        type: string
+      - description: Описание платежа
+        in: formData
+        name: description
+        type: string
+      responses:
+        "201":
+          description: Платёж успешно создан
+          schema:
+            $ref: '#/definitions/models.CreateExternalPaymentResponse'
+        "400":
+          description: Неверный запрос
+          schema:
+            type: string
+        "405":
+          description: Метод не разрешён
+          schema:
+            type: string
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: string
+      summary: Создать внешний платёж
+      tags:
+      - external-payment
+swagger: "2.0"

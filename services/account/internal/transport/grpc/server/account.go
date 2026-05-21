@@ -87,7 +87,7 @@ func (s *AccountServerAPI) GetAccount(
 	}, nil
 }
 
-func (s *AccountServerAPI) GetUserAccounts(
+func (s *AccountServerAPI) GetAccounts(
 	ctx context.Context,
 	req *accgrpc.GetAccountsRequest,
 ) (*accgrpc.GetAccountsResponse, error) {

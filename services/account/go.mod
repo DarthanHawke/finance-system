@@ -1,6 +1,6 @@
 module account-service
 
-go 1.23.6
+go 1.26.3
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2

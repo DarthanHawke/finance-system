@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	_ "external-payment-service/docs"
 	"fmt"
 	"net/http"
 	"os"
@@ -16,15 +17,19 @@ import (
 	consumer "external-payment-service/internal/transport/kafka/consumer"
 	producer "external-payment-service/internal/transport/kafka/producer"
 
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
+	httpSwagger "github.com/swaggo/http-swagger"
+
 	"go.uber.org/zap"
 )
 
 type App struct {
-	logger   *zap.Logger
-	config   *config.Configuration
-	consumer *consumer.Consumer
-	producer *producer.Producer
-	httpSrv  *http.Server
+	logger     *zap.Logger
+	config     *config.Configuration
+	consumer   *consumer.Consumer
+	producer   *producer.Producer
+	httpServer *http.Server
 }
 
 func NewApp(cfg *config.Configuration) (*App, error) {
@@ -56,7 +61,7 @@ func NewApp(cfg *config.Configuration) (*App, error) {
 	)
 
 	// Service
-	svc := service.NewExternalPaymentService(producer, logger)
+	service := service.NewExternalPaymentService(producer, logger)
 
 	// Consumer
 	consumer := consumer.NewConsumer(
@@ -72,26 +77,31 @@ func NewApp(cfg *config.Configuration) (*App, error) {
 			RebalanceTimeout: time.Duration(cfg.Kafka.ConsumerRebalanceTimeout) * time.Millisecond,
 			StartOffset:      cfg.Kafka.ConsumerStartOffset,
 		},
-		svc,
+		service,
 		logger,
 	)
+	httpHandler := httphandler.NewExternalPaymentHandler(service, logger)
 
-	// HTTP сервер
-	httpHandler := httphandler.NewExternalPaymentHandler(svc, logger)
-	mux := http.NewServeMux()
-	httpHandler.RegisterRoutes(mux)
+	router := chi.NewRouter()
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
+	router.Get("/swagger/*", httpSwagger.WrapHandler)
+	router.Mount("/", httpHandler.Routes())
 
-	httpSrv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.HTTPServer.Port),
-		Handler: mux,
+	httpServer := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.HTTPServer.Port),
+		Handler:      router,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	return &App{
-		logger:   logger,
-		config:   cfg,
-		consumer: consumer,
-		producer: producer,
-		httpSrv:  httpSrv,
+		logger:     logger,
+		config:     cfg,
+		consumer:   consumer,
+		producer:   producer,
+		httpServer: httpServer,
 	}, nil
 }
 
@@ -108,8 +118,8 @@ func (app *App) Run() error {
 
 	// HTTP сервер
 	go func() {
-		app.logger.Info("starting HTTP server", zap.String("addr", app.httpSrv.Addr))
-		if err := app.httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		app.logger.Info("starting HTTP server", zap.String("addr", app.httpServer.Addr))
+		if err := app.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			app.logger.Error("HTTP server error", zap.Error(err))
 		}
 	}()
@@ -129,7 +139,7 @@ func (app *App) Run() error {
 	// Останавливаем HTTP
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
-	if err := app.httpSrv.Shutdown(shutdownCtx); err != nil {
+	if err := app.httpServer.Shutdown(shutdownCtx); err != nil {
 		app.logger.Error("HTTP shutdown error", zap.Error(err))
 	}
 	app.logger.Info("HTTP server stopped")

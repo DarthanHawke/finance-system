@@ -3,13 +3,12 @@ package grpcapp
 import (
 	grpctransaction "transaction-service/internal/transport/grpc/server"
 
-	"crypto/tls"
 	"fmt"
 	"net"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type App struct {
@@ -21,11 +20,11 @@ type App struct {
 func New(
 	logger *zap.Logger,
 	gRPCport int,
-	tlsConfig *tls.Config,
 	transactionService grpctransaction.Transaction,
 ) *App {
-	creds := credentials.NewTLS(tlsConfig)
-	gRPCServer := grpc.NewServer(grpc.Creds(creds))
+	gRPCServer := grpc.NewServer(
+		grpc.Creds(insecure.NewCredentials()),
+	)
 	grpctransaction.NewTransactionServer(gRPCServer, transactionService)
 	return &App{
 		logger:     logger,

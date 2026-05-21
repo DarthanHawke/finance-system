@@ -75,7 +75,7 @@ func (s *BalanceService) handleOperationError(ctx context.Context, err error, ev
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	logger.Error("freeze balance failed",
+	logger.Error("balance operation failed",
 		zap.Error(err),
 	)
 
@@ -95,6 +95,7 @@ func (s *BalanceService) createSuccessEvent(transactionID uuid.UUID, eventType s
 			TransactionID: transactionID,
 			PartitionKey:  "txn:" + transactionID.String(),
 			Type:          eventType,
+			Status:        models.EventStatusPending,
 			CreatedAt:     time.Now(),
 			Source:        models.Source,
 			Payload:       payloadBytes,

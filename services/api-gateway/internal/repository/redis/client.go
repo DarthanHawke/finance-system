@@ -34,12 +34,12 @@ func NewClient(addr string, password string, db int) (*Client, error) {
 
 // Close закрывает соединение
 func (c *Client) Close() error {
-	return c.Close()
+	return c.Client.Close()
 }
 
 // Ping проверяет доступность
 func (c *Client) Ping(ctx context.Context) error {
-	return c.Ping(ctx)
+	return c.Client.Ping(ctx).Err()
 }
 
 // get Получаем значения из кеша

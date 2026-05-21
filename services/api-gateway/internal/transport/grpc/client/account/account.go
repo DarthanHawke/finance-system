@@ -4,7 +4,6 @@ import (
 	"api-gateway-service/internal/models"
 	"api-gateway-service/internal/transport/grpc/interceptor"
 	"context"
-	"crypto/tls"
 	"fmt"
 	"time"
 
@@ -15,7 +14,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type AccountClient struct {
@@ -29,7 +28,6 @@ func NewAccountClient(
 	addr string,
 	timeout time.Duration,
 	retriesCount int,
-	tlsConfig *tls.Config,
 ) (*AccountClient, error) {
 	const op = "transport.grpc.client.account.NewAccountClient"
 
@@ -43,15 +41,9 @@ func NewAccountClient(
 		grpclog.WithLogOnEvents(grpclog.PayloadReceived, grpclog.PayloadSent),
 	}
 
-	creds := credentials.NewTLS(&tls.Config{
-		ServerName:   "account-service",
-		Certificates: tlsConfig.Certificates,
-		RootCAs:      tlsConfig.ClientCAs,
-	})
-
 	cc, err := grpc.NewClient(
 		addr,
-		grpc.WithTransportCredentials(creds),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithChainUnaryInterceptor(
 			grpclog.UnaryClientInterceptor(interceptor.InterceptorLogger(logger), logOpts...),
 			grpcretry.UnaryClientInterceptor(retryOpts...)),

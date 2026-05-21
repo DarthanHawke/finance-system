@@ -105,7 +105,7 @@ func TestTransactionService_InternalTransfer_HappyPath(t *testing.T) {
 
 	// Событие, которое пришло бы из Kafka (transaction-commands)
 	startPayload := &models.CreateTransactionRequest{Transaction: tx}
-	startEvent := f.newEvent(models.EventTransactionResponse, startPayload)
+	startEvent := f.newEvent(models.EventTransactionRequest, startPayload)
 
 	// ожидаем создание транзакции и freeze.request
 	f.MockTM.On("CreateTransaction", ctx,
@@ -197,7 +197,7 @@ func TestTransactionService_InternalTransfer_RollbackAtDeposit(t *testing.T) {
 	// шаги 1-4: всё успешно (как в Happy Path)
 
 	startPayload := &models.CreateTransactionRequest{Transaction: tx}
-	startEvent := f.newEvent(models.EventTransactionResponse, startPayload)
+	startEvent := f.newEvent(models.EventTransactionRequest, startPayload)
 
 	f.MockTM.On("CreateTransaction", ctx, mock.Anything, mock.Anything).Return(nil)
 
@@ -301,7 +301,7 @@ func TestTransactionService_OutgoingTransfer_HappyPath(t *testing.T) {
 
 	// шаг 1: HandleTransactionResponse
 	startPayload := &models.CreateTransactionRequest{Transaction: tx}
-	startEvent := f.newEvent(models.EventTransactionResponse, startPayload)
+	startEvent := f.newEvent(models.EventTransactionRequest, startPayload)
 
 	f.MockTM.On("CreateTransaction", ctx, mock.Anything,
 		mock.MatchedBy(func(event *models.CreateEventRequest) bool {
@@ -379,7 +379,7 @@ func TestTransactionService_OutgoingTransfer_RollbackAtExternal(t *testing.T) {
 	ctx := context.Background()
 
 	// шаг 1: HandleTransactionResponse
-	startEvent := f.newEvent(models.EventTransactionResponse, &models.CreateTransactionRequest{Transaction: tx})
+	startEvent := f.newEvent(models.EventTransactionRequest, &models.CreateTransactionRequest{Transaction: tx})
 	f.MockTM.On("CreateTransaction", ctx, mock.Anything, mock.Anything).Return(nil)
 	err := f.TransactionService.HandleTransactionResponse(ctx, startEvent)
 	require.NoError(t, err)
@@ -440,7 +440,7 @@ func TestTransactionService_IncomingTransfer_HappyPath(t *testing.T) {
 
 	// шаг 1: HandleTransactionResponse (SenderType=external -> reserve)
 	startPayload := &models.CreateTransactionRequest{Transaction: tx}
-	startEvent := f.newEvent(models.EventTransactionResponse, startPayload)
+	startEvent := f.newEvent(models.EventTransactionRequest, startPayload)
 
 	f.MockTM.On("CreateTransaction", ctx, mock.Anything,
 		mock.MatchedBy(func(event *models.CreateEventRequest) bool {
@@ -502,7 +502,7 @@ func TestTransactionService_IncomingTransfer_RollbackAtDeposit(t *testing.T) {
 	ctx := context.Background()
 
 	// шаги 1-3: успешно
-	startEvent := f.newEvent(models.EventTransactionResponse, &models.CreateTransactionRequest{Transaction: tx})
+	startEvent := f.newEvent(models.EventTransactionRequest, &models.CreateTransactionRequest{Transaction: tx})
 	f.MockTM.On("CreateTransaction", ctx, mock.Anything, mock.Anything).Return(nil)
 	err := f.TransactionService.HandleTransactionResponse(ctx, startEvent)
 	require.NoError(t, err)

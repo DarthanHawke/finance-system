@@ -52,7 +52,7 @@ func (r *TransactionRepository) CreateTransaction(
 				sender_type, sender_account_code, sender_phone, sender_card_number,
 				recipient_type, recipient_account_code, recipient_phone, recipient_card_number,
 				processing_code, stan, authorization_code, description, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 	`
 
 	const queryEvents = `
@@ -73,7 +73,7 @@ func (r *TransactionRepository) CreateTransaction(
 			req.RecipientType,
 			req.RecipientAccountCode,
 			req.RecipientPhone,
-			req.RecipientAccountCode,
+			req.RecipientCardNumber,
 			req.ProcessingCode,
 			req.Stan,
 			req.AuthorizationCode,

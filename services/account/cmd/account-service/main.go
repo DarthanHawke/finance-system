@@ -1,14 +1,11 @@
 package main
 
 import (
+	app "account-service/internal/app"
 	"account-service/internal/config"
-	"account-service/internal/lib/logger"
 	"os"
 
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"go.uber.org/zap"
+	"log"
 )
 
 const (
@@ -17,35 +14,27 @@ const (
 	production  = "production"
 )
 
-// RunMigrations применяет все pending миграции
 func main() {
-	// Подключаем логгер Zap в настраиваемой конфигурации (>=LevelInfo выводит в консоль, >=DebugLevel в файл)
-	log := logger.SetupLogger()
-	defer log.Sync()
-
 	env := os.Getenv("APP_ENV")
 	if env == "" {
-		env = example
+		env = example // значение по умолчанию (например, production)
 	}
-	log.Info("ENV applied", zap.String("env", env))
 
 	// Загружаем конфиг
 	cfg, err := config.LoadConfig(env)
 	if err != nil {
-		log.Error("Failed to load config", zap.Error(err))
+		log.Fatalf("Failed to load config %v", err)
 		return
 	}
 
-	// Инициализируем мигратор
-	mgrt, err := migrate.New("file://./migrations", cfg.DataBase.DSN())
+	// Создаем сервер
+	server, err := app.NewApp(cfg)
 	if err != nil {
-		log.Error("migrate init failed:", zap.Error(err))
-	}
-	defer mgrt.Close()
-
-	// Применяем миграции
-	if err := mgrt.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Error("migrate up failed:", zap.Error(err))
+		log.Fatalf("Failed to create server: %v", err)
 	}
 
+	// Запускаем сервер
+	if err := server.Run(); err != nil {
+		log.Fatalf("Server error: %v", err)
+	}
 }

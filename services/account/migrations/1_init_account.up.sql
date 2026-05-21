@@ -1,5 +1,5 @@
 -- =======================================================================
--- Создание таблицы transactions для хранения информации о валютных счетах 
+-- Создание таблицы accounts для хранения информации о валютных счетах 
 -- =======================================================================
 
 -- Таблица для хранения данных о валютных счетах
@@ -21,9 +21,9 @@ CREATE TABLE accounts (
     reserve_balance DECIMAL(15, 2) NOT NULL DEFAULT 0 CHECK (reserve_balance >= 0),
 
     -- статус счета: active, blocked, closed
-    status           VARCHAR(20) DEFAULT 'active'
+    status           VARCHAR(20) DEFAULT 'active',
     -- Дата создания счёта
     created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     -- Дата последнего обновления информации о счёте
-    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

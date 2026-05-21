@@ -45,7 +45,6 @@ func NewProducer(
 ) *Producer {
 	writer := &kafka.Writer{
 		Addr:                   kafka.TCP(config.Brokers...),
-		Topic:                  config.Topic,
 		Balancer:               &kafka.Hash{},
 		BatchSize:              config.BatchSize,
 		BatchTimeout:           config.BatchTimeout,
@@ -80,6 +79,7 @@ func (p *Producer) Produce(ctx context.Context, topic, key string, event any) er
 	}
 
 	message := kafka.Message{
+		Topic: topic,
 		Key:   []byte(key),
 		Value: eventBytes,
 		Time:  time.Now(),

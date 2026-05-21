@@ -28,7 +28,7 @@ const (
 
 // Типы событий для Kafka
 const (
-	EventTransactionResponse = "transaction.response"
+	EventTransactionRequest = "transaction.request"
 
 	EventFreezeRequest    = "freeze.request"
 	EventFreezeResponse   = "freeze.response"
@@ -65,6 +65,7 @@ type Event struct {
 	Status        string    `db:"status" json:"status"`
 	Source        string    `db:"source" json:"source"`
 	CreatedAt     time.Time `db:"created_at" json:"created_at"`
+	ProcessedAt   time.Time `db:"processed_at" json:"processed_at"`
 	Payload       []byte    `db:"payload" json:"payload"`
 }
 

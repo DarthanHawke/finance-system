@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"time"
 
@@ -75,17 +76,23 @@ func (s *ExternalPaymentService) CreateExternalPayment(
 		zap.Float64("amount", req.Amount),
 	)
 
+	// Маппим валюту в числовой код ISO8583
+	currencyCode, err := mapCurrencyToISO(req.Currency)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
 	// Формируем ISO8583 запрос
 	isoMsg := &models.ISO8583Message{
 		MTI:            models.MTIFinancialRequest,
 		PrimaryAccount: req.SenderAccountCode,
-		ProcessingCode: "001020", // purchase, checking -> checking
-		Amount:         fmt.Sprintf("%.2f", req.Amount),
+		ProcessingCode: "216060",
+		Amount:         formatISOAmount(req.Amount, req.Currency),
 		STAN:           generateSTAN(),
 		RRN:            generateRRN(),
 		AccountID1:     req.SenderAccountCode,
 		AccountID2:     req.RecipientAccountCode,
-		Currency:       req.Currency,
+		Currency:       currencyCode,
 	}
 
 	payload, _ := json.Marshal(&models.ExternalRequestPayload{ISOMessage: isoMsg})
@@ -104,6 +111,27 @@ func (s *ExternalPaymentService) CreateExternalPayment(
 		Status:        "pending",
 		Message:       "External payment initiated",
 	}, nil
+}
+
+// mapCurrencyToISO маппит буквенный код валюты в числовой ISO8583
+func mapCurrencyToISO(currency string) (string, error) {
+	switch currency {
+	case "RUB":
+		return "643", nil
+	case "USD":
+		return "840", nil
+	case "EUR":
+		return "978", nil
+	default:
+		return "", fmt.Errorf("unsupported currency: %s", currency)
+	}
+}
+
+// formatISOAmount форматирует сумму в 12-значный формат ISO8583 в минимальных единицах
+func formatISOAmount(amount float64, currency string) string {
+	decimals := 2
+	amountInMinor := int64(amount * math.Pow(10, float64(decimals)))
+	return fmt.Sprintf("%012d", amountInMinor)
 }
 
 // HandleExternalRequest обрабатывает запрос на внешний платёж

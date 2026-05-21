@@ -89,6 +89,7 @@ func (p *Producer) Produce(ctx context.Context, topic, key string, event any) er
 	}
 
 	message := kafka.Message{
+		Topic: topic,
 		Key:   []byte(key),
 		Value: eventBytes,
 		Time:  time.Now(),

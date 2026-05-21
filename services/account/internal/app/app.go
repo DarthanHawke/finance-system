@@ -2,8 +2,6 @@ package app
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"os"
 	"os/signal"
@@ -47,11 +45,6 @@ func NewApp(cfg *config.Configuration) (*App, error) {
 		zap.String("env", cfg.Env),
 		zap.Int("port", cfg.GRPCServer.Port),
 	)
-
-	tlsConfig, err := createTLSConfig(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("create tls config: %w", err)
-	}
 
 	ibanManager, err := iban.NewIBANGenerator("ru", "1337", 25)
 	if err != nil {
@@ -147,7 +140,6 @@ func NewApp(cfg *config.Configuration) (*App, error) {
 	grpcApp := grpcapp.New(
 		logger,
 		cfg.GRPCServer.Port,
-		tlsConfig,
 		accountService,
 	)
 	return &App{
@@ -250,27 +242,4 @@ func createLogger(env string) (*zap.Logger, error) {
 		return zap.NewProduction()
 	}
 	return zap.NewDevelopment()
-}
-
-func createTLSConfig(cfg *config.Configuration) (*tls.Config, error) {
-	cert, err := tls.LoadX509KeyPair(cfg.TLSCert, cfg.TLSKey)
-	if err != nil {
-		return nil, fmt.Errorf("load key pair: %w", err)
-	}
-
-	certPool := x509.NewCertPool()
-	ca, err := os.ReadFile(cfg.CA)
-	if err != nil {
-		return nil, fmt.Errorf("read ca: %w", err)
-	}
-
-	if ok := certPool.AppendCertsFromPEM(ca); !ok {
-		return nil, fmt.Errorf("append ca certs")
-	}
-
-	return &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    certPool,
-	}, nil
 }

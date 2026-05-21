@@ -8,27 +8,18 @@ import (
 )
 
 type Configuration struct {
-	Env               string `mapstructure:"ENV" env-default:"prod"`
-	GRPCServer        `mapstructure:",squash"`
-	TLS               `mapstructure:",squash"`
-	DataBase          `mapstructure:",squash"`
-	Redis             `mapstructure:",squash"`
-	Kafka             `mapstructure:",squash"`
-	JWT               `mapstructure:",squash"`
-	JWTKeys           `mapstructure:",squash"`
-	SSOClient         `mapstructure:",squash"`
-	TransactionClient `mapstructure:",squash"`
+	Env        string `mapstructure:"ENV" env-default:"prod"`
+	GRPCServer `mapstructure:",squash"`
+	DataBase   `mapstructure:",squash"`
+	Redis      `mapstructure:",squash"`
+	Kafka      `mapstructure:",squash"`
+	JWT        `mapstructure:",squash"`
+	JWTKeys    `mapstructure:",squash"`
 }
 
 type GRPCServer struct {
 	Port    int `mapstructure:"SERVER_PORT" env-default:"50052"`
 	Timeout int `mapstructure:"SERVER_TIMEOUT" env-default:"10"`
-}
-
-type TLS struct {
-	CA      string `mapstructure:"TLS_CA" env-default:"./security/CA.example.crt"`
-	TLSKey  string `mapstructure:"TLS_SERVER" env-default:"./security/server.example.key"`
-	TLSCert string `mapstructure:"TLS_CERT" env-default:"./security/server.example.crt"`
 }
 
 type DataBase struct {
@@ -87,17 +78,6 @@ type JWTKeys struct {
 	JWTPublicKeyPath string `mapstructure:"JWT_KEY_PUBLIC" env-default:"./security/public.example.pem"`
 }
 
-type SSOClient struct {
-	Address      string        `mapstructure:"CLIENT_SSO_ADRESS" env-default:"sso-service:50051"`
-	Timeout      time.Duration `mapstructure:"CLIENT_SSO_TIMEOUT" env-default:"10s"`
-	RetriesCount int           `mapstructure:"CLIENT_SSO_RETRIES" env-default:"5"`
-}
-type TransactionClient struct {
-	Address      string        `mapstructure:"CLIENT_TRANSACTION_ADRESS" env-default:"transaction-service:50058"`
-	Timeout      time.Duration `mapstructure:"CLIENT_TRANSACTION_TIMEOUT" env-default:"10s"`
-	RetriesCount int           `mapstructure:"CLIENT_TRANSACTION_RETRIES" env-default:"5"`
-}
-
 type SystemUsers struct {
 	SystemUsers []User `mapstructure:"system_users"`
 }
@@ -111,16 +91,13 @@ type User struct {
 
 func (c DataBase) DSN() string {
 	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=%s&sslrootcert=%s&sslcert=%s&sslkey=%s",
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
 		c.User,
 		c.Password,
 		c.Host,
 		c.Port,
 		c.Name,
 		c.SSLMode,
-		c.RootCert,
-		c.Cert,
-		c.Key,
 	)
 }
 

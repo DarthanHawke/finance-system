@@ -206,7 +206,7 @@ func (r *AccountRepository) createEvent(ctx context.Context, tx *sqlx.Tx, req *m
 
 	const query = `
 		INSERT INTO events (id, transaction_id, partition_key, type, status, source, created_at, payload)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
 	_, err := tx.ExecContext(ctx, query,

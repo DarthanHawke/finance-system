@@ -1,0 +1,515 @@
+basePath: /
+definitions:
+  models.Account:
+    properties:
+      balance:
+        type: number
+      created_at:
+        type: string
+      currency:
+        type: string
+      frozen_balance:
+        type: number
+      name:
+        type: string
+      reserve_balance:
+        type: number
+      status:
+        enum:
+        - active
+        - blocked
+        - closed
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      сode:
+        type: string
+    required:
+    - status
+    type: object
+  models.CreateAccountRequest:
+    properties:
+      currency:
+        enum:
+        - USD
+        - EUR
+        - RUB
+        type: string
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+      user_id:
+        type: string
+      сode:
+        type: string
+    required:
+    - currency
+    - name
+    - user_id
+    type: object
+  models.CreateTransactionRequest:
+    properties:
+      amount:
+        type: number
+      authorization_code:
+        type: string
+      created_at:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      processing_code:
+        type: string
+      recipient_account_code:
+        type: string
+      recipient_card_number:
+        type: string
+      recipient_phone:
+        type: string
+      recipient_type:
+        type: string
+      sender_account_code:
+        type: string
+      sender_card_number:
+        type: string
+      sender_phone:
+        type: string
+      sender_type:
+        type: string
+      stan:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.CreateTransactionResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+      transaction_id:
+        type: string
+    type: object
+  models.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  models.GetAccountResponse:
+    properties:
+      balance:
+        type: number
+      created_at:
+        type: string
+      currency:
+        type: string
+      frozen_balance:
+        type: number
+      name:
+        type: string
+      reserve_balance:
+        type: number
+      status:
+        enum:
+        - active
+        - blocked
+        - closed
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      сode:
+        type: string
+    required:
+    - status
+    type: object
+  models.GetAccountsResponse:
+    properties:
+      accounts:
+        items:
+          $ref: '#/definitions/models.Account'
+        type: array
+    type: object
+  models.GetTransactionResponse:
+    properties:
+      amount:
+        type: number
+      authorization_code:
+        type: string
+      created_at:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      processing_code:
+        type: string
+      recipient_account_code:
+        type: string
+      recipient_card_number:
+        type: string
+      recipient_phone:
+        type: string
+      recipient_type:
+        type: string
+      sender_account_code:
+        type: string
+      sender_card_number:
+        type: string
+      sender_phone:
+        type: string
+      sender_type:
+        type: string
+      stan:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.GetTransactionsResponse:
+    properties:
+      transactions:
+        items:
+          $ref: '#/definitions/models.Transaction'
+        type: array
+    type: object
+  models.SuccessResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  models.Transaction:
+    properties:
+      amount:
+        type: number
+      authorization_code:
+        type: string
+      created_at:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      processing_code:
+        type: string
+      recipient_account_code:
+        type: string
+      recipient_card_number:
+        type: string
+      recipient_phone:
+        type: string
+      recipient_type:
+        type: string
+      sender_account_code:
+        type: string
+      sender_card_number:
+        type: string
+      sender_phone:
+        type: string
+      sender_type:
+        type: string
+      stan:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API для платежной системы
+  title: Finance-system API
+  version: "1.0"
+paths:
+  /account/{code}:
+    get:
+      description: Возвращает информацию о счете по его коду
+      parameters:
+      - description: Код счета
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.GetAccountResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Получить информацию о счете
+      tags:
+      - account
+  /account/{code}/block:
+    put:
+      description: Блокирует счет по его коду
+      parameters:
+      - description: Код счета
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Заблокировать счет
+      tags:
+      - account
+  /account/{code}/close:
+    delete:
+      description: Закрывает счет по его коду
+      parameters:
+      - description: Код счета
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Закрыть счет
+      tags:
+      - account
+  /account/create:
+    post:
+      consumes:
+      - application/json
+      description: Создает новый счет с указанной валютой и именем
+      parameters:
+      - description: Данные для создания счета
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Создать счет
+      tags:
+      - account
+  /account/get:
+    get:
+      description: Возвращает список всех счетов пользователя с пагинацией
+      parameters:
+      - description: ID пользователя
+        in: query
+        name: user_id
+        required: true
+        type: string
+      - default: 10
+        description: Лимит записей
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Смещение
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.GetAccountsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Получить список счетов пользователя
+      tags:
+      - account
+  /transaction/{transaction_id}:
+    get:
+      description: Возвращает информацию о транзакции по её ID
+      parameters:
+      - description: ID транзакции
+        in: path
+        name: transaction_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.GetTransactionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Получить транзакцию
+      tags:
+      - transaction
+  /transaction/account/{account_code}:
+    get:
+      description: Возвращает список транзакций для указанного счета с пагинацией
+      parameters:
+      - description: Код счета
+        in: path
+        name: account_code
+        required: true
+        type: string
+      - default: 10
+        description: Лимит записей
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Смещение
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.GetTransactionsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Получить транзакции счета
+      tags:
+      - transaction
+  /transaction/create:
+    post:
+      consumes:
+      - application/json
+      description: Создает новую транзакцию между счетами
+      parameters:
+      - description: Данные для создания транзакции
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateTransactionRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/models.CreateTransactionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Создать транзакцию
+      tags:
+      - transaction
+swagger: "2.0"

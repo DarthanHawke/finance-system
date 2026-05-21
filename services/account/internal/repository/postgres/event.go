@@ -64,7 +64,7 @@ func (r *EventRepository) GetPendingEvents(ctx context.Context, req *models.GetE
 	// и возвращам события
 	const query = `
 		UPDATE events 
-		SET processed_at = $1,
+		SET processed_at = $1
 		WHERE id IN (
 			SELECT id 
 			FROM events 
@@ -102,7 +102,8 @@ func (r *EventRepository) UpdateEventStatus(ctx context.Context, req *models.Upd
 
 	const query = `
 		UPDATE events 
-		SET status = $1, processed_at = $2
+		SET status = $1, 
+			processed_at = $2
 		WHERE id = $3
 	`
 

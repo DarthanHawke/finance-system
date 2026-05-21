@@ -1,9 +1,15 @@
 package app
 
 import (
+	_ "api-gateway-service/docs"
+	"api-gateway-service/internal/config"
+	redisclient "api-gateway-service/internal/repository/redis"
+	accountclient "api-gateway-service/internal/transport/grpc/client/account"
+	transactionclient "api-gateway-service/internal/transport/grpc/client/transaction"
+	accounthandler "api-gateway-service/internal/transport/http/handlers/account"
+	transactionhandler "api-gateway-service/internal/transport/http/handlers/transaction"
+	kafkaproducer "api-gateway-service/internal/transport/kafka/producer"
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"net/http"
 	"os"
@@ -12,14 +18,9 @@ import (
 	"syscall"
 	"time"
 
-	"api-gateway-service/internal/config"
-	redisclient "api-gateway-service/internal/repository/redis"
-	accountclient "api-gateway-service/internal/transport/grpc/client/account"
-	transactionclient "api-gateway-service/internal/transport/grpc/client/transaction"
-	accounthandler "api-gateway-service/internal/transport/http/handlers/account"
-	transactionhandler "api-gateway-service/internal/transport/http/handlers/transaction"
-	kafkaproducer "api-gateway-service/internal/transport/kafka/producer"
+	httpSwagger "github.com/swaggo/http-swagger"
 
+	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
@@ -45,11 +46,6 @@ func NewApp(cfg *config.Configuration) (*App, error) {
 		zap.Int("port", cfg.HTTPServer.Port),
 	)
 
-	tlsConfig, err := createTLSConfig(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("create tls config: %w", err)
-	}
-
 	redisClient, err := redisclient.NewClient(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
 	if err != nil {
 		return nil, fmt.Errorf("connect to redis: %w", err)
@@ -62,7 +58,6 @@ func NewApp(cfg *config.Configuration) (*App, error) {
 		cfg.AccountClient.Address,
 		cfg.AccountClient.Timeout,
 		cfg.AccountClient.RetriesCount,
-		tlsConfig,
 	)
 	if err != nil {
 		redisClient.Close()
@@ -76,7 +71,6 @@ func NewApp(cfg *config.Configuration) (*App, error) {
 		cfg.TransactionClient.Address,
 		cfg.TransactionClient.Timeout,
 		cfg.TransactionClient.RetriesCount,
-		tlsConfig,
 	)
 	if err != nil {
 		redisClient.Close()
@@ -115,6 +109,9 @@ func NewApp(cfg *config.Configuration) (*App, error) {
 	)
 
 	router := chi.NewRouter()
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
+	router.Get("/swagger/*", httpSwagger.WrapHandler)
 	router.Mount("/account", accountHandler.Routes())
 	router.Mount("/transaction", transactionHandler.Routes())
 
@@ -192,29 +189,6 @@ func createLogger(env string) (*zap.Logger, error) {
 		return zap.NewProduction()
 	}
 	return zap.NewDevelopment()
-}
-
-func createTLSConfig(cfg *config.Configuration) (*tls.Config, error) {
-	cert, err := tls.LoadX509KeyPair(cfg.TLS.TLSCert, cfg.TLS.TLSKey)
-	if err != nil {
-		return nil, fmt.Errorf("load key pair: %w", err)
-	}
-
-	certPool := x509.NewCertPool()
-	ca, err := os.ReadFile(cfg.TLS.CA)
-	if err != nil {
-		return nil, fmt.Errorf("read ca: %w", err)
-	}
-
-	if ok := certPool.AppendCertsFromPEM(ca); !ok {
-		return nil, fmt.Errorf("append ca certs")
-	}
-
-	return &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      certPool,
-		ClientCAs:    certPool,
-	}, nil
 }
 
 func splitBrokers(brokers string) []string {
