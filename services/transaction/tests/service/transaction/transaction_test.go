@@ -23,6 +23,7 @@ type TestTransactionService struct {
 	MockTM             *mocks.MockTransactionManager
 	MockEM             *mocks.MockEventManager
 	MockISO            *mocks.MockIso8583Manager
+	MockStan           *mocks.MockStanManager
 	TransactionID      uuid.UUID
 	SenderAccount      string
 	RecipientAccount   string
@@ -37,9 +38,10 @@ func newTestTransactionService(t *testing.T) *TestTransactionService {
 	mockTM := new(mocks.MockTransactionManager)
 	mockEM := new(mocks.MockEventManager)
 	mockISO := new(mocks.MockIso8583Manager)
+	mockStan := new(mocks.MockStanManager)
 	logger := zap.NewNop()
 
-	svc := service.NewTransactionService(mockTM, mockEM, mockISO, logger)
+	svc := service.NewTransactionService(mockTM, mockEM, mockISO, mockStan, logger)
 
 	return &TestTransactionService{
 		TransactionService: svc,

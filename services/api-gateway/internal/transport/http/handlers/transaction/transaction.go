@@ -268,9 +268,12 @@ func (h *TransactionHandler) createTransactionEvent(
 ) *models.Event {
 	transaction := &models.Transaction{
 		ID:                   transactionID,
+		Type:                 req.Type,
 		Amount:               req.Amount,
 		Currency:             req.Currency,
+		SenderType:           req.SenderType,
 		SenderAccountCode:    req.SenderAccountCode,
+		RecipientType:        req.RecipientType,
 		RecipientAccountCode: req.RecipientAccountCode,
 		Description:          req.Description,
 		Status:               models.TransactionStatusPending,
@@ -310,6 +313,12 @@ func (h *TransactionHandler) validateTransactionRequest(req *models.CreateTransa
 	}
 	if req.Currency != "USD" && req.Currency != "EUR" && req.Currency != "RUB" {
 		return fmt.Errorf("invalid currency, supported: USD, EUR, RUB")
+	}
+	if req.SenderType == "" {
+		return fmt.Errorf("sender_type is required")
+	}
+	if req.RecipientType == "" {
+		return fmt.Errorf("recipient_type is required")
 	}
 	return nil
 }

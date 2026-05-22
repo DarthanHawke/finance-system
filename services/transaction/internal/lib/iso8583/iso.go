@@ -18,21 +18,13 @@ var nilStr = ""
 
 // ISO8583 структура релизующая методы для работы с ISO8583
 type ISO8583 struct {
-	config      *config.ISO8583Config
-	stanManager StanManager
+	config *config.ISO8583Config
 }
 
-func NewISO8583(cfg *config.ISO8583Config, stanManager StanManager) *ISO8583 {
+func NewISO8583(cfg *config.ISO8583Config) *ISO8583 {
 	return &ISO8583{
-		config:      cfg,
-		stanManager: stanManager,
+		config: cfg,
 	}
-}
-
-type StanManager interface {
-	GetNextSTAN(transactionType, senderType string, date time.Time) (string, error)
-	GetCurrentSTAN(transactionType, senderType string, date time.Time) (string, error)
-	ResetCounters()
 }
 
 // ParseIncomingMessage парсит входящее ISO сообщение из JSON

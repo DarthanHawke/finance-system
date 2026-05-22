@@ -22,8 +22,8 @@ func NewSTAN() *STAN {
 }
 
 // GetNextSTAN возвращает следующий STAN для комбинации параметров
-func (s *STAN) GetNextSTAN(transactionType, senderType string, date time.Time) (string, error) {
-	key := s.generateKey(transactionType, senderType, date)
+func (s *STAN) GetNextSTAN(transactionType, senderType, recipientType string, date time.Time) (string, error) {
+	key := s.generateKey(transactionType, senderType, recipientType, date)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -41,8 +41,8 @@ func (s *STAN) GetNextSTAN(transactionType, senderType string, date time.Time) (
 }
 
 // GetCurrentSTAN возвращает текущий STAN без увеличения счетчика
-func (s *STAN) GetCurrentSTAN(transactionType, senderType string, date time.Time) (string, error) {
-	key := s.generateKey(transactionType, senderType, date)
+func (s *STAN) GetCurrentSTAN(transactionType, senderType, recipientType string, date time.Time) (string, error) {
+	key := s.generateKey(transactionType, senderType, recipientType, date)
 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -64,6 +64,6 @@ func (s *STAN) ResetCounters() {
 }
 
 // generateKey создает ключ для мапы счетчиков
-func (s *STAN) generateKey(transactionType, senderType string, date time.Time) string {
-	return fmt.Sprintf("%s_%s_%s", date.Format(s.dateFormat), transactionType, senderType)
+func (s *STAN) generateKey(transactionType, senderType, recipientType string, date time.Time) string {
+	return fmt.Sprintf("%s_%s_%s %s", date.Format(s.dateFormat), transactionType, senderType, recipientType)
 }

@@ -51,5 +51,5 @@ CREATE TABLE transactions (
     -- Дата платежа
     date                        DATE NOT NULL DEFAULT CURRENT_DATE,
     -- STAN уникален в течении дня (а в моем пет-проекте ещё и для каждого типа платежа)
-    UNIQUE(stan, date, type, sender_type)
+    UNIQUE(stan, date, type, sender_type, recipient_type)
 ); 

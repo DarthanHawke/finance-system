@@ -20,6 +20,7 @@ type TransactionService struct {
 	transactionManager TransactionManager
 	eventManager       EventManager
 	iso8583Manager     Iso8583Manager
+	stanManager        StanManager
 	logger             *zap.Logger
 }
 
@@ -28,12 +29,14 @@ func NewTransactionService(
 	transactionManager TransactionManager,
 	eventManager EventManager,
 	iso8583Manager Iso8583Manager,
+	stanManager StanManager,
 	logger *zap.Logger,
 ) *TransactionService {
 	return &TransactionService{
 		transactionManager: transactionManager,
 		eventManager:       eventManager,
 		iso8583Manager:     iso8583Manager,
+		stanManager:        stanManager,
 		logger:             logger.With(zap.String("component", "transaction_service")),
 	}
 }
@@ -57,6 +60,11 @@ type Iso8583Manager interface {
 	CreateFinancialResponse(transaction *models.Transaction, success bool, reason string) (*models.ISO8583Message, error)
 }
 
+// StanManager определяет методы управления System Trace Audit Number
+type StanManager interface {
+	GetNextSTAN(transactionType, senderType, recipientType string, date time.Time) (string, error)
+}
+
 // ==================== ОСНОВНЫЕ ОБРАБОТЧИКИ ====================
 
 // HandleTransactionResponse - создание нового платежа
@@ -76,6 +84,18 @@ func (s *TransactionService) HandleTransactionResponse(ctx context.Context, resp
 	}
 
 	transaction.Status = models.TransactionStatusPending
+	if transaction.Stan == "" {
+		stan, err := s.stanManager.GetNextSTAN(
+			transaction.Type,
+			transaction.SenderType,
+			transaction.RecipientType,
+			time.Now(),
+		)
+		if err != nil {
+			return fmt.Errorf("%s: failed to generate STAN: %w", op, err)
+		}
+		transaction.Stan = stan
+	}
 
 	var event *models.CreateEventRequest
 

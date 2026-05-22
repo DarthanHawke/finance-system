@@ -33,6 +33,7 @@ type App struct {
 	consumer        *consumer.Consumer
 	producer        *producer.Producer
 	outboxProcessor *processor.OutboxProcessor
+	stanManager     *stan.STAN
 }
 
 // NewApp создает все компоненты и настраивает зависимости
@@ -69,7 +70,7 @@ func NewApp(cfg *config.Configuration) (*App, error) {
 	deduplicator := redis.NewDeduplicator(redisClient, 24*time.Hour)
 
 	stanManager := stan.NewSTAN()
-	iso8583Manager := iso8583.NewISO8583(iso8583config, stanManager)
+	iso8583Manager := iso8583.NewISO8583(iso8583config)
 
 	transactionRepository := postgres.NewTransactionRepository(dataBase, cache, logger)
 	eventRepository := postgres.NewEventRepository(dataBase, logger)
@@ -83,6 +84,7 @@ func NewApp(cfg *config.Configuration) (*App, error) {
 		transactionRepository,
 		eventRepository,
 		iso8583Manager,
+		stanManager,
 		logger,
 	)
 
@@ -155,6 +157,7 @@ func NewApp(cfg *config.Configuration) (*App, error) {
 		consumer:        consumer,
 		producer:        producer,
 		outboxProcessor: outboxProcessor,
+		stanManager:     stanManager,
 	}, nil
 }
 
@@ -175,6 +178,9 @@ func (app *App) Run() error {
 
 	// запускаем outbox processor
 	app.outboxProcessor.StartProcessEvents(ctx)
+
+	// запускаем планировщик сброса счётчиков STAN
+	go app.startSTANResetScheduler(ctx)
 
 	app.logger.Info("server started successfully")
 
@@ -246,4 +252,23 @@ func createLogger(env string) (*zap.Logger, error) {
 		return zap.NewProduction()
 	}
 	return zap.NewDevelopment()
+}
+
+// startSTANResetScheduler сбрасывает счётчики STAN каждый день в полночь
+func (app *App) startSTANResetScheduler(ctx context.Context) {
+	app.logger.Info("starting STAN reset scheduler")
+
+	for {
+		now := time.Now()
+		next := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+
+		select {
+		case <-time.After(next.Sub(now)):
+			app.stanManager.ResetCounters() // нужен доступ к stanManager
+			app.logger.Info("STAN counters reset")
+		case <-ctx.Done():
+			app.logger.Info("STAN reset scheduler stopped")
+			return
+		}
+	}
 }
