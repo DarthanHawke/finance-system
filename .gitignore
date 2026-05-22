@@ -16,6 +16,8 @@
 # logs
 */*.log
 */*logs
+**/*.log
+**/*.log.*
 
 # TLS
 */*.key
@@ -26,3 +28,5 @@
 
 # all
 */*.txt
+
+services/kafka/kafka/

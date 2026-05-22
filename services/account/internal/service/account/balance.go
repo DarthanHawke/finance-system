@@ -256,7 +256,7 @@ func (s *BalanceService) HandleWithdrawRequest(ctx context.Context, event *model
 	return nil
 }
 
-// HandleRefundRequest откатываем списани средств
+// HandleRefundRequest откатываем списание средств
 func (s *BalanceService) HandleRefundRequest(ctx context.Context, event *models.Event) error {
 	const op = "service.account.HandleRefundRequest"
 
@@ -328,12 +328,12 @@ func (s *BalanceService) HandleBlockAccount(ctx context.Context, event *models.E
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	var payloadReq *models.UpdateAccountRequest
+	var payloadReq models.UpdateAccountRequest
 	if err := json.Unmarshal(event.Payload, &payloadReq); err != nil {
 		return err
 	}
 
-	if err := s.balanceManager.BlockAccountWithEvent(ctx, payloadReq, successEvent); err != nil {
+	if err := s.balanceManager.BlockAccountWithEvent(ctx, &payloadReq, successEvent); err != nil {
 		return s.handleOperationError(ctx, err, successEvent)
 	}
 

@@ -795,7 +795,7 @@ func (s *TransactionService) createExternalCommitEvent(
 	req *models.Transaction,
 	resp *models.Event,
 ) (*models.CreateEventRequest, error) {
-	var payloadResp *models.BalanceResponsePayload
+	var payloadResp models.BalanceResponsePayload
 	if err := json.Unmarshal(resp.Payload, &payloadResp); err != nil {
 		return nil, err
 	}
@@ -842,7 +842,7 @@ func (s *TransactionService) createExternalRollbackEvent(
 	req *models.Transaction,
 	resp *models.Event,
 ) (*models.CreateEventRequest, error) {
-	var payloadResp *models.BalanceResponsePayload
+	var payloadResp models.BalanceResponsePayload
 	if err := json.Unmarshal(resp.Payload, &payloadResp); err != nil {
 		return nil, err
 	}
@@ -878,14 +878,14 @@ func (s *TransactionService) createRefandEvent(req *models.Transaction) (*models
 func (s *TransactionService) getTransactionPayload(resp *models.Event) (*models.CreateTransactionRequest, error) {
 	const op = "service.transaction.getTransactionPayload"
 
-	var payloadIsoResp *models.ISO8583Payload
-	if err := json.Unmarshal(resp.Payload, &payloadIsoResp); err == nil {
-		return s.iso8583Manager.CreateTransactionFromISO(payloadIsoResp.ISOMessage)
+	var payloadResp models.CreateTransactionRequest
+	if err := json.Unmarshal(resp.Payload, &payloadResp); err == nil && payloadResp.Transaction != nil {
+		return &payloadResp, nil
 	}
 
-	var payloadResp *models.CreateTransactionRequest
-	if err := json.Unmarshal(resp.Payload, &payloadResp); err == nil {
-		return payloadResp, nil
+	var payloadIsoResp models.ISO8583Payload
+	if err := json.Unmarshal(resp.Payload, &payloadIsoResp); err == nil && payloadIsoResp.ISOMessage != nil {
+		return s.iso8583Manager.CreateTransactionFromISO(payloadIsoResp.ISOMessage)
 	}
 
 	return nil, fmt.Errorf("%s: %s", op, "Unknow Transaction Type")
@@ -893,7 +893,7 @@ func (s *TransactionService) getTransactionPayload(resp *models.Event) (*models.
 
 // isSuccessBalanceResponse - проверяет успешность ответа операций с балансом счета
 func (s *TransactionService) isSuccessBalanceResponse(resp *models.Event) bool {
-	var payloadResp *models.BalanceResponsePayload
+	var payloadResp models.BalanceResponsePayload
 	if err := json.Unmarshal(resp.Payload, &payloadResp); err != nil {
 		return false
 	}
@@ -902,7 +902,7 @@ func (s *TransactionService) isSuccessBalanceResponse(resp *models.Event) bool {
 
 // isSuccessExternalResponse - проверяет успешность ответа внещнего платёжного шлюза
 func (s *TransactionService) isSuccessExternalResponse(resp *models.Event) bool {
-	var payloadResp *models.BalanceResponsePayload
+	var payloadResp models.BalanceResponsePayload
 	if err := json.Unmarshal(resp.Payload, &payloadResp); err != nil {
 		return false
 	}
