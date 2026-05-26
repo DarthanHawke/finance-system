@@ -3,7 +3,7 @@ module api-gateway-service
 go 1.26.3
 
 require (
-	github.com/DarthanHawke/protos-finance-system v0.9.8
+	github.com/DarthanHawke/protos-finance-system v1.0.0
 	github.com/go-chi/chi v1.5.5
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/go-chi/render v1.0.3

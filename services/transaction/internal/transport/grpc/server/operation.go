@@ -4,7 +4,7 @@ import (
 	"context"
 	"transaction-service/internal/models"
 
-	trngrpc "github.com/DarthanHawke/protos-finance-system/gen/go/transaction"
+	trngrpc "github.com/DarthanHawke/protos-finance-system/gen/go/transaction/v1"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

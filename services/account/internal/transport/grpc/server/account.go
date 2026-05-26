@@ -4,7 +4,7 @@ import (
 	"account-service/internal/models"
 	"context"
 
-	accgrpc "github.com/DarthanHawke/protos-finance-system/gen/go/account"
+	accgrpc "github.com/DarthanHawke/protos-finance-system/gen/go/account/v1"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

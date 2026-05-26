@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	accgrpc "github.com/DarthanHawke/protos-finance-system/gen/go/account"
+	accgrpc "github.com/DarthanHawke/protos-finance-system/gen/go/account/v1"
 	"github.com/google/uuid"
 	grpclog "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
