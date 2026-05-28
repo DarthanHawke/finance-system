@@ -19,7 +19,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
 
 // TestTransactionRepository содержит все зависимости для тестов
@@ -39,9 +38,8 @@ func new(t *testing.T) *TestTransactionRepository {
 	database := &repository.Database{DB: sqlxDB}
 
 	mockCache := &MockRedisCache{}
-	logger := zap.NewNop()
 
-	repo := repository.NewTransactionRepository(database, mockCache, logger)
+	repo := repository.NewTransactionRepository(database, mockCache)
 
 	t.Cleanup(func() {
 		db.Close()

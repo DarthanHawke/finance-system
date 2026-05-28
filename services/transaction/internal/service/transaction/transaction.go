@@ -6,13 +6,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 	"transaction-service/internal/lib/errors/apperr"
 	"transaction-service/internal/models"
 
 	"github.com/google/uuid"
-	"go.uber.org/zap"
 )
 
 // TransactionService реализует бизнес-логику работы с платежами
@@ -21,7 +21,6 @@ type TransactionService struct {
 	eventManager       EventManager
 	iso8583Manager     Iso8583Manager
 	stanManager        StanManager
-	logger             *zap.Logger
 }
 
 // NewTransactionService создает новый экземпляр TransactionService
@@ -30,14 +29,12 @@ func NewTransactionService(
 	eventManager EventManager,
 	iso8583Manager Iso8583Manager,
 	stanManager StanManager,
-	logger *zap.Logger,
 ) *TransactionService {
 	return &TransactionService{
 		transactionManager: transactionManager,
 		eventManager:       eventManager,
 		iso8583Manager:     iso8583Manager,
 		stanManager:        stanManager,
-		logger:             logger.With(zap.String("component", "transaction_service")),
 	}
 }
 
@@ -69,18 +66,18 @@ type StanManager interface {
 
 // HandleTransactionResponse - создание нового платежа
 func (s *TransactionService) HandleTransactionResponse(ctx context.Context, resp *models.Event) error {
-	const op = "service.transaction.HandleTransactionResponse"
-
-	logger := s.logger.With(
-		zap.String("op:", op),
-	)
-
-	logger.Info("transaction saga started")
+	const op = "transaction.HandleTransactionResponse"
 
 	var transaction *models.CreateTransactionRequest
 	var err error
 	if transaction, err = s.getTransactionPayload(resp); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	transaction.Status = models.TransactionStatusPending
@@ -92,7 +89,10 @@ func (s *TransactionService) HandleTransactionResponse(ctx context.Context, resp
 			time.Now(),
 		)
 		if err != nil {
-			return fmt.Errorf("%s: failed to generate STAN: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 		transaction.Stan = stan
 	}
@@ -106,54 +106,63 @@ func (s *TransactionService) HandleTransactionResponse(ctx context.Context, resp
 	switch transaction.SenderType {
 	case models.AccountInternal:
 		if event, err = s.createFreezeEvent(transaction.Transaction); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	case models.AccountExternal:
 		if event, err = s.createReserveEvent(transaction.Transaction); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	default:
-		eventType := "unknow operation"
-		return fmt.Errorf("%s: %s", op, eventType)
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: apperr.ErrUnknownTransactionType,
+		}
 	}
 
 	if err := s.transactionManager.CreateTransaction(ctx, transaction, event); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
-
-	logger.Info("transaction wait account",
-		zap.String("event id:", event.ID.String()),
-		zap.String("event type:", event.Type),
-		zap.String("transaction id:", transaction.ID.String()),
-		zap.String("account code:", transaction.SenderAccountCode),
-	)
 
 	return nil
 }
 
 // HandleFreezeResponse - ответ на заморозку средств при переводе
 func (s *TransactionService) HandleFreezeResponse(ctx context.Context, resp *models.Event) error {
-	const op = "service.transaction.HandleFreezeResponse"
-
-	logger := s.logger.With(
-		zap.String("op:", op),
-		zap.String("transaction ID:", resp.TransactionID.String()),
-	)
-
-	logger.Info("processing response of freeze balance")
+	const op = "transaction.HandleFreezeResponse"
 
 	// если заморозка средств прошла не успешно(или невозможно
 	// разшифровать payload), то компенсируем
-	if !s.isSuccessBalanceResponse(resp) {
+	if !s.isSuccessResponse(resp) {
 		if err := s.cancelTransaction(ctx, resp); err != nil {
-			return fmt.Errorf("%s: compensating action failed: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 		return nil
 	}
 
 	transaction, err := s.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: resp.TransactionID})
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	var event *models.CreateEventRequest
@@ -165,16 +174,28 @@ func (s *TransactionService) HandleFreezeResponse(ctx context.Context, resp *mod
 	switch transaction.RecipientType {
 	case models.AccountInternal:
 		if event, err = s.createReserveEvent(transaction.Transaction); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	case models.AccountExternal:
 		if event, err = s.createExternalEvent(transaction.Transaction); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	}
 
 	if err := s.eventManager.CreateEvent(ctx, event); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	return nil
@@ -182,25 +203,24 @@ func (s *TransactionService) HandleFreezeResponse(ctx context.Context, resp *mod
 
 // HandleReserveResponse
 func (s *TransactionService) HandleReserveResponse(ctx context.Context, resp *models.Event) error {
-	const op = "service.transaction.HandleReserveResponse"
-
-	logger := s.logger.With(
-		zap.String("op:", op),
-		zap.String("transaction ID:", resp.TransactionID.String()),
-	)
-
-	logger.Info("processing response of reserve balance")
+	const op = "transaction.HandleReserveResponse"
 
 	transaction, err := s.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: resp.TransactionID})
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	var event *models.CreateEventRequest
 
 	// если резервирование средств прошло не успешно(или невозможно разшифровать payload),
 	// то начинаем компенсацию распределенной транзакции
-	if !s.isSuccessBalanceResponse(resp) {
+	if !s.isSuccessResponse(resp) {
 		// если тип отправителя внутрненний - значит успели заморозить средства,
 		// размораживаем средства отправителя,
 		// если тип отправителя внешний - значит это пополнение,
@@ -209,17 +229,33 @@ func (s *TransactionService) HandleReserveResponse(ctx context.Context, resp *mo
 		switch transaction.SenderType {
 		case models.AccountInternal:
 			if event, err = s.createUnfreezeEvent(transaction.Transaction); err != nil {
-				return fmt.Errorf("%s: %w", op, err)
+				return &apperr.WrappedError{
+					Op:  op,
+					Err: err,
+				}
 			}
 			if err := s.eventManager.CreateEvent(ctx, event); err != nil {
-				return fmt.Errorf("%s: %w", op, err)
+				var appErr *apperr.Error
+				if errors.As(err, &appErr) {
+					return err
+				}
+				return &apperr.WrappedError{
+					Op:  op,
+					Err: err,
+				}
 			}
 		case models.AccountExternal:
 			if err := s.cancelTransaction(ctx, resp); err != nil {
-				return fmt.Errorf("%s: compensating action failed: %w", op, err)
+				return &apperr.WrappedError{
+					Op:  op,
+					Err: err,
+				}
 			}
 			if event, err = s.createExternalRollbackEvent(transaction.Transaction, resp); err != nil {
-				return fmt.Errorf("%s: %w", op, err)
+				return &apperr.WrappedError{
+					Op:  op,
+					Err: err,
+				}
 			}
 		}
 		return nil
@@ -232,16 +268,28 @@ func (s *TransactionService) HandleReserveResponse(ctx context.Context, resp *mo
 	switch transaction.SenderType {
 	case models.AccountInternal:
 		if event, err = s.createWithdrawEvent(transaction.Transaction); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	case models.AccountExternal:
 		if event, err = s.createExternalEvent(transaction.Transaction); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	}
 
 	if err := s.eventManager.CreateEvent(ctx, event); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	return nil
@@ -249,25 +297,24 @@ func (s *TransactionService) HandleReserveResponse(ctx context.Context, resp *mo
 
 // HandleExternalResponse
 func (s *TransactionService) HandleExternalResponse(ctx context.Context, resp *models.Event) error {
-	const op = "service.transaction.HandleExternalResponse"
-
-	logger := s.logger.With(
-		zap.String("op:", op),
-		zap.String("transaction ID:", resp.TransactionID.String()),
-	)
-
-	logger.Info("processing response of external transaction")
+	const op = "transaction.HandleExternalResponse"
 
 	transaction, err := s.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: resp.TransactionID})
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	var event *models.CreateEventRequest
 
 	// если внешнний платёжный шлюз прислал отказ(или невозможно разшифровать payload),
 	// то начинаем компенсацию распределенной транзакции
-	if !s.isSuccessExternalResponse(resp) {
+	if !s.isSuccessResponse(resp) {
 		// если тип отправителя внутрненний - значит успели заморозить средства,
 		// размораживаем средства отправителя,
 		// если тип отправителя внешний - значит успели зарезервировать средства,
@@ -275,15 +322,28 @@ func (s *TransactionService) HandleExternalResponse(ctx context.Context, resp *m
 		switch transaction.SenderType {
 		case models.AccountInternal:
 			if event, err = s.createUnfreezeEvent(transaction.Transaction); err != nil {
-				return fmt.Errorf("%s: %w", op, err)
+				return &apperr.WrappedError{
+					Op:  op,
+					Err: err,
+				}
 			}
 		case models.AccountExternal:
 			if event, err = s.createUnreserveEvent(transaction.Transaction); err != nil {
-				return fmt.Errorf("%s: %w", op, err)
+				return &apperr.WrappedError{
+					Op:  op,
+					Err: err,
+				}
 			}
 		}
 		if err := s.eventManager.CreateEvent(ctx, event); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			var appErr *apperr.Error
+			if errors.As(err, &appErr) {
+				return err
+			}
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 		return nil
 	}
@@ -295,16 +355,28 @@ func (s *TransactionService) HandleExternalResponse(ctx context.Context, resp *m
 	switch transaction.SenderType {
 	case models.AccountInternal:
 		if event, err = s.createWithdrawEvent(transaction.Transaction); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	case models.AccountExternal:
 		if event, err = s.createDepositeEvent(transaction.Transaction); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	}
 
 	if err := s.eventManager.CreateEvent(ctx, event); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	return nil
@@ -312,25 +384,24 @@ func (s *TransactionService) HandleExternalResponse(ctx context.Context, resp *m
 
 // HandleWithdrawResponse
 func (s *TransactionService) HandleWithdrawResponse(ctx context.Context, resp *models.Event) error {
-	const op = "service.transaction.HandleWithdrawResponse"
-
-	logger := s.logger.With(
-		zap.String("op:", op),
-		zap.String("transaction ID:", resp.TransactionID.String()),
-	)
-
-	logger.Info("processing response of withdraw balance")
+	const op = "transaction.HandleWithdrawResponse"
 
 	transaction, err := s.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: resp.TransactionID})
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	var event *models.CreateEventRequest
 
 	// если списание средств прошло не успешно(или невозможно разшифровать payload),
 	// то начинаем компенсацию распределенной транзакции
-	if !s.isSuccessExternalResponse(resp) {
+	if !s.isSuccessResponse(resp) {
 		// если тип получателя внутрненний - значит успели и заморозить и зарезервировать средства,
 		// сначала убираем резерв средств получателя,
 		// если тип получателя внешний - значит отправили средства во "внешний платёжный шлюз",
@@ -338,15 +409,28 @@ func (s *TransactionService) HandleWithdrawResponse(ctx context.Context, resp *m
 		switch transaction.SenderType {
 		case models.AccountInternal:
 			if event, err = s.createUnreserveEvent(transaction.Transaction); err != nil {
-				return fmt.Errorf("%s: %w", op, err)
+				return &apperr.WrappedError{
+					Op:  op,
+					Err: err,
+				}
 			}
 		case models.AccountExternal:
 			if event, err = s.createExternalRollbackEvent(transaction.Transaction, resp); err != nil {
-				return fmt.Errorf("%s: %w", op, err)
+				return &apperr.WrappedError{
+					Op:  op,
+					Err: err,
+				}
 			}
 		}
 		if err := s.eventManager.CreateEvent(ctx, event); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			var appErr *apperr.Error
+			if errors.As(err, &appErr) {
+				return err
+			}
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 		return nil
 	}
@@ -358,16 +442,28 @@ func (s *TransactionService) HandleWithdrawResponse(ctx context.Context, resp *m
 	switch transaction.RecipientType {
 	case models.AccountInternal:
 		if event, err = s.createDepositeEvent(transaction.Transaction); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	case models.AccountExternal:
 		if event, err = s.createExternalCommitEvent(transaction.Transaction, resp); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	}
 
 	if err := s.eventManager.CreateEvent(ctx, event); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	// если тип получателя внешний, то платёж полностью обработан, обновляем статус
@@ -377,9 +473,15 @@ func (s *TransactionService) HandleWithdrawResponse(ctx context.Context, resp *m
 			Status: models.TransactionStatusCompleted,
 		}
 		if err := s.transactionManager.UpdateTransactionStatus(ctx, req); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			var appErr *apperr.Error
+			if errors.As(err, &appErr) {
+				return err
+			}
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
-		logger.Info("transaction completed")
 	}
 
 	return nil
@@ -387,25 +489,24 @@ func (s *TransactionService) HandleWithdrawResponse(ctx context.Context, resp *m
 
 // HandleDepositResponse
 func (s *TransactionService) HandleDepositResponse(ctx context.Context, resp *models.Event) error {
-	const op = "service.transaction.HandleDepositResponse"
-
-	logger := s.logger.With(
-		zap.String("op:", op),
-		zap.String("transaction ID:", resp.TransactionID.String()),
-	)
-
-	logger.Info("processing response of deposit balance")
+	const op = "transaction.HandleDepositResponse"
 
 	transaction, err := s.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: resp.TransactionID})
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	var event *models.CreateEventRequest
 
 	// если пополнение средств прошло не успешно(или невозможно разшифровать payload),
 	// то начинаем компенсацию распределенной транзакции
-	if !s.isSuccessExternalResponse(resp) {
+	if !s.isSuccessResponse(resp) {
 		// если тип отправителя внутрненний - значит успели списать средства,
 		// начинаем с возврата средств отправителю,
 		// если тип отправителя внешний - значит получили средства от "внешнего платёжного шлюза",
@@ -413,15 +514,28 @@ func (s *TransactionService) HandleDepositResponse(ctx context.Context, resp *mo
 		switch transaction.SenderType {
 		case models.AccountInternal:
 			if event, err = s.createRefandEvent(transaction.Transaction); err != nil {
-				return fmt.Errorf("%s: %w", op, err)
+				return &apperr.WrappedError{
+					Op:  op,
+					Err: err,
+				}
 			}
 		case models.AccountExternal:
 			if event, err = s.createExternalRollbackEvent(transaction.Transaction, resp); err != nil {
-				return fmt.Errorf("%s: %w", op, err)
+				return &apperr.WrappedError{
+					Op:  op,
+					Err: err,
+				}
 			}
 		}
 		if err := s.eventManager.CreateEvent(ctx, event); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			var appErr *apperr.Error
+			if errors.As(err, &appErr) {
+				return err
+			}
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 		return nil
 	}
@@ -429,14 +543,22 @@ func (s *TransactionService) HandleDepositResponse(ctx context.Context, resp *mo
 	// если тип отправителя внешний - значит это пополнение счета,
 	// отправляем подтверждение успешной транзакции пополнения на "внешний платёжный шлюз"
 	if transaction.SenderType == models.AccountExternal {
-		var event *models.CreateEventRequest
-
 		if event, err = s.createExternalCommitEvent(transaction.Transaction, resp); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 
 		if err := s.eventManager.CreateEvent(ctx, event); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			var appErr *apperr.Error
+			if errors.As(err, &appErr) {
+				return err
+			}
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	}
 
@@ -446,9 +568,14 @@ func (s *TransactionService) HandleDepositResponse(ctx context.Context, resp *mo
 		Status: models.TransactionStatusCompleted,
 	}
 	if err := s.transactionManager.UpdateTransactionStatus(ctx, req); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
-	logger.Info("transaction completed")
 
 	return nil
 }
@@ -457,37 +584,46 @@ func (s *TransactionService) HandleDepositResponse(ctx context.Context, resp *mo
 
 // HandleUnfreezeResponse
 func (s *TransactionService) HandleUnfreezeResponse(ctx context.Context, resp *models.Event) error {
-	const op = "service.transaction.HandleUnfreezeResponse"
-
-	logger := s.logger.With(
-		zap.String("op:", op),
-		zap.String("transaction ID:", resp.TransactionID.String()),
-	)
-
-	logger.Info("processing response of unfreeze balance")
+	const op = "transaction.HandleUnfreezeResponse"
 
 	transaction, err := s.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: resp.TransactionID})
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	var payloadResp models.BalanceResponsePayload
-	if err := json.Unmarshal([]byte(resp.Payload), &payloadResp); err != nil {
-		return fmt.Errorf("failed to unmarshal balance response payload: %w", err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	// есди проваливаем компенсирующие действия, то блочим счета и смотрим вручную
-	if !s.isSuccessBalanceResponse(resp) {
+	if !s.isSuccessResponse(resp) {
 		req := &models.UpdateAccountRequest{
 			TransactionID: transaction.ID,
 			Code:          transaction.SenderAccountCode,
 		}
-		s.HandleBlockAccountRequest(ctx, req)
+		if err := s.HandleBlockAccountRequest(ctx, req); err != nil {
+			return &apperr.TerminalError{
+				Op: op,
+				Context: fmt.Sprintf("failed to block sender account %s after unsuccessful unfreeze for transaction %s",
+					transaction.SenderAccountCode, transaction.ID),
+				Err: err,
+			}
+		}
+
 		if transaction.RecipientType == models.AccountInternal {
 			req.Code = transaction.RecipientAccountCode
-			s.HandleBlockAccountRequest(ctx, req)
+			if err := s.HandleBlockAccountRequest(ctx, req); err != nil {
+				return &apperr.TerminalError{
+					Op: op,
+					Context: fmt.Sprintf("failed to block recipient account %s after unsuccessful unfreeze for transaction %s",
+						transaction.RecipientAccountCode, transaction.ID),
+					Err: err,
+				}
+			}
 		}
-		return fmt.Errorf("%s: faild to unfreeze balance: %w", op, apperr.ErrEventUnsuccess)
+		return apperr.ErrEventUnsuccess
 	}
 
 	req := &models.UpdateTransactionStatusRequest{
@@ -496,7 +632,13 @@ func (s *TransactionService) HandleUnfreezeResponse(ctx context.Context, resp *m
 	}
 
 	if err := s.transactionManager.UpdateTransactionStatus(ctx, req); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	return nil
@@ -504,37 +646,46 @@ func (s *TransactionService) HandleUnfreezeResponse(ctx context.Context, resp *m
 
 // HandleUnreserveResponse
 func (s *TransactionService) HandleUnreserveResponse(ctx context.Context, resp *models.Event) error {
-	const op = "service.transaction.HandleUnreserveResponse"
-
-	logger := s.logger.With(
-		zap.String("op:", op),
-		zap.String("transaction ID:", resp.TransactionID.String()),
-	)
-
-	logger.Info("processing response of unreserve balance")
+	const op = "transaction.HandleUnreserveResponse"
 
 	transaction, err := s.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: resp.TransactionID})
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	var payloadResp models.BalanceResponsePayload
-	if err := json.Unmarshal([]byte(resp.Payload), &payloadResp); err != nil {
-		return fmt.Errorf("failed to unmarshal balance response payload: %w", err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	// есди проваливаем компенсирующие действия, то блочим счета и смотрим вручную
-	if !s.isSuccessBalanceResponse(resp) {
+	if !s.isSuccessResponse(resp) {
 		req := &models.UpdateAccountRequest{
 			TransactionID: transaction.ID,
 			Code:          transaction.RecipientAccountCode,
 		}
-		s.HandleBlockAccountRequest(ctx, req)
+		if err := s.HandleBlockAccountRequest(ctx, req); err != nil {
+			return &apperr.TerminalError{
+				Op: op,
+				Context: fmt.Sprintf("failed to block recipient account %s after unsuccessful unreserve for transaction %s",
+					transaction.RecipientAccountCode, transaction.ID),
+				Err: err,
+			}
+		}
+
 		if transaction.SenderType == models.AccountInternal {
 			req.Code = transaction.SenderAccountCode
-			s.HandleBlockAccountRequest(ctx, req)
+			if err := s.HandleBlockAccountRequest(ctx, req); err != nil {
+				return &apperr.TerminalError{
+					Op: op,
+					Context: fmt.Sprintf("failed to block sender account %s after unsuccessful unreserve for transaction %s",
+						transaction.SenderAccountCode, transaction.ID),
+					Err: err,
+				}
+			}
 		}
-		return fmt.Errorf("%s: faild to unfreeze balance: %w", op, apperr.ErrEventUnsuccess)
+		return apperr.ErrEventUnsuccess
 	}
 
 	var event *models.CreateEventRequest
@@ -546,15 +697,28 @@ func (s *TransactionService) HandleUnreserveResponse(ctx context.Context, resp *
 	switch transaction.SenderType {
 	case models.AccountInternal:
 		if event, err = s.createUnfreezeEvent(transaction.Transaction); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 		if err := s.eventManager.CreateEvent(ctx, event); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			var appErr *apperr.Error
+			if errors.As(err, &appErr) {
+				return err
+			}
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 		return nil
 	case models.AccountExternal:
 		if err := s.cancelTransaction(ctx, resp); err != nil {
-			return fmt.Errorf("%s: compensating action failed: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	}
 	return nil
@@ -562,28 +726,34 @@ func (s *TransactionService) HandleUnreserveResponse(ctx context.Context, resp *
 
 // HandleExternalRollbackResponse
 func (s *TransactionService) HandleExternalRollbackResponse(ctx context.Context, resp *models.Event) error {
-	const op = "service.transaction.HandleExternalRollbackResponse"
-
-	logger := s.logger.With(
-		zap.String("op:", op),
-		zap.String("transaction ID:", resp.TransactionID.String()),
-	)
-
-	logger.Info("processing response of external rollback")
+	const op = "transaction.HandleExternalRollbackResponse"
 
 	transaction, err := s.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: resp.TransactionID})
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	// есди проваливаем компенсирующие действия, то блочим счет и смотрим вручную
-	if !s.isSuccessExternalResponse(resp) {
+	if !s.isSuccessResponse(resp) {
 		req := &models.UpdateAccountRequest{
 			TransactionID: transaction.ID,
 			Code:          transaction.RecipientAccountCode,
 		}
-		s.HandleBlockAccountRequest(ctx, req)
-		return fmt.Errorf("%s: faild to unfreeze balance: %w", op, apperr.ErrEventUnsuccess)
+		if err := s.HandleBlockAccountRequest(ctx, req); err != nil {
+			return &apperr.TerminalError{
+				Op: op,
+				Context: fmt.Sprintf("failed to block recipient account %s after unsuccessful external rollback for transaction %s",
+					transaction.RecipientAccountCode, transaction.ID),
+				Err: err,
+			}
+		}
+		return apperr.ErrEventUnsuccess
 	}
 
 	var event *models.CreateEventRequest
@@ -595,16 +765,28 @@ func (s *TransactionService) HandleExternalRollbackResponse(ctx context.Context,
 	switch transaction.SenderType {
 	case models.AccountInternal:
 		if event, err = s.createUnfreezeEvent(transaction.Transaction); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	case models.AccountExternal:
 		if event, err = s.createUnreserveEvent(transaction.Transaction); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	}
 
 	if err := s.eventManager.CreateEvent(ctx, event); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	return nil
@@ -612,32 +794,46 @@ func (s *TransactionService) HandleExternalRollbackResponse(ctx context.Context,
 
 // HandleRefundResponse
 func (s *TransactionService) HandleRefundResponse(ctx context.Context, resp *models.Event) error {
-	const op = "service.transaction.HandleRefundResponse"
-
-	logger := s.logger.With(
-		zap.String("op:", op),
-		zap.String("transaction ID:", resp.TransactionID.String()),
-	)
-
-	logger.Info("processing response of refund balance")
+	const op = "transaction.HandleRefundResponse"
 
 	transaction, err := s.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: resp.TransactionID})
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	// есди проваливаем компенсирующие действия, то блочим счета и смотрим вручную
-	if !s.isSuccessBalanceResponse(resp) {
+	if !s.isSuccessResponse(resp) {
 		req := &models.UpdateAccountRequest{
 			TransactionID: transaction.ID,
 			Code:          transaction.SenderAccountCode,
 		}
-		s.HandleBlockAccountRequest(ctx, req)
+		if err := s.HandleBlockAccountRequest(ctx, req); err != nil {
+			return &apperr.TerminalError{
+				Op: op,
+				Context: fmt.Sprintf("failed to block sender account %s after unsuccessful refund for transaction %s",
+					transaction.SenderAccountCode, transaction.ID),
+				Err: err,
+			}
+		}
+
 		if transaction.RecipientType == models.AccountInternal {
 			req.Code = transaction.RecipientAccountCode
-			s.HandleBlockAccountRequest(ctx, req)
+			if err := s.HandleBlockAccountRequest(ctx, req); err != nil {
+				return &apperr.TerminalError{
+					Op: op,
+					Context: fmt.Sprintf("failed to block recipient account %s after unsuccessful refund for transaction %s",
+						transaction.RecipientAccountCode, transaction.ID),
+					Err: err,
+				}
+			}
 		}
-		return fmt.Errorf("%s: faild to unfreeze balance: %w", op, apperr.ErrEventUnsuccess)
+		return apperr.ErrEventUnsuccess
 	}
 
 	var event *models.CreateEventRequest
@@ -649,15 +845,27 @@ func (s *TransactionService) HandleRefundResponse(ctx context.Context, resp *mod
 	switch transaction.RecipientType {
 	case models.AccountInternal:
 		if event, err = s.createUnreserveEvent(transaction.Transaction); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	case models.AccountExternal:
 		if event, err = s.createExternalRollbackEvent(transaction.Transaction, resp); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
+			}
 		}
 	}
 	if err := s.eventManager.CreateEvent(ctx, event); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	return nil
@@ -665,14 +873,7 @@ func (s *TransactionService) HandleRefundResponse(ctx context.Context, resp *mod
 
 // HandleBlockAccountRequest
 func (s *TransactionService) HandleBlockAccountRequest(ctx context.Context, req *models.UpdateAccountRequest) error {
-	const op = "service.transaction.HandleBlockAccountRequest"
-
-	logger := s.logger.With(
-		zap.String("op:", op),
-		zap.String("transaction ID:", req.TransactionID.String()),
-	)
-
-	logger.Info("blocking account started")
+	const op = "transaction.HandleBlockAccountRequest"
 
 	payload := models.UpdateAccountPayload{
 		Code: req.Code,
@@ -680,7 +881,10 @@ func (s *TransactionService) HandleBlockAccountRequest(ctx context.Context, req 
 
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	event := &models.CreateEventRequest{
@@ -696,7 +900,13 @@ func (s *TransactionService) HandleBlockAccountRequest(ctx context.Context, req 
 	}
 
 	if err := s.eventManager.CreateEvent(ctx, event); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	return nil
@@ -704,17 +914,10 @@ func (s *TransactionService) HandleBlockAccountRequest(ctx context.Context, req 
 
 // HandleBlockAccountResponse
 func (s *TransactionService) HandleBlockAccountResponse(ctx context.Context, resp *models.Event) error {
-	const op = "service.transaction.HandleBlockAccountResponse"
+	const op = "transaction.HandleBlockAccountResponse"
 
-	logger := s.logger.With(
-		zap.String("op:", op),
-		zap.String("transaction ID:", resp.TransactionID.String()),
-	)
-
-	logger.Info("processing response of blocking account")
-
-	if !s.isSuccessBalanceResponse(resp) {
-		return fmt.Errorf("%s: faild to block account: %w", op, apperr.ErrEventUnsuccess)
+	if !s.isSuccessResponse(resp) {
+		return apperr.ErrEventUnsuccess
 	}
 
 	req := &models.UpdateTransactionStatusRequest{
@@ -723,7 +926,13 @@ func (s *TransactionService) HandleBlockAccountResponse(ctx context.Context, res
 	}
 
 	if err := s.transactionManager.UpdateTransactionStatus(ctx, req); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	return nil
@@ -733,9 +942,14 @@ func (s *TransactionService) HandleBlockAccountResponse(ctx context.Context, res
 
 // createEvent обертка для создания типа событий
 func (s *TransactionService) createEvent(transactionID uuid.UUID, accountcode, eventType string, payload any) (*models.CreateEventRequest, error) {
+	const op = "transaction.createEvent"
+
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		return nil, err
+		return nil, &apperr.WrappedError{
+			Op:  op,
+			Err: fmt.Errorf("marshal payload: %w", err),
+		}
 	}
 
 	return &models.CreateEventRequest{
@@ -776,9 +990,17 @@ func (s *TransactionService) createReserveEvent(req *models.Transaction) (*model
 
 // createExternalEvent - создает событие для обращения к "внешнему платёжному шлюзу"
 func (s *TransactionService) createExternalEvent(req *models.Transaction) (*models.CreateEventRequest, error) {
+	const op = "transaction.createExternalEvent"
+
 	isoPayload, err := s.iso8583Manager.CreateFinancialRequest(req)
 	if err != nil {
-		return nil, err
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return nil, err
+		}
+		return nil, &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 	payload := models.ExternalRequestPayload{
 		ISOMessage: isoPayload,
@@ -815,14 +1037,25 @@ func (s *TransactionService) createExternalCommitEvent(
 	req *models.Transaction,
 	resp *models.Event,
 ) (*models.CreateEventRequest, error) {
+	const op = "transaction.createExternalCommitEvent"
+
 	var payloadResp models.BalanceResponsePayload
 	if err := json.Unmarshal(resp.Payload, &payloadResp); err != nil {
-		return nil, err
+		return nil, &apperr.WrappedError{
+			Op:  op,
+			Err: fmt.Errorf("unmarshal payload: %w", err),
+		}
 	}
 
 	isoPayload, err := s.iso8583Manager.CreateFinancialResponse(req, payloadResp.Success, payloadResp.Reason)
 	if err != nil {
-		return nil, err
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return nil, err
+		}
+		return nil, &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	payload := models.ISO8583Payload{
@@ -862,14 +1095,25 @@ func (s *TransactionService) createExternalRollbackEvent(
 	req *models.Transaction,
 	resp *models.Event,
 ) (*models.CreateEventRequest, error) {
+	const op = "transaction.createExternalRollbackEvent"
+
 	var payloadResp models.BalanceResponsePayload
 	if err := json.Unmarshal(resp.Payload, &payloadResp); err != nil {
-		return nil, err
+		return nil, &apperr.WrappedError{
+			Op:  op,
+			Err: fmt.Errorf("unmarshal payload: %w", err),
+		}
 	}
 
 	isoPayload, err := s.iso8583Manager.CreateFinancialResponse(req, payloadResp.Success, payloadResp.Reason)
 	if err != nil {
-		return nil, err
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return nil, err
+		}
+		return nil, &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	payload := models.ISO8583Payload{
@@ -896,7 +1140,7 @@ func (s *TransactionService) createRefandEvent(req *models.Transaction) (*models
 
 // getTransactionPayload - возвращает payload из события создания платежа
 func (s *TransactionService) getTransactionPayload(resp *models.Event) (*models.CreateTransactionRequest, error) {
-	const op = "service.transaction.getTransactionPayload"
+	const op = "transaction.getTransactionPayload"
 
 	var payloadResp models.CreateTransactionRequest
 	if err := json.Unmarshal(resp.Payload, &payloadResp); err == nil && payloadResp.Transaction != nil {
@@ -908,22 +1152,17 @@ func (s *TransactionService) getTransactionPayload(resp *models.Event) (*models.
 		return s.iso8583Manager.CreateTransactionFromISO(payloadIsoResp.ISOMessage)
 	}
 
-	return nil, fmt.Errorf("%s: %s", op, "Unknow Transaction Type")
-}
-
-// isSuccessBalanceResponse - проверяет успешность ответа операций с балансом счета
-func (s *TransactionService) isSuccessBalanceResponse(resp *models.Event) bool {
-	var payloadResp models.BalanceResponsePayload
-	if err := json.Unmarshal(resp.Payload, &payloadResp); err != nil {
-		return false
+	return nil, &apperr.WrappedError{
+		Op:  op,
+		Err: apperr.ErrUnknownTransactionType,
 	}
-	return payloadResp.Success
 }
 
-// isSuccessExternalResponse - проверяет успешность ответа внещнего платёжного шлюза
-func (s *TransactionService) isSuccessExternalResponse(resp *models.Event) bool {
+// isSuccessResponse - проверяет успешность ответа операций
+func (s *TransactionService) isSuccessResponse(resp *models.Event) bool {
 	var payloadResp models.BalanceResponsePayload
 	if err := json.Unmarshal(resp.Payload, &payloadResp); err != nil {
+		// TODO: add metrics
 		return false
 	}
 	return payloadResp.Success
@@ -931,14 +1170,8 @@ func (s *TransactionService) isSuccessExternalResponse(resp *models.Event) bool 
 
 // cancelTransaction - обновляем статус платежа на отмененный
 func (s *TransactionService) cancelTransaction(ctx context.Context, event *models.Event) error {
-	const op = "service.transaction.cancelTransaction"
+	const op = "transaction.cancelTransaction"
 
-	logger := s.logger.With(
-		zap.String("op:", op),
-		zap.String("transaction ID:", event.TransactionID.String()),
-	)
-
-	logger.Info("canceling paymant")
 	//TODO отсылать сообщение в INTERNAL, если нельзя
 	req := &models.UpdateTransactionStatusRequest{
 		ID:     event.TransactionID,
@@ -946,7 +1179,13 @@ func (s *TransactionService) cancelTransaction(ctx context.Context, event *model
 	}
 
 	if err := s.transactionManager.UpdateTransactionStatus(ctx, req); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return err
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 	return nil
 }

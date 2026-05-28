@@ -1,10 +1,14 @@
-package operation
+package grpc
 
 import (
 	"context"
+	"errors"
 	"transaction-service/internal/models"
 
+	"transaction-service/internal/lib/errors/apperr"
+
 	trngrpc "github.com/DarthanHawke/protos-finance-system/gen/go/transaction/v1"
+
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -41,14 +45,14 @@ func (s *TransactionServerAPI) GetTransaction(
 ) (*trngrpc.GetTransactionResponse, error) {
 	transactionID, err := uuid.Parse(req.GetId().GetValue())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid UUID format: %v", err)
+		return nil, status.Error(codes.InvalidArgument, "invalid UUID format")
 	}
 
 	transaction, err := s.transaction.GetTransaction(ctx, &models.GetTransactionRequest{
 		ID: transactionID,
 	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to get payment")
+		return nil, mapError(err)
 	}
 	return &trngrpc.GetTransactionResponse{
 		Transaction: &trngrpc.Transaction{
@@ -85,7 +89,7 @@ func (s *TransactionServerAPI) GetTransactions(
 		Offset:      int(req.GetOffcet()),
 	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to get payment")
+		return nil, mapError(err)
 	}
 
 	protoTransactions := make([]*trngrpc.Transaction, 0, len(transactions.Transactions))
@@ -114,4 +118,21 @@ func (s *TransactionServerAPI) GetTransactions(
 	}
 	return &trngrpc.GetTransactionsResponse{Transaction: protoTransactions}, nil
 
+}
+
+func mapError(err error) error {
+	// Доменная ошибка — маппим по коду
+	if appErr, ok := errors.AsType[*apperr.Error](err); ok {
+		switch appErr.Code {
+		case "TRANSACTION_NOT_FOUND":
+			return status.Error(codes.NotFound, appErr.Message)
+		case "TRANSACTION_ID_NOT_UNIQUE":
+			return status.Error(codes.AlreadyExists, appErr.Message)
+		default:
+			return status.Error(codes.FailedPrecondition, appErr.Message)
+		}
+	}
+
+	// Всё остальное — Internal
+	return status.Error(codes.Internal, "internal error")
 }

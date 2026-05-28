@@ -3,54 +3,45 @@ package postgres
 
 import (
 	"context"
-	"fmt"
-	"strings"
+	"errors"
 	"time"
 	"transaction-service/internal/lib/errors/apperr"
 	"transaction-service/internal/models"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jmoiron/sqlx"
-	"go.uber.org/zap"
 )
 
 // EventRepository структура релизующая методы для работы с событиями
 type EventRepository struct {
-	db     *Database
-	logger *zap.Logger
+	db *Database
 }
 
-func NewEventRepository(db *Database, logger *zap.Logger) *EventRepository {
+func NewEventRepository(db *Database) *EventRepository {
 	return &EventRepository{
-		db:     db,
-		logger: logger.With(zap.String("component", "transaction_service")),
+		db: db,
 	}
 }
 
 // CreateEvent создает событие
 func (r *EventRepository) CreateEvent(ctx context.Context, req *models.CreateEventRequest) error {
-	const op = "repository.event.CreateEvent"
+	const op = "event.CreateEvent"
 
 	const query = `
-		INSERT INTO events (id, transaction_id, partition_key, type, status, source, created_at, payload)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO events (id, transaction_id, partition_key, type, status, source, payload)
+		VALUES (:id, :transaction_id, :partition_key, :type, :status, :source, :payload)
 	`
 
-	_, err := r.db.ExecContext(ctx, query,
-		req.ID,
-		req.TransactionID,
-		req.PartitionKey,
-		req.Type,
-		req.Status,
-		req.Source,
-		req.CreatedAt,
-		req.Payload,
-	)
+	_, err := r.db.NamedExecContext(ctx, query, req)
 
 	if err != nil {
-		if strings.Contains(err.Error(), "23505") {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
 			return apperr.ErrEventIDNotUnique
 		}
-		return fmt.Errorf("%s: %w", op, err)
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	return nil
@@ -58,7 +49,7 @@ func (r *EventRepository) CreateEvent(ctx context.Context, req *models.CreateEve
 
 // GetPendingEvents возвращает не завершненные события
 func (r *EventRepository) GetPendingEvents(ctx context.Context, req *models.GetEventRequest) (models.GetEventResponse, error) {
-	const op = "repository.event.GetPendingEvents"
+	const op = "event.GetPendingEvents"
 
 	// Апдейтим processed_at, чтоб дргуие потоки не взяли эти же значения
 	// и возвращам события
@@ -88,7 +79,13 @@ func (r *EventRepository) GetPendingEvents(ctx context.Context, req *models.GetE
 		req.Limit,
 	)
 	if err != nil {
-		return models.GetEventResponse{}, fmt.Errorf("%s: %w", op, err)
+		return models.GetEventResponse{}, &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
+	}
+	if len(events) == 0 {
+		return models.GetEventResponse{}, nil
 	}
 
 	resp := models.GetEventResponse{Events: events}
@@ -98,7 +95,7 @@ func (r *EventRepository) GetPendingEvents(ctx context.Context, req *models.GetE
 
 // UpdateEventStatus обновляет статус события
 func (r *EventRepository) UpdateEventStatus(ctx context.Context, req *models.UpdateEventStatusRequest) error {
-	const op = "repository.event.UpdateEventStatus"
+	const op = "event.UpdateEventStatus"
 
 	const query = `
 		UPDATE events 
@@ -114,22 +111,25 @@ func (r *EventRepository) UpdateEventStatus(ctx context.Context, req *models.Upd
 			req.ID,
 		)
 		if err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return err
 		}
 
 		rowsAffected, err := result.RowsAffected()
 		if err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return err
 		}
 
 		if rowsAffected == 0 {
-			return fmt.Errorf("%s: expected more zero row affected, got %d", op, rowsAffected)
+			return apperr.ErrEventNotFound
 		}
 
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	return nil

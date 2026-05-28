@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
 )
 
 // Database - обёртка для sqlx.DB
@@ -16,7 +16,7 @@ type Database struct {
 
 // NewDatabase создаёт новое подключение к БД
 func NewDatabase(dsn string) (*Database, error) {
-	db, err := sqlx.Connect("postgres", dsn)
+	db, err := sqlx.Connect("pgx", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}

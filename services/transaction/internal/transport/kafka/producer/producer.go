@@ -5,17 +5,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
+	"transaction-service/internal/lib/errors/apperr"
 
 	"github.com/segmentio/kafka-go"
-	"go.uber.org/zap"
 )
 
 type Producer struct {
 	writer      *kafka.Writer
 	dlqWriter   *kafka.Writer
 	retryConfig *RetryConfig
-	logger      *zap.Logger
+	logger      *slog.Logger
 }
 
 // Config содержит конфигурацию для Kafka Producer
@@ -52,7 +53,7 @@ func NewProducer(
 	config *Config,
 	dlqConfig *DLQConfig,
 	retryConfig *RetryConfig,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) *Producer {
 	writer := &kafka.Writer{
 		Addr:                   kafka.TCP(config.Brokers...),
@@ -81,24 +82,27 @@ func NewProducer(
 		writer:      writer,
 		dlqWriter:   dlqWriter,
 		retryConfig: retryConfig,
-		logger:      logger.With(zap.String("component", "kafka_producer")),
+		logger:      logger.With("component", "kafka_producer"),
 	}
 }
 
 // Produce публикует событие в Kafka
 func (p *Producer) Produce(ctx context.Context, topic, key string, event any) error {
-	const op = "kafka.producer.Produce"
+	const op = "producer.Produce"
 
-	logger := p.logger.With(
-		zap.String("op", op),
-		zap.String("topic", topic),
-		zap.String("key", key),
+	log := p.logger.With(
+		"op", op,
+		"topic", topic,
+		"key", key,
 	)
 
 	eventBytes, err := json.Marshal(event)
 	if err != nil {
-		logger.Error("failed to marshal event", zap.Error(err))
-		return fmt.Errorf("%s: %w", op, err)
+		log.Error("failed to marshal event", "error", err)
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	message := kafka.Message{
@@ -118,24 +122,14 @@ func (p *Producer) Produce(ctx context.Context, topic, key string, event any) er
 		},
 	}
 
-	var lastErr error
 	waitDuration := p.retryConfig.InitialWait
 
 	for attempt := 1; attempt <= p.retryConfig.MaxAttempts; attempt++ {
 		err = p.writer.WriteMessages(ctx, message)
 		if err == nil {
-			logger.Debug("event published successfully",
-				zap.Int("message_size", len(message.Value)),
-			)
+			// TODO: metrics - kafka_produce_success_total
 			return nil
 		}
-
-		lastErr = err
-		logger.Warn("failed to publish message, will retry",
-			zap.Error(err),
-			zap.ByteString("message_key", message.Key),
-			zap.Duration("wait_time", waitDuration),
-		)
 
 		// Если это последняя попытка, выходим
 		if attempt == p.retryConfig.MaxAttempts {
@@ -145,35 +139,47 @@ func (p *Producer) Produce(ctx context.Context, topic, key string, event any) er
 		// Ждем перед следующей попыткой
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("%s: %w", op, ctx.Err())
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: ctx.Err(),
+			}
 		case <-time.After(waitDuration):
 			// Увеличиваем время ожидания для следующей попытки
 			waitDuration = min(time.Duration(float64(waitDuration)*p.retryConfig.Multiplier), p.retryConfig.MaxWait)
 		}
 	}
 
-	logger.Error("failed to publish message after all retry attempts",
-		zap.Error(lastErr),
-		zap.Int("max_attempts", p.retryConfig.MaxAttempts),
-		zap.ByteString("message_key", message.Key),
+	log.Error("failed to publish message after all retry attempts",
+		"op", op,
+		"topic", topic,
+		"key", key,
+		"error", err,
+		"max_attempts", p.retryConfig.MaxAttempts,
 	)
+	// TODO: metrics - kafka_produce_error_total
 
-	return fmt.Errorf("%s: failed after %d attempts: %w", op, p.retryConfig.MaxAttempts, lastErr)
+	return &apperr.WrappedError{
+		Op:  op,
+		Err: fmt.Errorf("failed after %d attempts: %w", p.retryConfig.MaxAttempts, err),
+	}
 }
 
 // ProduceDLQ отправляет сообщение в DLQ
 func (p *Producer) ProduceDLQ(ctx context.Context, key string, event any, eventError error) error {
-	const op = "kafka.producer.ProduceDLQ"
+	const op = "producer.ProduceDLQ"
 
-	logger := p.logger.With(
-		zap.String("op", op),
-		zap.String("key", key),
+	log := p.logger.With(
+		"op", op,
+		"key", key,
 	)
 
 	eventBytes, err := json.Marshal(event)
 	if err != nil {
-		logger.Error("failed to marshal event for DLQ", zap.Error(err))
-		return fmt.Errorf("%s: %w", op, err)
+		log.Error("failed to marshal event for DLQ", "error", err)
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	dlqMessage := kafka.Message{
@@ -202,17 +208,24 @@ func (p *Producer) ProduceDLQ(ctx context.Context, key string, event any, eventE
 
 	err = p.dlqWriter.WriteMessages(ctx, dlqMessage)
 	if err != nil {
-		logger.Error("failed to publish message to DLQ",
-			zap.Error(err),
-			zap.ByteString("message_key", dlqMessage.Key),
+		log.Error("failed to publish message to DLQ",
+			"op", op,
+			"key", key,
+			"error", err,
 		)
-		return fmt.Errorf("%s: %w", op, err)
+		// TODO: metrics - kafka_dlq_error_total
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
-	logger.Warn("event published to DLQ successfully",
-		zap.Int("message_size", len(dlqMessage.Value)),
-		zap.String("original_error", eventError.Error()),
+	log.Warn("event published to DLQ",
+		"op", op,
+		"key", key,
+		"error", eventError.Error(),
 	)
+	// TODO: metrics - kafka_dlq_sent_total
 
 	return nil
 }

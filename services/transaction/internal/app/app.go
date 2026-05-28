@@ -3,13 +3,14 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
-	grpcapp "transaction-service/internal/app/grpc"
+	grpc "transaction-service/internal/app/grpc"
 	config "transaction-service/internal/config"
 	iso8583 "transaction-service/internal/lib/iso8583"
 	stan "transaction-service/internal/lib/stan"
@@ -19,17 +20,14 @@ import (
 	consumer "transaction-service/internal/transport/kafka/consumer"
 	processor "transaction-service/internal/transport/kafka/outbox"
 	producer "transaction-service/internal/transport/kafka/producer"
-
-	"go.uber.org/zap"
 )
 
 // App управляет всеми компонентами сервиса
 type App struct {
-	logger          *zap.Logger
-	config          *config.Configuration
+	logger          *slog.Logger
 	postgres        *postgres.Database
 	redis           *redis.Client
-	grpcApp         *grpcapp.App
+	grpc            *grpc.App
 	consumer        *consumer.Consumer
 	producer        *producer.Producer
 	outboxProcessor *processor.OutboxProcessor
@@ -37,47 +35,33 @@ type App struct {
 }
 
 // NewApp создает все компоненты и настраивает зависимости
-func NewApp(cfg *config.Configuration) (*App, error) {
-	logger, err := createLogger(cfg.Env)
-	if err != nil {
-		return nil, fmt.Errorf("create logger: %w", err)
-	}
-
-	logger.Info("initializing server",
-		zap.String("env", cfg.Env),
-		zap.Int("port", cfg.GRPCServer.Port),
-	)
-
-	iso8583config, err := config.LoadISO8583Config(cfg.ISO8583ConfigPath)
-	if err != nil {
-		return nil, fmt.Errorf("load ISO8583 config: %w", err)
-	}
+func NewApp(cfg *config.Configuration, iso8583cfg *config.ISO8583Config, log *slog.Logger) (*App, error) {
+	log.Info("initializing server", "env", cfg.Env, "port", cfg.GRPCServer.Port)
 
 	dataBase, err := postgres.NewDatabase(cfg.DataBase.DSN())
 	if err != nil {
 		return nil, fmt.Errorf("connect to database: %w", err)
 	}
-	logger.Info("database connected")
+	log.Info("database connected")
 
 	redisClient, err := redis.NewClient(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
 	if err != nil {
 		dataBase.Close()
 		return nil, fmt.Errorf("connect to redis: %w", err)
 	}
-	logger.Info("Redis connection success", zap.String("Addres", cfg.Redis.Addr))
+	log.Info("Redis connection success", "address", cfg.Redis.Addr)
 
 	cache := redis.NewCache(redisClient, 10*time.Minute)
 	deduplicator := redis.NewDeduplicator(redisClient, 24*time.Hour)
 
 	stanManager := stan.NewSTAN()
-	iso8583Manager := iso8583.NewISO8583(iso8583config)
+	iso8583Manager := iso8583.NewISO8583(iso8583cfg)
 
-	transactionRepository := postgres.NewTransactionRepository(dataBase, cache, logger)
-	eventRepository := postgres.NewEventRepository(dataBase, logger)
+	transactionRepository := postgres.NewTransactionRepository(dataBase, cache)
+	eventRepository := postgres.NewEventRepository(dataBase)
 
 	operationService := service.NewOperationService(
 		transactionRepository,
-		logger,
 	)
 
 	transactionService := service.NewTransactionService(
@@ -85,7 +69,6 @@ func NewApp(cfg *config.Configuration) (*App, error) {
 		eventRepository,
 		iso8583Manager,
 		stanManager,
-		logger,
 	)
 
 	producer := producer.NewProducer(
@@ -111,7 +94,7 @@ func NewApp(cfg *config.Configuration) (*App, error) {
 			MaxWait:     time.Duration(cfg.Kafka.RetryMaxWait) * time.Millisecond,
 			Multiplier:  cfg.Kafka.RetryMultiplier,
 		},
-		logger,
+		log,
 	)
 
 	consumer := consumer.NewConsumer(
@@ -130,30 +113,30 @@ func NewApp(cfg *config.Configuration) (*App, error) {
 		},
 		transactionService,
 		deduplicator,
-		logger,
+		log,
 	)
 
 	outboxProcessor := processor.NewOutboxProcessor(
 		eventRepository,
 		producer,
-		logger,
+		log,
 		&processor.Config{
-			BatchSize:    100,
-			HandlePeriod: 1 * time.Second,
+			BatchSize:    cfg.Kafka.ProcessorBatchSize,
+			HandlePeriod: time.Duration(cfg.Kafka.ProcessorHandlePeriod) * time.Millisecond,
+			Concurrency:  cfg.Kafka.Concurrency,
 		},
 	)
 
-	grpcApp := grpcapp.New(
-		logger,
+	grpc := grpc.New(
+		log,
 		cfg.GRPCServer.Port,
 		operationService,
 	)
 	return &App{
-		logger:          logger,
-		config:          cfg,
+		logger:          log,
 		postgres:        dataBase,
 		redis:           redisClient,
-		grpcApp:         grpcApp,
+		grpc:            grpc,
 		consumer:        consumer,
 		producer:        producer,
 		outboxProcessor: outboxProcessor,
@@ -171,16 +154,24 @@ func (app *App) Run() error {
 	app.logger.Info("starting server")
 
 	// запускаем gRPC сервер
-	go app.grpcApp.MustRun()
+	go app.grpc.MustRun()
 
 	// запускаем Kafka consumer
-	app.consumer.Start(ctx)
+	app.consumer.Run(ctx)
 
 	// запускаем outbox processor
-	app.outboxProcessor.StartProcessEvents(ctx)
+	outboxDone := make(chan struct{})
+	go func() {
+		defer close(outboxDone)
+		app.outboxProcessor.Run(ctx)
+	}()
 
 	// запускаем планировщик сброса счётчиков STAN
-	go app.startSTANResetScheduler(ctx)
+	stanDone := make(chan struct{})
+	go func() {
+		defer close(stanDone)
+		app.runSTANResetScheduler(ctx)
+	}()
 
 	app.logger.Info("server started successfully")
 
@@ -195,16 +186,24 @@ func (app *App) Run() error {
 	}
 
 	// останавливаем gRPC
-	app.grpcApp.Stop()
+	app.grpc.Stop()
 	app.logger.Info("grpc server stopped")
 
 	// в сулчае нормального завершения сразу отправляем отмену для consumer и outbox,
 	// чтоб не висели в таймауте в ожидании defer
 	cancel()
 
+	// ждем завершения outbox processor
+	<-outboxDone
+	app.logger.Info("outbox processor stopped")
+
+	// ждем завершения STAN scheduler
+	<-stanDone
+	app.logger.Info("stan scheduler stopped")
+
 	// останавливаем consumer
 	if err := app.consumer.Stop(); err != nil {
-		app.logger.Error("failed to stop consumer", zap.Error(err))
+		app.logger.Error("failed to stop consumer", "error", err)
 	}
 
 	app.logger.Info("server stopped gracefully")
@@ -216,19 +215,19 @@ func (app *App) shutdown() {
 
 	if app.producer != nil {
 		if err := app.producer.Close(); err != nil {
-			app.logger.Error("failed to close producer", zap.Error(err))
+			app.logger.Error("failed to close producer", "error", err)
 		}
 	}
 
 	if app.redis != nil {
 		if err := app.redis.Close(); err != nil {
-			app.logger.Error("failed to close redis", zap.Error(err))
+			app.logger.Error("failed to close redis", "error", err)
 		}
 	}
 
 	if app.postgres != nil {
 		if err := app.postgres.Close(); err != nil {
-			app.logger.Error("failed to close database", zap.Error(err))
+			app.logger.Error("failed to close database", "error", err)
 		}
 	}
 
@@ -247,15 +246,8 @@ func splitTopics(topics string) []string {
 	return parts
 }
 
-func createLogger(env string) (*zap.Logger, error) {
-	if env == "production" {
-		return zap.NewProduction()
-	}
-	return zap.NewDevelopment()
-}
-
-// startSTANResetScheduler сбрасывает счётчики STAN каждый день в полночь
-func (app *App) startSTANResetScheduler(ctx context.Context) {
+// runSTANResetScheduler сбрасывает счётчики STAN каждый день в полночь
+func (app *App) runSTANResetScheduler(ctx context.Context) {
 	app.logger.Info("starting STAN reset scheduler")
 
 	for {

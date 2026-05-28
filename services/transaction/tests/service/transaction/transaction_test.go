@@ -14,7 +14,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
 
 // TestTransactionService содержит все зависимости для теста
@@ -39,9 +38,8 @@ func newTestTransactionService(t *testing.T) *TestTransactionService {
 	mockEM := new(mocks.MockEventManager)
 	mockISO := new(mocks.MockIso8583Manager)
 	mockStan := new(mocks.MockStanManager)
-	logger := zap.NewNop()
 
-	svc := service.NewTransactionService(mockTM, mockEM, mockISO, mockStan, logger)
+	svc := service.NewTransactionService(mockTM, mockEM, mockISO, mockStan)
 
 	return &TestTransactionService{
 		TransactionService: svc,

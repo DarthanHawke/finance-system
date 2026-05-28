@@ -13,6 +13,7 @@ type Configuration struct {
 	DataBase          `mapstructure:",squash"`
 	Redis             `mapstructure:",squash"`
 	Kafka             `mapstructure:",squash"`
+	Logs              `mapstructure:",squash"`
 }
 
 type GRPCServer struct {
@@ -64,6 +65,17 @@ type Kafka struct {
 	RetryInitialWait         int     `mapstructure:"KAFKA_RETRY_INITIAL_WAIT" env-default:"100"`
 	RetryMaxWait             int     `mapstructure:"KAFKA_RETRY_MAX_WAIT" env-default:"5000"`
 	RetryMultiplier          float64 `mapstructure:"KAFKA_RETRY_MULTIPLIER" env-default:"2.0"`
+	ProcessorBatchSize       int     `mapstructure:"KAFKA_PROCESSOR_BATCH_SIZE" env-default:"100"`
+	ProcessorHandlePeriod    int     `mapstructure:"KAFKA_PROCESSOR_HANDLE_PERIOD" env-default:"100"`
+	Concurrency              int     `mapstructure:"KAFKA_CONCURRENCY" env-default:"8"`
+}
+
+type Logs struct {
+	LogFile    string `mapstructure:"LOG_FILE" env-default:"logs/app.log"`
+	MaxSize    int    `mapstructure:"LOG_MAX_SIZE" env-default:"10"`
+	MaxBackups int    `mapstructure:"LOG_MAX_BACKUPS" env-default:"3"`
+	MaxAge     int    `mapstructure:"LOG_MAX_AGE" env-default:"7"`
+	AddSource  bool   `mapstructure:"LOG_SOURCE" env-default:"true"`
 }
 
 func (c DataBase) DSN() string {

@@ -1,11 +1,11 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 	app "transaction-service/internal/app"
 	"transaction-service/internal/config"
-
-	"log"
+	"transaction-service/internal/lib/logger"
 )
 
 const (
@@ -23,18 +23,33 @@ func main() {
 	// Загружаем конфиг
 	cfg, err := config.LoadConfig(env)
 	if err != nil {
-		log.Fatalf("Failed to load config %v", err)
+		slog.Error("Failed to load config", "error", err)
+		return
+	}
+	iso8583cfg, err := config.LoadISO8583Config(cfg.ISO8583ConfigPath)
+	if err != nil {
+		slog.Error("Failed to load ISO8583 config", "error", err)
 		return
 	}
 
+	log := logger.New(logger.Config{
+		Env:        cfg.Env,
+		Level:      slog.LevelInfo,
+		LogFile:    cfg.Logs.LogFile,
+		MaxSize:    cfg.Logs.MaxSize,
+		MaxBackups: cfg.Logs.MaxBackups,
+		MaxAge:     cfg.Logs.MaxAge,
+		AddSource:  cfg.Logs.AddSource,
+	})
+
 	// Создаем сервер
-	server, err := app.NewApp(cfg)
+	server, err := app.NewApp(cfg, iso8583cfg, log)
 	if err != nil {
-		log.Fatalf("Failed to create server: %v", err)
+		slog.Error("Failed to create server", "error", err)
 	}
 
 	// Запускаем сервер
 	if err := server.Run(); err != nil {
-		log.Fatalf("Server error: %v", err)
+		slog.Error("Server error", "error", err)
 	}
 }

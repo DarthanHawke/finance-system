@@ -7,20 +7,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 	"transaction-service/internal/lib/errors/apperr"
 	"transaction-service/internal/models"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jmoiron/sqlx"
-	"go.uber.org/zap"
 )
 
 // TransactionRepository структура релизующая методы для работы со платежами
 type TransactionRepository struct {
-	db     *Database
-	cache  RedisCacheManager
-	logger *zap.Logger
+	db    *Database
+	cache RedisCacheManager
 }
 
 // RedisCacheManager интерфейс с методами для кэша
@@ -31,11 +29,10 @@ type RedisCacheManager interface {
 	DeleteByPrefix(ctx context.Context, prefix string) error
 }
 
-func NewTransactionRepository(db *Database, cache RedisCacheManager, logger *zap.Logger) *TransactionRepository {
+func NewTransactionRepository(db *Database, cache RedisCacheManager) *TransactionRepository {
 	return &TransactionRepository{
-		db:     db,
-		cache:  cache,
-		logger: logger.With(zap.String("component", "transaction_service")),
+		db:    db,
+		cache: cache,
 	}
 }
 
@@ -45,73 +42,50 @@ func (r *TransactionRepository) CreateTransaction(
 	req *models.CreateTransactionRequest,
 	event *models.CreateEventRequest,
 ) error {
-	const op = "repository.transaction.CreateTransaction"
+	const op = "transaction.CreateTransaction"
 
 	const queryTransactions = `
 		INSERT INTO transactions (id, type, amount, currency, 
 				sender_type, sender_account_code, sender_phone, sender_card_number,
 				recipient_type, recipient_account_code, recipient_phone, recipient_card_number,
-				processing_code, stan, authorization_code, description, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+				processing_code, stan, authorization_code, description, status)
+		VALUES (:id, :type, :amount, :currency, 
+				:sender_type, :sender_account_code, :sender_phone, :sender_card_number,
+				:recipient_type, :recipient_account_code, :recipient_phone, :recipient_card_number,
+				:processing_code, :stan, :authorization_code, :description, :status)
 	`
 
 	const queryEvents = `
-		INSERT INTO events (id, transaction_id, partition_key, type, status, source, created_at, payload)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO events (id, transaction_id, partition_key, type, status, source, payload)
+		VALUES (:id, :transaction_id, :partition_key, :type, :status, :source, :payload)
 	`
 
 	err := r.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
-		_, err := tx.ExecContext(ctx, queryTransactions,
-			req.ID,
-			req.Type,
-			req.Amount,
-			req.Currency,
-			req.SenderType,
-			req.SenderAccountCode,
-			req.SenderPhone,
-			req.SenderCardNumber,
-			req.RecipientType,
-			req.RecipientAccountCode,
-			req.RecipientPhone,
-			req.RecipientCardNumber,
-			req.ProcessingCode,
-			req.Stan,
-			req.AuthorizationCode,
-			req.Description,
-			req.Status,
-			time.Now(),
-			time.Now(),
-		)
+		_, err := tx.NamedExecContext(ctx, queryTransactions, req)
 
 		if err != nil {
-			if strings.Contains(err.Error(), "23505") {
+			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
 				return apperr.ErrTransactionIDNotUnique
 			}
-			return fmt.Errorf("%s: %w", op, err)
+			return err
 		}
 
-		_, err = tx.ExecContext(ctx, queryEvents,
-			event.ID,
-			event.TransactionID,
-			event.PartitionKey,
-			event.Type,
-			event.Status,
-			event.Source,
-			event.CreatedAt,
-			event.Payload,
-		)
+		_, err = tx.NamedExecContext(ctx, queryEvents, event)
 
 		if err != nil {
-			if strings.Contains(err.Error(), "23505") {
+			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
 				return apperr.ErrEventIDNotUnique
 			}
-			return fmt.Errorf("%s: %w", op, err)
+			return err
 		}
 
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	go r.tryInvalidateAccountTransactionsCache(ctx, op, req.SenderAccountCode)
@@ -125,7 +99,7 @@ func (r *TransactionRepository) GetTransaction(
 	ctx context.Context,
 	req *models.GetTransactionRequest,
 ) (models.GetTransactionResponse, error) {
-	const op = "repository.transaction.GetTransaction"
+	const op = "transaction.GetTransaction"
 
 	query := `SELECT id, type, amount, currency, 
 				sender_type, sender_account_code, sender_phone, sender_card_number,
@@ -141,7 +115,10 @@ func (r *TransactionRepository) GetTransaction(
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.GetTransactionResponse{}, apperr.ErrTransactionNotFound
 		}
-		return models.GetTransactionResponse{}, fmt.Errorf("%s: %w", op, err)
+		return models.GetTransactionResponse{}, &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	return resp, nil
@@ -152,7 +129,7 @@ func (r *TransactionRepository) GetTransactions(
 	ctx context.Context,
 	req *models.GetTransactionsRequest,
 ) (models.GetTransactionsResponse, error) {
-	const op = "repository.transaction.GetTransactions"
+	const op = "transaction.GetTransactions"
 
 	cacheKey := fmt.Sprintf("account_transactions:%s:limit:%d:offset:%d",
 		req.AccountCode, req.Limit, req.Offset)
@@ -162,13 +139,10 @@ func (r *TransactionRepository) GetTransactions(
 	cachedData, err := r.cache.Get(ctx, cacheKey)
 	if err == nil && cachedData != "" {
 		if err := json.Unmarshal([]byte(cachedData), &resp); err == nil {
-			r.logger.Debug("cache hit")
+			// TODO: add metrics
 			return resp, nil
 		}
-		r.logger.Warn("failed to unmarshal cached data",
-			zap.String("op", op),
-			zap.Error(err),
-		)
+		// TODO: add metrics
 	}
 
 	query := `SELECT id, type, amount, currency, 
@@ -181,28 +155,27 @@ func (r *TransactionRepository) GetTransactions(
 
 	err = r.db.SelectContext(ctx, &transactions, query, req.AccountCode, req.Limit, req.Offset)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return models.GetTransactionsResponse{}, apperr.ErrTransactionNotFound
+		return models.GetTransactionsResponse{}, &apperr.WrappedError{
+			Op:  op,
+			Err: err,
 		}
-		return models.GetTransactionsResponse{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	if len(transactions) == 0 {
+		return models.GetTransactionsResponse{}, apperr.ErrTransactionNotFound
 	}
 
 	resp = models.GetTransactionsResponse{Transactions: transactions}
 
 	data, err := json.Marshal(resp)
 	if err != nil {
-		r.logger.Warn("failed to matshal json data",
-			zap.String("op", op),
-			zap.Error(err),
-		)
-		return resp, nil
+		return models.GetTransactionsResponse{}, &apperr.WrappedError{
+			Op:  op,
+			Err: fmt.Errorf("marshal response: %w", err),
+		}
 	}
 	if err := r.cache.Set(ctx, cacheKey, string(data)); err != nil {
-		r.logger.Warn("failed to set cache key with data",
-			zap.String("op", op),
-			zap.String("cachekey", cacheKey),
-			zap.Error(err),
-		)
+		// TODO: add metrics
 	}
 
 	return resp, nil
@@ -210,7 +183,7 @@ func (r *TransactionRepository) GetTransactions(
 
 // UpdateTransactionStatus обновляет статус платежа
 func (r *TransactionRepository) UpdateTransactionStatus(ctx context.Context, req *models.UpdateTransactionStatusRequest) error {
-	const op = "repository.transaction.UpdateTransactionStatus"
+	const op = "transaction.UpdateTransactionStatus"
 
 	const query = `UPDATE transactions 
 					SET status = $1, updated_at = $2
@@ -227,14 +200,17 @@ func (r *TransactionRepository) UpdateTransactionStatus(ctx context.Context, req
 		if err != nil {
 			return err
 		}
-		if rowsAffected != 1 {
-			return fmt.Errorf("%s: expected 1 row affected, got %d", op, rowsAffected)
+		if rowsAffected == 0 {
+			return apperr.ErrTransactionNotFound
 		}
 
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
 	go r.tryInvalidateAccountTransactionsCache(ctx, op, req.SenderAccountCode)
@@ -245,17 +221,19 @@ func (r *TransactionRepository) UpdateTransactionStatus(ctx context.Context, req
 
 const cacheInvalidationTimeout = 5 * time.Second
 
-// invalidateAccountTransactionsCache инвалидирует кэш по номеру счёта, и логирует ошибку в случае неудачи
+// invalidateAccountTransactionsCache инвалидирует кэш по номеру счёта
 func (r *TransactionRepository) tryInvalidateAccountTransactionsCache(ctx context.Context, op string, account string) {
+	defer func() {
+		if p := recover(); p != nil {
+			// TODO: add metrics (critical alert — cache invalidation panicked)
+		}
+	}()
+
 	ctx, cancel := context.WithTimeout(ctx, cacheInvalidationTimeout)
 	defer cancel()
 
 	cacheKey := fmt.Sprintf("account_transactions:%s", account)
 	if err := r.cache.DeleteByPrefix(ctx, cacheKey); err != nil {
-		r.logger.Warn("failed to delete cache key",
-			zap.String("op", op),
-			zap.String("cachekey", cacheKey),
-			zap.Error(err),
-		)
+		// TODO: add metrics
 	}
 }

@@ -5,14 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
+	"transaction-service/internal/lib/errors/apperr"
 	"transaction-service/internal/models"
 	"transaction-service/internal/repository/redis"
 
 	"github.com/segmentio/kafka-go"
-	"go.uber.org/zap"
 )
 
 // Consumer реализует Kafka consumer для обработки событий
@@ -20,7 +21,8 @@ type Consumer struct {
 	readers      map[string]*kafka.Reader
 	handler      EventHandler
 	deduplicator *redis.Deduplicator
-	logger       *zap.Logger
+	logger       *slog.Logger
+	concurrency  int
 	wg           sync.WaitGroup
 }
 
@@ -59,7 +61,7 @@ func NewConsumer(
 	config *Config,
 	handler EventHandler,
 	deduplicator *redis.Deduplicator,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) *Consumer {
 	readers := make(map[string]*kafka.Reader)
 
@@ -88,45 +90,45 @@ func NewConsumer(
 		readers:      readers,
 		handler:      handler,
 		deduplicator: deduplicator,
-		logger:       logger.With(zap.String("component", "kafka_consumer")),
+		logger:       logger.With("component", "kafka_consumer"),
+		concurrency:  config.Concurrency,
 	}
 }
 
-// Start запускает консьюмеры для всех топиков
-func (c *Consumer) Start(ctx context.Context) {
-	const op = "kafka.consumer.Start"
+// Run запускает консьюмеры для всех топиков
+func (c *Consumer) Run(ctx context.Context) {
+	const op = "consumer.Run"
 
-	logger := c.logger.With(
-		zap.String("op", op),
+	log := c.logger.With("op", op)
+	log.Info("starting kafka consumers",
+		"concurrency_per_topic", c.concurrency,
 	)
-
-	logger.Info("starting kafka consumers")
 
 	for topic, reader := range c.readers {
 		c.wg.Add(1)
 		go c.consume(ctx, topic, reader)
 	}
 
-	logger.Info("all kafka consumers started")
+	log.Info("all kafka consumers started")
 }
 
 // Stop останавливает все консьюмеры
 func (c *Consumer) Stop() error {
-	const op = "kafka.consumer.Stop"
+	const op = "consumer.Stop"
 
-	logger := c.logger.With(
-		zap.String("op", op),
+	log := c.logger.With(
+		"op", op,
 	)
 
-	logger.Info("stopping kafka consumers")
+	log.Info("stopping kafka consumers")
 
 	// Закрываем все readers
 	var lastErr error
 	for topic, reader := range c.readers {
 		if err := reader.Close(); err != nil {
-			c.logger.Error("failed to close reader",
-				zap.String("topic", topic),
-				zap.Error(err),
+			log.Error("failed to close reader",
+				"topic", topic,
+				"error", err,
 			)
 			lastErr = err
 		}
@@ -142,9 +144,9 @@ func (c *Consumer) Stop() error {
 	// Таймаут для graceful shutdown
 	select {
 	case <-done:
-		c.logger.Info("all consumers stopped gracefully")
+		log.Info("all consumers stopped gracefully")
 	case <-time.After(30 * time.Second):
-		c.logger.Warn("forced shutdown after timeout")
+		log.Warn("forced shutdown after timeout")
 	}
 
 	if lastErr != nil {
@@ -156,101 +158,172 @@ func (c *Consumer) Stop() error {
 
 // consume обрабатывает сообщения из конкретного топика
 func (c *Consumer) consume(ctx context.Context, topic string, reader *kafka.Reader) {
-	const op = "kafka.consumer.consume"
+	const op = "consumer.consume"
 
 	defer c.wg.Done()
 
-	logger := c.logger.With(
-		zap.String("op", op),
-		zap.String("topic", topic),
+	log := c.logger.With(
+		"op", op,
+		"topic", topic,
 	)
 
-	logger.Info("starting to consume topic")
+	log.Info("starting to consume topic")
+
+	messages := make(chan kafka.Message, c.concurrency*2)
+
+	// Запускаем пул воркеров для этого топика
+	var workersWg sync.WaitGroup
+	for i := 0; i < c.concurrency; i++ {
+		workersWg.Add(1)
+		go c.worker(ctx, topic, reader, messages, i, &workersWg)
+	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Info("shutdown signal received")
+			log.Info("shutting down consumer, waiting for workers")
+			close(messages) // воркеры дообработают оставшиеся и выйдут
+			workersWg.Wait()
+			log.Info("consumer stopped")
 			return
 		default:
 			message, err := reader.FetchMessage(ctx)
 			if err != nil {
 				if err == context.Canceled {
-					logger.Info("context cancelled")
+					close(messages)
+					workersWg.Wait()
+					log.Info("consumer stopped")
 					return
 				}
-				logger.Error("failed to fetch message", zap.Error(err))
+				log.Error("failed to fetch message", "error", err)
+				// TODO: metrics - consumer_fetch_error_total
 				continue
 			}
 
-			if err := c.processMessage(ctx, topic, message); err != nil {
-				logger.Error("failed to process message",
-					zap.Error(err),
-					zap.Int("partition", message.Partition),
-					zap.Int64("offset", message.Offset),
-				)
-				continue
-			}
-
-			// Коммитим офсет
-			if err := reader.CommitMessages(ctx, message); err != nil {
-				logger.Error("failed to commit message",
-					zap.Error(err),
-					zap.Int("partition", message.Partition),
-					zap.Int64("offset", message.Offset),
-				)
+			select {
+			case <-ctx.Done():
+				close(messages)
+				workersWg.Wait()
+				return
+			case messages <- message:
 			}
 		}
 	}
 }
 
+// worker обрабатывает сообщения из канала
+func (c *Consumer) worker(
+	ctx context.Context,
+	topic string,
+	reader *kafka.Reader,
+	messages <-chan kafka.Message,
+	workerID int,
+	wg *sync.WaitGroup,
+) {
+	const op = "consumer.worker"
+
+	defer wg.Done()
+
+	log := c.logger.With(
+		"op", op,
+		"topic", topic,
+		"worker_id", workerID,
+	)
+
+	for message := range messages {
+		err := c.processMessage(ctx, topic, message)
+		if err != nil {
+			log.Warn("message processing failed, will retry",
+				"error", err,
+				"partition", message.Partition,
+				"offset", message.Offset,
+			)
+			// TODO: metrics - consumer_retryable_error_total
+			continue
+		}
+
+		// Коммитим офсет
+		if err := reader.CommitMessages(ctx, message); err != nil {
+			log.Error("failed to commit message",
+				"error", err,
+				"partition", message.Partition,
+				"offset", message.Offset,
+			)
+			// TODO: metrics - consumer_commit_error_total
+		}
+	}
+
+	log.Debug("worker stopped")
+}
+
 // processMessage обрабатывает отдельное сообщение
 func (c *Consumer) processMessage(ctx context.Context, topic string, message kafka.Message) error {
-	const op = "kafka.consumer.processMessage"
+	const op = "consumer.processMessage"
 
-	logger := c.logger.With(
-		zap.String("op", op),
-		zap.String("topic", topic),
-		zap.Int("partition", message.Partition),
-		zap.Int64("offset", message.Offset),
-		zap.String("key", string(message.Key)),
+	log := c.logger.With(
+		"op", op,
+		"topic", topic,
+		"partition", message.Partition,
+		"offset", message.Offset,
+		"key", string(message.Key),
 	)
 
 	// Парсим сообщение в Event
 	var event models.Event
 	if err := json.Unmarshal(message.Value, &event); err != nil {
-		logger.Error("failed to unmarshal event", zap.Error(err))
-		return fmt.Errorf("%s: %w", op, err)
+		log.Error("failed to unmarshal event",
+			"error", err,
+		)
+		// TODO: metrics - consumer_corrupted_message_total
+		return nil
 	}
 
-	logger.Debug("processing event",
-		zap.String("event_id", event.ID.String()),
-		zap.String("event_type", event.Type),
-		zap.String("transaction_id", event.TransactionID.String()),
+	log.Debug("processing event",
+		"event_id", event.ID.String(),
+		"event_type", event.Type,
+		"transaction_id", event.TransactionID.String(),
 	)
 
 	isDuplicate, err := c.deduplicator.IsDuplicate(ctx, event.ID.String())
 	if err != nil {
-		c.logger.Warn("dedup check failed", zap.Error(err))
+		// TODO: metrics - consumer_dedup_error_total
+		c.logger.Warn("dedup check failed", "error", err)
 	}
 	if isDuplicate {
-		c.logger.Info("duplicate event, skipping",
-			zap.String("event_id", event.ID.String()),
-			zap.String("event_type", event.Type),
-		)
 		return nil
 	}
 
 	// Обрабатываем событие в зависимости от типа
 	if err := c.routeEvent(ctx, &event); err != nil {
-		logger.Error("failed to handle event",
-			zap.String("event_type", event.Type),
-			zap.Error(err),
-		)
-		return fmt.Errorf("%s: %w", op, err)
+		retryable, terminal := apperr.Classify(err)
+
+		if terminal {
+			log.Error("terminal error - committing offset, manual intervention required",
+				"event_type", event.Type,
+				"event_id", event.ID.String(),
+				"error", err,
+			)
+			// TODO: metrics - consumer_terminal_error_total
+			return nil
+		}
+
+		if !retryable {
+			log.Warn("non-retryable error - committing offset",
+				"event_type", event.Type,
+				"event_id", event.ID.String(),
+				"error", err,
+			)
+			// TODO: metrics - consumer_business_error_total
+			return nil
+		}
+
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
 
-	logger.Debug("event processed successfully")
+	log.Debug("event processed successfully")
 
 	return nil
 }
@@ -281,6 +354,6 @@ func (c *Consumer) routeEvent(ctx context.Context, event *models.Event) error {
 	case models.EventBlockResponse:
 		return c.handler.HandleBlockAccountResponse(ctx, event)
 	default:
-		return fmt.Errorf("unknown event type: %s", event.Type)
+		return apperr.ErrUnknownEventType
 	}
 }

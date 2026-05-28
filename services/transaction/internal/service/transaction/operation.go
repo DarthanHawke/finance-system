@@ -4,27 +4,21 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"transaction-service/internal/lib/errors/apperr"
 	"transaction-service/internal/models"
-
-	"go.uber.org/zap"
 )
 
-// TransactionService реализует бизнес-логику работы с платежами
+// OperationService реализует бизнес-логику работы с платежами
 type OperationService struct {
 	operationManager OperationManager
-	logger           *zap.Logger
 }
 
-// NewOperationService создает новый экземпляр TransactionService
+// NewOperationService создает новый экземпляр OperationService
 func NewOperationService(
 	operationManager OperationManager,
-	logger *zap.Logger,
 ) *OperationService {
 	return &OperationService{
 		operationManager: operationManager,
-		logger:           logger.With(zap.String("component", "transaction_service")),
 	}
 }
 
@@ -39,31 +33,18 @@ func (s *OperationService) GetTransaction(
 	ctx context.Context,
 	req *models.GetTransactionRequest,
 ) (models.GetTransactionResponse, error) {
-	const op = "service.transaction.GetTransaction"
-
-	logger := s.logger.With(
-		zap.String("op:", op),
-		zap.String("transaction ID:", req.ID.String()),
-	)
-	logger.Info("getting transaction")
+	const op = "transaction.GetTransaction"
 
 	resp, err := s.operationManager.GetTransaction(ctx, req)
 	if err != nil {
-		if errors.Is(err, apperr.ErrTransactionNotFound) {
-			logger.Warn("transaction not found",
-				zap.Error(err),
-			)
-			return models.GetTransactionResponse{}, apperr.ErrTransactionNotFound
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return models.GetTransactionResponse{}, err
 		}
-		logger.Error("failed to get transaction",
-			zap.Error(err),
-		)
-		return models.GetTransactionResponse{}, fmt.Errorf("failed to get transaction: %w", err)
+		return models.GetTransactionResponse{}, &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
-
-	logger.Debug("Successfully got transaction",
-		zap.String("status:", resp.Status),
-	)
 
 	return resp, nil
 }
@@ -73,29 +54,18 @@ func (s *OperationService) GetTransactions(
 	ctx context.Context,
 	req *models.GetTransactionsRequest,
 ) (models.GetTransactionsResponse, error) {
-	const op = "service.transaction.GetTransactions"
-
-	logger := s.logger.With(
-		zap.String("op:", op),
-		zap.String("account code:", req.AccountCode),
-	)
-	logger.Info("getting transaction")
+	const op = "transaction.GetTransactions"
 
 	resp, err := s.operationManager.GetTransactions(ctx, req)
 	if err != nil {
-		if errors.Is(err, apperr.ErrTransactionNotFound) {
-			logger.Warn("transaction not found",
-				zap.Error(err),
-			)
-			return models.GetTransactionsResponse{}, apperr.ErrTransactionNotFound
+		if err, ok := errors.AsType[*apperr.Error](err); ok {
+			return models.GetTransactionsResponse{}, err
 		}
-		logger.Error("failed to get transaction",
-			zap.Error(err),
-		)
-		return models.GetTransactionsResponse{}, fmt.Errorf("failed to get transaction: %w", err)
+		return models.GetTransactionsResponse{}, &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
 	}
-
-	logger.Debug("Successfully got transactions")
 
 	return resp, nil
 }
