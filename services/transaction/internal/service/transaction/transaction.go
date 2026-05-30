@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 	"transaction-service/internal/lib/errors/apperr"
+	"transaction-service/internal/lib/metrics"
 	"transaction-service/internal/models"
 
 	"github.com/google/uuid"
@@ -1162,7 +1163,7 @@ func (s *TransactionService) getTransactionPayload(resp *models.Event) (*models.
 func (s *TransactionService) isSuccessResponse(resp *models.Event) bool {
 	var payloadResp models.BalanceResponsePayload
 	if err := json.Unmarshal(resp.Payload, &payloadResp); err != nil {
-		// TODO: add metrics
+		metrics.CorruptedPayloadTotal.Inc()
 		return false
 	}
 	return payloadResp.Success
@@ -1172,7 +1173,6 @@ func (s *TransactionService) isSuccessResponse(resp *models.Event) bool {
 func (s *TransactionService) cancelTransaction(ctx context.Context, event *models.Event) error {
 	const op = "transaction.cancelTransaction"
 
-	//TODO отсылать сообщение в INTERNAL, если нельзя
 	req := &models.UpdateTransactionStatusRequest{
 		ID:     event.TransactionID,
 		Status: models.TransactionStatusCancelled,

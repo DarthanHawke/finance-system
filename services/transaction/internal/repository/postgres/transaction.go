@@ -139,10 +139,8 @@ func (r *TransactionRepository) GetTransactions(
 	cachedData, err := r.cache.Get(ctx, cacheKey)
 	if err == nil && cachedData != "" {
 		if err := json.Unmarshal([]byte(cachedData), &resp); err == nil {
-			// TODO: add metrics
 			return resp, nil
 		}
-		// TODO: add metrics
 	}
 
 	query := `SELECT id, type, amount, currency, 
@@ -175,7 +173,6 @@ func (r *TransactionRepository) GetTransactions(
 		}
 	}
 	if err := r.cache.Set(ctx, cacheKey, string(data)); err != nil {
-		// TODO: add metrics
 	}
 
 	return resp, nil
@@ -225,7 +222,6 @@ const cacheInvalidationTimeout = 5 * time.Second
 func (r *TransactionRepository) tryInvalidateAccountTransactionsCache(ctx context.Context, op string, account string) {
 	defer func() {
 		if p := recover(); p != nil {
-			// TODO: add metrics (critical alert — cache invalidation panicked)
 		}
 	}()
 
@@ -234,6 +230,5 @@ func (r *TransactionRepository) tryInvalidateAccountTransactionsCache(ctx contex
 
 	cacheKey := fmt.Sprintf("account_transactions:%s", account)
 	if err := r.cache.DeleteByPrefix(ctx, cacheKey); err != nil {
-		// TODO: add metrics
 	}
 }

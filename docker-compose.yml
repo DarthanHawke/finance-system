@@ -19,6 +19,7 @@ services:
     networks:
       - app_network
       - kafka_network
+      - monitoring_network
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'transaction-service' || exit 1"]
       interval: 20s
@@ -37,6 +38,8 @@ services:
       - postgres_data:/data
     networks:
       - app_network
+      - monitoring_network
+      - ui_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -51,6 +54,8 @@ services:
       - redis_data:/data
     networks:
       - app_network
+      - monitoring_network
+      - ui_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -77,6 +82,7 @@ services:
     networks:
       - app_network
       - kafka_network
+      - monitoring_network
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'account-service' || exit 1"]
       interval: 20s
@@ -94,7 +100,9 @@ services:
     volumes:
       - postgres_data:/data 
     networks:
-      - app_network   
+      - app_network  
+      - monitoring_network 
+      - ui_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -109,6 +117,8 @@ services:
       - redis_data:/data
     networks:
       - app_network
+      - monitoring_network
+      - ui_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -131,6 +141,7 @@ services:
     networks:
       - app_network
       - kafka_network
+      - monitoring_network
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'api-gateway' || exit 1"]
       interval: 20s
@@ -145,6 +156,8 @@ services:
       - redis_data:/data
     networks:
       - app_network
+      - monitoring_network
+      - ui_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -180,13 +193,14 @@ services:
     networks:
       - app_network
       - kafka_network
+      - ui_network
 
   kafka-ui:
     extends:
       file: services/kafka/docker-compose.kafka.yml
       service: kafka-ui
     networks:
-      - app_network
+      - ui_network
       - kafka_network
 
   kafka-init:
@@ -211,7 +225,7 @@ services:
       - pgadmin_data:/var/lib/pgadmin
       - ./services/postgres/servers.json:/pgadmin4/servers.json
     networks:
-      - app_network
+      - ui_network
     depends_on:
       postgres-transaction:
         condition: service_healthy
@@ -226,7 +240,7 @@ services:
     volumes:
       - redisinsight_data:/data
     networks:
-      - app_network
+      - ui_network
     depends_on:
       redis-transaction:
         condition: service_healthy
@@ -235,11 +249,105 @@ services:
       redis-api-gateway:
         condition: service_healthy
 
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - ./monitoring/grafana.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - ./monitoring/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard-provider.yml
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring_network
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring_network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ./monitoring/tempo.yml:/etc/tempo.yml
+      - tempo_data:/var/tempo
+    ports:
+      - "4317:4317"  
+      - "4318:4318"  
+      - "3200:3200" 
+    networks:
+      - monitoring_network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3200/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    command: ["-config.file=/etc/loki/loki-config.yml"]
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/loki-config.yml
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - monitoring_network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      - ./monitoring/promtail.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock  
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro  
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - monitoring_network
+    depends_on:
+      - loki
+
 networks:
   app_network:
     driver: bridge
     name: app_network
   kafka_network:
+  monitoring_network:
+    driver: bridge
+    name: monitoring_network
+  ui_network:
+    driver: bridge
+    name: ui_network
 
 volumes:
   redis_data:
@@ -247,3 +355,6 @@ volumes:
   kafka_data:
   pgadmin_data:
   redisinsight_data:
+  tempo_data:
+  loki_data:
+  grafana_data:

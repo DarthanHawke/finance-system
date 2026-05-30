@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -25,6 +26,7 @@ func New(
 ) *App {
 	gRPCServer := grpc.NewServer(
 		grpc.Creds(insecure.NewCredentials()),
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.UnaryInterceptor(grpcinterceptor.UnaryServerInterceptor(logger)),
 	)
 	grpctransaction.NewTransactionServer(gRPCServer, transactionService)

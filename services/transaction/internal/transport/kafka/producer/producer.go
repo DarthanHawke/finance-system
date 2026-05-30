@@ -8,8 +8,15 @@ import (
 	"log/slog"
 	"time"
 	"transaction-service/internal/lib/errors/apperr"
+	"transaction-service/internal/lib/metrics"
+	"transaction-service/internal/lib/tracing"
 
 	"github.com/segmentio/kafka-go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Producer struct {
@@ -17,6 +24,7 @@ type Producer struct {
 	dlqWriter   *kafka.Writer
 	retryConfig *RetryConfig
 	logger      *slog.Logger
+	tracer      trace.Tracer
 }
 
 // Config содержит конфигурацию для Kafka Producer
@@ -55,49 +63,57 @@ func NewProducer(
 	retryConfig *RetryConfig,
 	logger *slog.Logger,
 ) *Producer {
-	writer := &kafka.Writer{
-		Addr:                   kafka.TCP(config.Brokers...),
-		Balancer:               &kafka.Hash{},
-		BatchSize:              config.BatchSize,
-		BatchTimeout:           config.BatchTimeout,
-		RequiredAcks:           kafka.RequiredAcks(config.RequiredAcks),
-		MaxAttempts:            config.MaxAttempts,
-		WriteTimeout:           config.WriteTimeout,
-		AllowAutoTopicCreation: true,
-		Compression:            kafka.Snappy,
-	}
-
-	dlqWriter := &kafka.Writer{
-		Addr:                   kafka.TCP(dlqConfig.Brokers...),
-		Topic:                  dlqConfig.Topic,
-		Balancer:               &kafka.Hash{},
-		BatchSize:              dlqConfig.BatchSize,
-		BatchTimeout:           dlqConfig.BatchTimeout,
-		MaxAttempts:            dlqConfig.MaxAttempts,
-		AllowAutoTopicCreation: true,
-		Compression:            kafka.Snappy,
-	}
-
 	return &Producer{
-		writer:      writer,
-		dlqWriter:   dlqWriter,
+		writer:      createWriter(config.Brokers, "", config.BatchSize, config.BatchTimeout, config.RequiredAcks, config.MaxAttempts, config.WriteTimeout),
+		dlqWriter:   createWriter(dlqConfig.Brokers, dlqConfig.Topic, dlqConfig.BatchSize, dlqConfig.BatchTimeout, 0, dlqConfig.MaxAttempts, 0),
 		retryConfig: retryConfig,
 		logger:      logger.With("component", "kafka_producer"),
+		tracer:      otel.Tracer("kafka-producer"),
+	}
+}
+
+func createWriter(brokers []string, topic string, batchSize int, batchTimeout time.Duration, requiredAcks, maxAttempts int, writeTimeout time.Duration) *kafka.Writer {
+	return &kafka.Writer{
+		Addr:                   kafka.TCP(brokers...),
+		Topic:                  topic,
+		Balancer:               &kafka.Hash{},
+		BatchSize:              batchSize,
+		BatchTimeout:           batchTimeout,
+		RequiredAcks:           kafka.RequiredAcks(requiredAcks),
+		MaxAttempts:            maxAttempts,
+		WriteTimeout:           writeTimeout,
+		AllowAutoTopicCreation: true,
+		Compression:            kafka.Snappy,
 	}
 }
 
 // Produce публикует событие в Kafka
 func (p *Producer) Produce(ctx context.Context, topic, key string, event any) error {
 	const op = "producer.Produce"
+	start := time.Now()
+	defer func() {
+		metrics.KafkaProduceDuration.Observe(time.Since(start).Seconds())
+	}()
 
-	log := p.logger.With(
+	log := tracing.WithTraceContext(ctx, p.logger.With(
 		"op", op,
 		"topic", topic,
 		"key", key,
+	))
+
+	ctx, span := p.tracer.Start(ctx, "kafka.produce",
+		trace.WithAttributes(
+			attribute.String("messaging.system", "kafka"),
+			attribute.String("messaging.destination", topic),
+			attribute.String("messaging.kafka.message.key", key),
+		),
 	)
+	defer span.End()
 
 	eventBytes, err := json.Marshal(event)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "marshal failed")
 		log.Error("failed to marshal event", "error", err)
 		return &apperr.WrappedError{
 			Op:  op,
@@ -122,12 +138,19 @@ func (p *Producer) Produce(ctx context.Context, topic, key string, event any) er
 		},
 	}
 
+	carrier := propagation.MapCarrier{}
+	otel.GetTextMapPropagator().Inject(ctx, carrier)
+	for k, v := range carrier {
+		message.Headers = append(message.Headers, kafka.Header{Key: k, Value: []byte(v)})
+	}
+
 	waitDuration := p.retryConfig.InitialWait
 
 	for attempt := 1; attempt <= p.retryConfig.MaxAttempts; attempt++ {
 		err = p.writer.WriteMessages(ctx, message)
 		if err == nil {
-			// TODO: metrics - kafka_produce_success_total
+			span.SetStatus(codes.Ok, "published")
+			metrics.KafkaProduceTotal.WithLabelValues("success").Inc()
 			return nil
 		}
 
@@ -139,6 +162,8 @@ func (p *Producer) Produce(ctx context.Context, topic, key string, event any) er
 		// Ждем перед следующей попыткой
 		select {
 		case <-ctx.Done():
+			span.RecordError(ctx.Err())
+			span.SetStatus(codes.Error, "context cancelled")
 			return &apperr.WrappedError{
 				Op:  op,
 				Err: ctx.Err(),
@@ -149,6 +174,9 @@ func (p *Producer) Produce(ctx context.Context, topic, key string, event any) er
 		}
 	}
 
+	span.RecordError(err)
+	span.SetStatus(codes.Error, "all retries exhausted")
+
 	log.Error("failed to publish message after all retry attempts",
 		"op", op,
 		"topic", topic,
@@ -156,7 +184,7 @@ func (p *Producer) Produce(ctx context.Context, topic, key string, event any) er
 		"error", err,
 		"max_attempts", p.retryConfig.MaxAttempts,
 	)
-	// TODO: metrics - kafka_produce_error_total
+	metrics.KafkaProduceTotal.WithLabelValues("error").Inc()
 
 	return &apperr.WrappedError{
 		Op:  op,
@@ -168,13 +196,24 @@ func (p *Producer) Produce(ctx context.Context, topic, key string, event any) er
 func (p *Producer) ProduceDLQ(ctx context.Context, key string, event any, eventError error) error {
 	const op = "producer.ProduceDLQ"
 
-	log := p.logger.With(
+	log := tracing.WithTraceContext(ctx, p.logger.With(
 		"op", op,
 		"key", key,
+	))
+
+	ctx, span := p.tracer.Start(ctx, "kafka.produce_dlq",
+		trace.WithAttributes(
+			attribute.String("messaging.system", "kafka"),
+			attribute.String("messaging.destination", "dlq"),
+			attribute.String("messaging.kafka.message.key", key),
+		),
 	)
+	defer span.End()
 
 	eventBytes, err := json.Marshal(event)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "marshal failed")
 		log.Error("failed to marshal event for DLQ", "error", err)
 		return &apperr.WrappedError{
 			Op:  op,
@@ -208,24 +247,27 @@ func (p *Producer) ProduceDLQ(ctx context.Context, key string, event any, eventE
 
 	err = p.dlqWriter.WriteMessages(ctx, dlqMessage)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "dlq write failed")
 		log.Error("failed to publish message to DLQ",
 			"op", op,
 			"key", key,
 			"error", err,
 		)
-		// TODO: metrics - kafka_dlq_error_total
+		metrics.KafkaDLQSent.WithLabelValues("error").Inc()
 		return &apperr.WrappedError{
 			Op:  op,
 			Err: err,
 		}
 	}
 
+	span.SetStatus(codes.Ok, "published to DLQ")
 	log.Warn("event published to DLQ",
 		"op", op,
 		"key", key,
 		"error", eventError.Error(),
 	)
-	// TODO: metrics - kafka_dlq_sent_total
+	metrics.KafkaDLQSent.WithLabelValues("success").Inc()
 
 	return nil
 }

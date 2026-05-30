@@ -1,0 +1,32 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: name
+            values: ["transaction-service", "account-service", "api-gateway-service", "external-payment-service"]
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_name']
+        target_label: 'service'
+        regex: '/(.+)\.\d+'  # извлекает имя сервиса из container_name
+      - source_labels: ['service']
+        regex: 'transaction-service|account-service|api-gateway-service|external-payment-service'
+        action: keep
+      - source_labels: ['service']
+        regex: 'finance-system'
+        action: drop
+    pipeline_stages:
+      - docker: {}
+      - labels:
+          service: ""

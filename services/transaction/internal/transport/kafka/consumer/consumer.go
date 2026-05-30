@@ -10,10 +10,17 @@ import (
 	"time"
 
 	"transaction-service/internal/lib/errors/apperr"
+	"transaction-service/internal/lib/metrics"
+	"transaction-service/internal/lib/tracing"
 	"transaction-service/internal/models"
 	"transaction-service/internal/repository/redis"
 
 	"github.com/segmentio/kafka-go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Consumer реализует Kafka consumer для обработки событий
@@ -22,6 +29,7 @@ type Consumer struct {
 	handler      EventHandler
 	deduplicator *redis.Deduplicator
 	logger       *slog.Logger
+	tracer       trace.Tracer
 	concurrency  int
 	wg           sync.WaitGroup
 }
@@ -91,6 +99,7 @@ func NewConsumer(
 		handler:      handler,
 		deduplicator: deduplicator,
 		logger:       logger.With("component", "kafka_consumer"),
+		tracer:       otel.Tracer("kafka-consumer"),
 		concurrency:  config.Concurrency,
 	}
 }
@@ -196,7 +205,7 @@ func (c *Consumer) consume(ctx context.Context, topic string, reader *kafka.Read
 					return
 				}
 				log.Error("failed to fetch message", "error", err)
-				// TODO: metrics - consumer_fetch_error_total
+				metrics.ConsumerFetchErrors.Inc()
 				continue
 			}
 
@@ -224,11 +233,11 @@ func (c *Consumer) worker(
 
 	defer wg.Done()
 
-	log := c.logger.With(
+	log := tracing.WithTraceContext(ctx, c.logger.With(
 		"op", op,
 		"topic", topic,
 		"worker_id", workerID,
-	)
+	))
 
 	for message := range messages {
 		err := c.processMessage(ctx, topic, message)
@@ -238,7 +247,7 @@ func (c *Consumer) worker(
 				"partition", message.Partition,
 				"offset", message.Offset,
 			)
-			// TODO: metrics - consumer_retryable_error_total
+			metrics.ConsumerRetryableErrors.Inc()
 			continue
 		}
 
@@ -249,7 +258,7 @@ func (c *Consumer) worker(
 				"partition", message.Partition,
 				"offset", message.Offset,
 			)
-			// TODO: metrics - consumer_commit_error_total
+			metrics.ConsumerCommitErrors.Inc()
 		}
 	}
 
@@ -259,24 +268,53 @@ func (c *Consumer) worker(
 // processMessage обрабатывает отдельное сообщение
 func (c *Consumer) processMessage(ctx context.Context, topic string, message kafka.Message) error {
 	const op = "consumer.processMessage"
+	start := time.Now()
+	defer func() {
+		metrics.ConsumerMessageDuration.Observe(time.Since(start).Seconds())
+	}()
 
-	log := c.logger.With(
+	log := tracing.WithTraceContext(ctx, c.logger.With(
 		"op", op,
 		"topic", topic,
 		"partition", message.Partition,
 		"offset", message.Offset,
 		"key", string(message.Key),
+	))
+
+	carrier := propagation.MapCarrier{}
+	for _, h := range message.Headers {
+		carrier[h.Key] = string(h.Value)
+	}
+	ctx = otel.GetTextMapPropagator().Extract(ctx, carrier)
+
+	ctx, span := c.tracer.Start(ctx, "kafka.consume",
+		trace.WithAttributes(
+			attribute.String("messaging.system", "kafka"),
+			attribute.String("messaging.destination", topic),
+			attribute.String("messaging.kafka.message.key", string(message.Key)),
+			attribute.Int("messaging.kafka.partition", message.Partition),
+			attribute.Int64("messaging.kafka.offset", message.Offset),
+		),
 	)
+	defer span.End()
 
 	// Парсим сообщение в Event
 	var event models.Event
 	if err := json.Unmarshal(message.Value, &event); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "unmarshal failed")
 		log.Error("failed to unmarshal event",
 			"error", err,
 		)
-		// TODO: metrics - consumer_corrupted_message_total
+		metrics.ConsumerMessagesProcessed.WithLabelValues("corrupted").Inc()
 		return nil
 	}
+
+	span.SetAttributes(
+		attribute.String("event_id", event.ID.String()),
+		attribute.String("event_type", event.Type),
+		attribute.String("transaction_id", event.TransactionID.String()),
+	)
 
 	log.Debug("processing event",
 		"event_id", event.ID.String(),
@@ -286,10 +324,12 @@ func (c *Consumer) processMessage(ctx context.Context, topic string, message kaf
 
 	isDuplicate, err := c.deduplicator.IsDuplicate(ctx, event.ID.String())
 	if err != nil {
-		// TODO: metrics - consumer_dedup_error_total
+		metrics.ConsumerDedupErrors.Inc()
 		c.logger.Warn("dedup check failed", "error", err)
 	}
 	if isDuplicate {
+		span.SetStatus(codes.Ok, "duplicate skipped")
+		metrics.ConsumerMessagesProcessed.WithLabelValues("duplicate").Inc()
 		return nil
 	}
 
@@ -298,33 +338,39 @@ func (c *Consumer) processMessage(ctx context.Context, topic string, message kaf
 		retryable, terminal := apperr.Classify(err)
 
 		if terminal {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "terminal error")
+			metrics.ConsumerMessagesProcessed.WithLabelValues("terminal_error").Inc()
 			log.Error("terminal error - committing offset, manual intervention required",
 				"event_type", event.Type,
 				"event_id", event.ID.String(),
 				"error", err,
 			)
-			// TODO: metrics - consumer_terminal_error_total
 			return nil
 		}
 
 		if !retryable {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "non-retryable error")
+			metrics.ConsumerMessagesProcessed.WithLabelValues("business_error").Inc()
 			log.Warn("non-retryable error - committing offset",
 				"event_type", event.Type,
 				"event_id", event.ID.String(),
 				"error", err,
 			)
-			// TODO: metrics - consumer_business_error_total
 			return nil
 		}
-
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "retryable error")
 		return &apperr.WrappedError{
 			Op:  op,
 			Err: err,
 		}
 	}
 
+	span.SetStatus(codes.Ok, "processed")
 	log.Debug("event processed successfully")
-
+	metrics.ConsumerMessagesProcessed.WithLabelValues("success").Inc()
 	return nil
 }
 

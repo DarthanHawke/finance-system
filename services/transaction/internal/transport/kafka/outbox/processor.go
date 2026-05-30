@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 	"transaction-service/internal/lib/errors/apperr"
+	"transaction-service/internal/lib/metrics"
+	"transaction-service/internal/lib/tracing"
 	"transaction-service/internal/models"
 )
 
@@ -88,13 +90,17 @@ func (p *OutboxProcessor) Run(ctx context.Context) {
 // fetchAndDispatch получает события из БД и отправляет в канал воркерам
 func (p *OutboxProcessor) fetchAndDispatch(ctx context.Context) {
 	const op = "processor.fetchAndDispatch"
+	start := time.Now()
+	defer func() {
+		metrics.OutboxBatchDuration.Observe(time.Since(start).Seconds())
+	}()
 
 	log := p.logger.With("op", op)
 
 	events, err := p.outboxManager.GetPendingEvents(ctx, &models.GetEventRequest{Limit: p.batchSize})
 	if err != nil {
 		log.Error("failed to get pending events", "error", err)
-		// TODO: metrics - outbox_get_events_error_total (alert: >0 за 5 мин → critical)
+		metrics.OutboxGetEventsErrors.Inc()
 		return
 	}
 
@@ -105,6 +111,7 @@ func (p *OutboxProcessor) fetchAndDispatch(ctx context.Context) {
 	log.Debug("dispatching events to workers",
 		"count", len(events.Events),
 	)
+	metrics.OutboxBatchSize.Set(float64(len(events.Events)))
 
 	for _, event := range events.Events {
 		select {
@@ -119,14 +126,14 @@ func (p *OutboxProcessor) fetchAndDispatch(ctx context.Context) {
 func (p *OutboxProcessor) worker(ctx context.Context, workerID int) {
 	defer p.wg.Done()
 
-	log := p.logger.With(
+	log := tracing.WithTraceContext(ctx, p.logger.With(
 		"op", "processor.worker",
 		"worker_id", workerID,
-	)
+	))
 
 	for event := range p.eventsCh {
 		if err := p.processEvent(ctx, event); err != nil {
-			// TODO: metrics - outbox_process_event_error_total
+			metrics.OutboxEventsProcessed.WithLabelValues("error").Inc()
 		}
 	}
 
@@ -137,9 +144,9 @@ func (p *OutboxProcessor) worker(ctx context.Context, workerID int) {
 func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) error {
 	const op = "processor.processEvent"
 
-	log := p.logger.With(
+	log := tracing.WithTraceContext(ctx, p.logger.With(
 		"op", "processor.worker",
-	)
+	))
 
 	// Ключ для партиционирования - хэш номера счета для гарантии порядка сообщения внутри одного счета
 	messageKey := event.PartitionKey
@@ -150,7 +157,7 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 		retryable, isTerminal := apperr.Classify(err)
 
 		if isTerminal {
-			// TODO: metrics - outbox_terminal_error_total
+			metrics.OutboxEventsProcessed.WithLabelValues("terminal_error").Inc()
 			log.Error("TERMINAL ERROR - sending to DLQ immediately",
 				"op", op,
 				"event_id", event.ID.String(),
@@ -162,7 +169,7 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 					Err: err,
 				}
 			}
-			// TODO: metrics - outbox_dlq_sent_total
+			metrics.OutboxEventsProcessed.WithLabelValues("dlq").Inc()
 			if err := p.outboxManager.UpdateEventStatus(
 				ctx,
 				&models.UpdateEventStatusRequest{
@@ -179,7 +186,7 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 		}
 
 		if !retryable {
-			// TODO: metrics - outbox_business_error_total
+			metrics.OutboxEventsProcessed.WithLabelValues("business_error").Inc()
 			log.Warn("non-retryable error, sending to DLQ",
 				"op", op,
 				"event_id", event.ID.String(),
@@ -191,7 +198,7 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 					Err: err,
 				}
 			}
-			// TODO: metrics - outbox_dlq_sent_total
+			metrics.OutboxEventsProcessed.WithLabelValues("dlq").Inc()
 			if err := p.outboxManager.UpdateEventStatus(
 				ctx,
 				&models.UpdateEventStatusRequest{
@@ -208,7 +215,7 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 		}
 
 		if time.Since(event.CreatedAt) > 8*time.Hour {
-			// TODO: metrics - outbox_expired_total
+			metrics.OutboxEventsProcessed.WithLabelValues("expired").Inc()
 			log.Warn("event expired, sending to DLQ",
 				"op", op,
 				"event_id", event.ID.String(),
@@ -220,7 +227,7 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 					Err: err,
 				}
 			}
-			// TODO: metrics - outbox_dlq_sent_total
+			metrics.OutboxEventsProcessed.WithLabelValues("dlq").Inc()
 			if err := p.outboxManager.UpdateEventStatus(
 				ctx,
 				&models.UpdateEventStatusRequest{
@@ -254,6 +261,6 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 			Err: fmt.Errorf("update event status: %w", err),
 		}
 	}
-
+	metrics.OutboxEventsProcessed.WithLabelValues("success").Inc()
 	return nil
 }

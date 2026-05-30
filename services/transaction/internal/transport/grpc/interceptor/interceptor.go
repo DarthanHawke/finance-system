@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"runtime/debug"
+	"transaction-service/internal/lib/tracing"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -18,10 +19,11 @@ func UnaryServerInterceptor(logger *slog.Logger) grpc.UnaryServerInterceptor {
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (resp any, err error) {
+		log := tracing.WithTraceContext(ctx, logger)
 		// Обработка паники
 		defer func() {
 			if p := recover(); p != nil {
-				logger.ErrorContext(ctx, "panic in gRPC handler",
+				log.ErrorContext(ctx, "panic in gRPC handler",
 					"method", info.FullMethod,
 					"panic", p,
 					"stack", string(debug.Stack()),
@@ -34,12 +36,12 @@ func UnaryServerInterceptor(logger *slog.Logger) grpc.UnaryServerInterceptor {
 		if err != nil {
 			st, _ := status.FromError(err)
 			if st.Code() == codes.Internal {
-				logger.ErrorContext(ctx, "gRPC request failed",
+				log.ErrorContext(ctx, "gRPC request failed",
 					"method", info.FullMethod,
 					"code", st.Code().String(),
 				)
 			} else {
-				logger.WarnContext(ctx, "gRPC request failed",
+				log.WarnContext(ctx, "gRPC request failed",
 					"method", info.FullMethod,
 					"code", st.Code().String(),
 				)

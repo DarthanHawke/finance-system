@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -14,12 +15,16 @@ import (
 	config "transaction-service/internal/config"
 	iso8583 "transaction-service/internal/lib/iso8583"
 	stan "transaction-service/internal/lib/stan"
+	tracing "transaction-service/internal/lib/tracing"
 	postgres "transaction-service/internal/repository/postgres"
 	redis "transaction-service/internal/repository/redis"
 	service "transaction-service/internal/service/transaction"
 	consumer "transaction-service/internal/transport/kafka/consumer"
 	processor "transaction-service/internal/transport/kafka/outbox"
 	producer "transaction-service/internal/transport/kafka/producer"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 // App управляет всеми компонентами сервиса
@@ -32,11 +37,23 @@ type App struct {
 	producer        *producer.Producer
 	outboxProcessor *processor.OutboxProcessor
 	stanManager     *stan.STAN
+	tracerProvider  *trace.TracerProvider
+	metricsServer   *http.Server
 }
 
 // NewApp создает все компоненты и настраивает зависимости
 func NewApp(cfg *config.Configuration, iso8583cfg *config.ISO8583Config, log *slog.Logger) (*App, error) {
 	log.Info("initializing server", "env", cfg.Env, "port", cfg.GRPCServer.Port)
+
+	tracer, err := tracing.InitTracer(
+		context.Background(),
+		"transaction-service",
+		cfg.Tracing.OTLPEndpoint,
+		log,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("init tracer: %w", err)
+	}
 
 	dataBase, err := postgres.NewDatabase(cfg.DataBase.DSN())
 	if err != nil {
@@ -127,6 +144,11 @@ func NewApp(cfg *config.Configuration, iso8583cfg *config.ISO8583Config, log *sl
 		},
 	)
 
+	metric := &http.Server{
+		Addr:    ":9090",
+		Handler: promhttp.Handler(),
+	}
+
 	grpc := grpc.New(
 		log,
 		cfg.GRPCServer.Port,
@@ -141,6 +163,8 @@ func NewApp(cfg *config.Configuration, iso8583cfg *config.ISO8583Config, log *sl
 		producer:        producer,
 		outboxProcessor: outboxProcessor,
 		stanManager:     stanManager,
+		tracerProvider:  tracer,
+		metricsServer:   metric,
 	}, nil
 }
 
@@ -152,6 +176,9 @@ func (app *App) Run() error {
 	defer cancel()
 
 	app.logger.Info("starting server")
+
+	// запускаем http сервер для prometheus
+	go app.runMetricServer()
 
 	// запускаем gRPC сервер
 	go app.grpc.MustRun()
@@ -185,6 +212,9 @@ func (app *App) Run() error {
 		app.logger.Info("context cancelled")
 	}
 
+	app.stopMetricServer(ctx)
+	app.logger.Info("http prometheus server stopped")
+
 	// останавливаем gRPC
 	app.grpc.Stop()
 	app.logger.Info("grpc server stopped")
@@ -216,6 +246,14 @@ func (app *App) shutdown() {
 	if app.producer != nil {
 		if err := app.producer.Close(); err != nil {
 			app.logger.Error("failed to close producer", "error", err)
+		}
+	}
+
+	if app.tracerProvider != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := app.tracerProvider.Shutdown(ctx); err != nil {
+			app.logger.Error("failed to shutdown tracer", "error", err)
 		}
 	}
 
@@ -256,11 +294,28 @@ func (app *App) runSTANResetScheduler(ctx context.Context) {
 
 		select {
 		case <-time.After(next.Sub(now)):
-			app.stanManager.ResetCounters() // нужен доступ к stanManager
+			app.stanManager.ResetCounters()
 			app.logger.Info("STAN counters reset")
 		case <-ctx.Done():
 			app.logger.Info("STAN reset scheduler stopped")
 			return
+		}
+	}
+}
+
+func (app *App) runMetricServer() {
+	app.logger.Info("starting metrics server", "port", 9090)
+	if err := app.metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		app.logger.Error("metrics server failed", "error", err)
+	}
+}
+
+func (app *App) stopMetricServer(ctx context.Context) {
+	if app.metricsServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := app.metricsServer.Shutdown(ctx); err != nil {
+			app.logger.Error("failed to shutdown metrics server", "error", err)
 		}
 	}
 }

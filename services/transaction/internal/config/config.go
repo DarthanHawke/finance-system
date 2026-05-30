@@ -14,6 +14,7 @@ type Configuration struct {
 	Redis             `mapstructure:",squash"`
 	Kafka             `mapstructure:",squash"`
 	Logs              `mapstructure:",squash"`
+	Tracing           `mapstructure:",squash"`
 }
 
 type GRPCServer struct {
@@ -71,11 +72,15 @@ type Kafka struct {
 }
 
 type Logs struct {
-	LogFile    string `mapstructure:"LOG_FILE" env-default:"logs/app.log"`
+	LogFile    string `mapstructure:"LOG_FILE" env-default:""`
 	MaxSize    int    `mapstructure:"LOG_MAX_SIZE" env-default:"10"`
 	MaxBackups int    `mapstructure:"LOG_MAX_BACKUPS" env-default:"3"`
 	MaxAge     int    `mapstructure:"LOG_MAX_AGE" env-default:"7"`
 	AddSource  bool   `mapstructure:"LOG_SOURCE" env-default:"true"`
+}
+
+type Tracing struct {
+	OTLPEndpoint string `mapstructure:"TRACING_OTLP_ENDPOINT" env-default:"tempo:4317"`
 }
 
 func (c DataBase) DSN() string {
