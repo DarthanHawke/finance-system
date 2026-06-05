@@ -55,15 +55,6 @@ CREATE TABLE transactions (
     -- Инициатор
     initiator                   initiator_type NOT NULL,
 
-    -- Тип финансовой операции и счета
-    processing_code             VARCHAR(6),
-    -- STAN номер для внешних платежей
-    stan                        VARCHAR(6),
-    -- Код подтверждения успешной авторизации операции
-    authorization_code          VARCHAR(10),
-    -- Идентификатор от внешней системы (UETR, RRN и т.д.)
-    external_reference          VARCHAR(64),
-
     -- Описание платежа
     description                 TEXT,
 
