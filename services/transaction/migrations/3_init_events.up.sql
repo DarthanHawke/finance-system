@@ -1,13 +1,20 @@
+-- migrations/3_init_events.up.sql
 -- =======================================================================
 -- Создание таблицы events для хранения событий
 -- =======================================================================
+
+-- Статусы событий
+CREATE TYPE event_status AS ENUM (
+    'pending',                   -- Записано в БД, не отправлено
+    'published'                  -- Успешно отправлено
+);
 
 -- Таблица для хранения событий
 CREATE TABLE events (
     -- ID события
     id              UUID PRIMARY KEY,
 
-    -- ID платежа
+    -- ID транзакции
     transaction_id  UUID NOT NULL REFERENCES transactions(id),
    
     -- Ключ для партиционирования
@@ -17,10 +24,14 @@ CREATE TABLE events (
     type            VARCHAR(50) NOT NULL,
 
     -- Статус события
-    status          VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'completed')),
+    status          event_status NOT NULL DEFAULT 'pending',
     
     -- Сервис в котором создано событие
     source          VARCHAR(50) NOT NULL,
+
+    -- Контекст трассировки
+    trace_id        VARCHAR(32) NOT NULL,
+    span_id         VARCHAR(16) NOT NULL,
 
     -- Время создания события
     created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -31,6 +42,10 @@ CREATE TABLE events (
     -- Данные события
     payload         JSONB NOT NULL,
 
-    -- Для платежа выполнится не более 1 одинакового события
+    -- Для транзакции выполнится не более 1 одинакового события
     UNIQUE(transaction_id, type)
 );
+
+-- Для быстрого поиска pending событий
+CREATE INDEX idx_events_pending ON events(status, processed_at, created_at)
+    WHERE status = 'pending';
