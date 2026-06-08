@@ -36,7 +36,3 @@ CREATE TABLE transaction_parties (
 
     PRIMARY KEY (transaction_id, role)
 );
-
--- Поиск рефандов по исходной транзакции для валидации при создании рефанда
-CREATE INDEX idx_transactions_parent ON transactions(parent_transaction_id)
-    WHERE parent_transaction_id IS NOT NULL;

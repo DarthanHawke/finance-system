@@ -63,3 +63,7 @@ CREATE TABLE transactions (
     -- Дата последнего обновления
     updated_at                  TIMESTAMP NOT NULL DEFAULT NOW(),
 ); 
+
+-- Поиск рефандов по исходной транзакции для валидации при создании рефанда
+CREATE INDEX idx_transactions_parent ON transactions(parent_transaction_id)
+    WHERE parent_transaction_id IS NOT NULL;

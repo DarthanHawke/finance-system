@@ -9,7 +9,6 @@ import (
 	"transaction-service/internal/models"
 
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jmoiron/sqlx"
 )
 
 // EventRepository структура релизующая методы для работы с событиями
@@ -28,8 +27,8 @@ func (r *EventRepository) CreateEvent(ctx context.Context, req *models.CreateEve
 	const op = "event.CreateEvent"
 
 	const query = `
-		INSERT INTO events (id, transaction_id, partition_key, type, status, source, payload)
-		VALUES (:id, :transaction_id, :partition_key, :type, :status, :source, :payload)
+		INSERT INTO events (id, transaction_id, partition_key, type, status, source, trace_id, span_id, payload)
+		VALUES (:id, :transaction_id, :partition_key, :type, :status, :source, :trace_id, :span_id, :payload)
 	`
 
 	_, err := r.db.NamedExecContext(ctx, query, req)
@@ -66,7 +65,7 @@ func (r *EventRepository) GetPendingEvents(ctx context.Context, req *models.GetE
 			FOR UPDATE SKIP LOCKED
 		)
 		RETURNING id, transaction_id, partition_key, type, status, source, 
-			created_at, processed_at, payload
+			trace_id, span_id, created_at, processed_at, payload
 	`
 
 	fiveMinutesAgo := time.Now().Add(-5 * time.Minute)
@@ -104,32 +103,24 @@ func (r *EventRepository) UpdateEventStatus(ctx context.Context, req *models.Upd
 		WHERE id = $3
 	`
 
-	err := r.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
-		result, err := tx.ExecContext(ctx, query,
-			req.Status,
-			time.Now(),
-			req.ID,
-		)
-		if err != nil {
-			return err
-		}
-
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-
-		if rowsAffected == 0 {
-			return apperr.ErrEventNotFound
-		}
-
-		return nil
-	})
+	result, err := r.db.ExecContext(ctx, query, req.Status, time.Now(), req.ID)
 	if err != nil {
 		return &apperr.WrappedError{
 			Op:  op,
 			Err: err,
 		}
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
+	}
+
+	if rowsAffected == 0 {
+		return apperr.ErrEventNotFound
 	}
 
 	return nil

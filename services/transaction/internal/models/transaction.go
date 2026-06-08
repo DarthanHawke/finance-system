@@ -11,26 +11,77 @@ const Source = "transaction-service"
 
 // Статусы платежей:
 const (
-	// TransactionStatusPending - платеж в обработке
-	TransactionStatusPending string = "pending"
+	// TransactionStatusProcessing - платеж в обработке
+	TransactionStatusProcessing string = "PROCESSING"
+
+	// TransactionStatusAwaitingExternal - ожидает ответа от внешней системы
+	TransactionStatusAwaitingExternal = "AWAITING_EXTERNAL"
 
 	// TransactionStatusCompleted - платеж завершён
-	TransactionStatusCompleted string = "completed"
+	TransactionStatusCompleted string = "COMPLETED"
 
 	// TransactionStatusCancelled - платеж отменён
-	TransactionStatusCancelled string = "cancelled"
+	TransactionStatusCancelled string = "CANCELLED"
 
 	// TransactionStatusBlocked - платеж не может быть выполнен, требуется ручное вмешательство
-	TransactionStatusBlocked string = "blocked"
+	TransactionStatusBlocked string = "BLOCKED"
 )
 
-// Тип платежей
+// Типы транзакций
 const (
-	// AccountInternal - внутренний счет
-	AccountInternal string = "internal"
+	// TransactionTypeOnUsTransfer - перевод между счетами внутри системы
+	TransactionTypeOnUsTransfer = "ON_US_TRANSFER"
 
-	// AccountExternal - внешний счет
-	AccountExternal string = "external"
+	// TransactionTypeInboundRemittance - входящий перевод из внешней системы
+	TransactionTypeInboundRemittance = "INBOUND_REMITTANCE"
+
+	// TransactionTypeOutboundRemittance - исходящий перевод во внешнюю систему
+	TransactionTypeOutboundRemittance = "OUTBOUND_REMITTANCE"
+
+	// TransactionTypeDirectDebit - списание по требованию получателя внутри системы
+	TransactionTypeDirectDebit = "DIRECT_DEBIT"
+
+	// TransactionTypeInboundDirectDebit - входящий перевод по мандату из внешней системы
+	TransactionTypeInboundDirectDebit = "INBOUND_DIRECT_DEBIT"
+
+	// TransactionTypeOutboundDirectDebit - исходящий перевод по мандату во внешнюю систему
+	TransactionTypeOutboundDirectDebit = "OUTBOUND_DIRECT_DEBIT"
+
+	// TransactionTypeTopUpRequest - запрос на входящий перевод из внешнего источника
+	TransactionTypeTopUpRequest = "TOPUP_REQUEST"
+
+	// TransactionTypeRefund - возврат
+	TransactionTypeRefund = "REFUND"
+
+	// TransactionTypeChargeback - принудительный возврат, инициированный внешней системой
+	TransactionTypeChargeback = "CHARGEBACK"
+
+	// TransactionTypeAdjustment - административная операция
+	TransactionTypeAdjustment = "ADJUSTMENT"
+)
+
+// Типы инициаторов
+const (
+	// InitiatorCustomer - клиент
+	InitiatorCustomer = "CUSTOMER"
+
+	// InitiatorExternal - внешняя система
+	InitiatorExternal = "EXTERNAL"
+
+	// InitiatorSystem - система
+	InitiatorSystem = "SYSTEM"
+)
+
+// Роли участников
+const (
+	RoleSender    = "SENDER"
+	RoleRecipient = "RECIPIENT"
+)
+
+// Типы участников
+const (
+	TypeInternal = "INTERNAL"
+	TypeExternal = "EXTERNAL"
 )
 
 // Валюты:
@@ -47,25 +98,24 @@ const (
 
 // Transaction - дтошка платежа
 type Transaction struct {
-	ID                   uuid.UUID `db:"id" json:"id"`
-	Type                 string    `db:"type" json:"type"`
-	Amount               float64   `db:"amount" json:"amount"`
-	Currency             string    `db:"currency" json:"currency"`
-	SenderType           string    `db:"sender_type" json:"sender_type"`
-	SenderAccountCode    string    `db:"sender_account_code" json:"sender_account_code"`
-	SenderPhone          string    `db:"sender_phone" json:"sender_phone"`
-	SenderCardNumber     string    `db:"sender_card_number" json:"sender_card_number"`
-	RecipientType        string    `db:"recipient_type" json:"recipient_type"`
-	RecipientAccountCode string    `db:"recipient_account_code" json:"recipient_account_code"`
-	RecipientPhone       string    `db:"recipient_phone" json:"recipient_phone"`
-	RecipientCardNumber  string    `db:"recipient_card_number" json:"recipient_card_number"`
-	ProcessingCode       string    `db:"processing_code" json:"processing_code"`
-	Stan                 string    `db:"stan" json:"stan"`
-	AuthorizationCode    string    `db:"authorization_code" json:"authorization_code"`
-	Description          string    `db:"description" json:"description,omitempty"`
-	Status               string    `db:"status" json:"status"`
-	CreatedAt            time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt            time.Time `db:"updated_at" json:"updated_at"`
+	ID                  uuid.UUID          `db:"id" json:"id"`
+	IdempotencyKey      *string            `db:"idempotency_key" json:"idempotency_key,omitempty"`
+	ParentTransactionID *uuid.UUID         `db:"parent_transaction_id" json:"parent_transaction_id,omitempty"`
+	Type                string             `db:"type" json:"type"`
+	Status              string             `db:"status" json:"status"`
+	Amount              float64            `db:"amount" json:"amount"`
+	Currency            string             `db:"currency" json:"currency"`
+	Initiator           string             `db:"initiator" json:"initiator"`
+	Description         string             `db:"description" json:"description,omitempty"`
+	CreatedAt           time.Time          `db:"created_at" json:"created_at"`
+	UpdatedAt           time.Time          `db:"updated_at" json:"updated_at"`
+	Parties             []TransactionParty `json:"parties,omitempty"`
+}
+
+type TransactionParty struct {
+	Role        string            `db:"role" json:"role"`
+	Type        string            `db:"party_type" json:"party_type"`
+	Identifiers map[string]string `db:"identifiers" json:"identifiers"`
 }
 
 type CreateTransactionRequest struct {

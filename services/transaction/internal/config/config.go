@@ -7,14 +7,13 @@ import (
 )
 
 type Configuration struct {
-	Env               string `mapstructure:"ENV" env-default:"prod"`
-	ISO8583ConfigPath string `mapstructure:"ISO8583_CONFIG_PATH" env-default:"iso8583.example"`
-	GRPCServer        `mapstructure:",squash"`
-	DataBase          `mapstructure:",squash"`
-	Redis             `mapstructure:",squash"`
-	Kafka             `mapstructure:",squash"`
-	Logs              `mapstructure:",squash"`
-	Tracing           `mapstructure:",squash"`
+	Env        string `mapstructure:"ENV" env-default:"prod"`
+	GRPCServer `mapstructure:",squash"`
+	DataBase   `mapstructure:",squash"`
+	Redis      `mapstructure:",squash"`
+	Kafka      `mapstructure:",squash"`
+	Logs       `mapstructure:",squash"`
+	Tracing    `mapstructure:",squash"`
 }
 
 type GRPCServer struct {

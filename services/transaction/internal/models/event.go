@@ -64,6 +64,8 @@ type Event struct {
 	Type          string    `db:"type" json:"type"`
 	Status        string    `db:"status" json:"status"`
 	Source        string    `db:"source" json:"source"`
+	TraceID       string    `db:"trace_id" json:"trace_id"`
+	SpanID        string    `db:"span_id" json:"span_id"`
 	CreatedAt     time.Time `db:"created_at" json:"created_at"`
 	ProcessedAt   time.Time `db:"processed_at" json:"processed_at"`
 	Payload       []byte    `db:"payload" json:"payload"`

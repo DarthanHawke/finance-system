@@ -59,6 +59,11 @@ var (
 		Code:    "TRANSACTION_ID_NOT_UNIQUE",
 		Message: "transaction code not unique",
 	}
+	// ErrTransactionPartiesAlreadyExist - ID платежа уже занят
+	ErrTransactionPartiesAlreadyExist = &Error{
+		Code:    "TRANSACTION_PARTIES_ALREADY_EXIST",
+		Message: "parties for this transaction already exist",
+	}
 	// ErrTransactionNotFound - платеж не найден
 	ErrTransactionNotFound = &Error{
 		Code:    "TRANSACTION_NOT_FOUND",

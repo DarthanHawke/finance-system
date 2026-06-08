@@ -17,22 +17,12 @@ import (
 
 // TransactionRepository структура релизующая методы для работы со платежами
 type TransactionRepository struct {
-	db    *Database
-	cache RedisCacheManager
+	db *Database
 }
 
-// RedisCacheManager интерфейс с методами для кэша
-type RedisCacheManager interface {
-	Get(ctx context.Context, key string) (string, error)
-	Set(ctx context.Context, key string, value any) error
-	Delete(ctx context.Context, key string) error
-	DeleteByPrefix(ctx context.Context, prefix string) error
-}
-
-func NewTransactionRepository(db *Database, cache RedisCacheManager) *TransactionRepository {
+func NewTransactionRepository(db *Database) *TransactionRepository {
 	return &TransactionRepository{
-		db:    db,
-		cache: cache,
+		db: db,
 	}
 }
 
@@ -45,19 +35,18 @@ func (r *TransactionRepository) CreateTransaction(
 	const op = "transaction.CreateTransaction"
 
 	const queryTransactions = `
-		INSERT INTO transactions (id, type, amount, currency, 
-				sender_type, sender_account_code, sender_phone, sender_card_number,
-				recipient_type, recipient_account_code, recipient_phone, recipient_card_number,
-				processing_code, stan, authorization_code, description, status)
-		VALUES (:id, :type, :amount, :currency, 
-				:sender_type, :sender_account_code, :sender_phone, :sender_card_number,
-				:recipient_type, :recipient_account_code, :recipient_phone, :recipient_card_number,
-				:processing_code, :stan, :authorization_code, :description, :status)
+		INSERT INTO transactions (id, idempotency_key, parent_transaction_id, type, status, amount, currency, initiator, description)
+		VALUES (:id, :idempotency_key, :parent_transaction_id, :type, :status, :amount, :currency, :initiator, :description)
+	`
+
+	const queryParties = `
+		INSERT INTO transaction_parties (transaction_id, role, party_type, identifiers)
+		VALUES (:transaction_id, :role, :party_type, :identifiers)
 	`
 
 	const queryEvents = `
-		INSERT INTO events (id, transaction_id, partition_key, type, status, source, payload)
-		VALUES (:id, :transaction_id, :partition_key, :type, :status, :source, :payload)
+		INSERT INTO events (id, transaction_id, partition_key, type, status, source, trace_id, span_id, payload)
+		VALUES (:id, :transaction_id, :partition_key, :type, :status, :source, :trace_id, :span_id, :payload)
 	`
 
 	err := r.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
@@ -68,6 +57,17 @@ func (r *TransactionRepository) CreateTransaction(
 				return apperr.ErrTransactionIDNotUnique
 			}
 			return err
+		}
+
+		for _, party := range req.Parties {
+			_, err = tx.NamedExecContext(ctx, queryParties, party)
+
+			if err != nil {
+				if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
+					return apperr.ErrTransactionPartiesAlreadyExist
+				}
+				return err
+			}
 		}
 
 		_, err = tx.NamedExecContext(ctx, queryEvents, event)
@@ -88,9 +88,6 @@ func (r *TransactionRepository) CreateTransaction(
 		}
 	}
 
-	go r.tryInvalidateAccountTransactionsCache(ctx, op, req.SenderAccountCode)
-	go r.tryInvalidateAccountTransactionsCache(ctx, op, req.RecipientAccountCode)
-
 	return nil
 }
 
@@ -101,16 +98,32 @@ func (r *TransactionRepository) GetTransaction(
 ) (models.GetTransactionResponse, error) {
 	const op = "transaction.GetTransaction"
 
-	query := `SELECT id, type, amount, currency, 
-				sender_type, sender_account_code, sender_phone, sender_card_number,
-				recipient_type, recipient_account_code, recipient_phone, recipient_card_number,
-				description, status, created_at, updated_at
-		FROM transactions 
-		WHERE id = $1`
+	query := `
+        SELECT t.id, t.idempotency_key, t.parent_transaction_id, 
+			t.type::text, t.status::text, t.amount::float8, t.currency,
+            t.initiator::text, t.description, t.created_at, t.updated_at,
+            COALESCE(
+                jsonb_agg(
+                    jsonb_build_object(
+                        'role', tp.role::text,
+                        'party_type', tp.party_type::text,
+                        'identifiers', tp.identifiers
+                    )
+                ) FILTER (WHERE tp.transaction_id IS NOT NULL),
+                '[]'::jsonb
+            ) as parties
+        FROM transactions t
+        LEFT JOIN transaction_parties tp ON t.id = tp.transaction_id
+        WHERE t.id = $1
+        GROUP BY t.id
+    `
 
-	var resp models.GetTransactionResponse
+	var row struct {
+		models.Transaction
+		PartiesJSON json.RawMessage `db:"parties"`
+	}
 
-	err := r.db.GetContext(ctx, &resp, query, req.ID)
+	err := r.db.GetContext(ctx, &row, query, req.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.GetTransactionResponse{}, apperr.ErrTransactionNotFound
@@ -121,61 +134,16 @@ func (r *TransactionRepository) GetTransaction(
 		}
 	}
 
-	return resp, nil
-}
-
-// GetTransactions возвращает все платежи связанные со счетом
-func (r *TransactionRepository) GetTransactions(
-	ctx context.Context,
-	req *models.GetTransactionsRequest,
-) (models.GetTransactionsResponse, error) {
-	const op = "transaction.GetTransactions"
-
-	cacheKey := fmt.Sprintf("account_transactions:%s:limit:%d:offset:%d",
-		req.AccountCode, req.Limit, req.Offset)
-	var resp models.GetTransactionsResponse
-	var transactions []models.Transaction
-
-	cachedData, err := r.cache.Get(ctx, cacheKey)
-	if err == nil && cachedData != "" {
-		if err := json.Unmarshal([]byte(cachedData), &resp); err == nil {
-			return resp, nil
-		}
-	}
-
-	query := `SELECT id, type, amount, currency, 
-				sender_type, sender_account_code, sender_phone, sender_card_number,
-				recipient_type, recipient_account_code, recipient_phone, recipient_card_number,
-				description, status, created_at, updated_at
-		FROM transactions 
-		WHERE sender_account_code = $1 or recipient_account_code = $1
-		LIMIT $2 OFFSET $3`
-
-	err = r.db.SelectContext(ctx, &transactions, query, req.AccountCode, req.Limit, req.Offset)
-	if err != nil {
-		return models.GetTransactionsResponse{}, &apperr.WrappedError{
+	if err := json.Unmarshal(row.PartiesJSON, &row.Transaction.Parties); err != nil {
+		return models.GetTransactionResponse{}, &apperr.WrappedError{
 			Op:  op,
-			Err: err,
+			Err: fmt.Errorf("unmarshal payload: %w", err),
 		}
 	}
 
-	if len(transactions) == 0 {
-		return models.GetTransactionsResponse{}, apperr.ErrTransactionNotFound
-	}
-
-	resp = models.GetTransactionsResponse{Transactions: transactions}
-
-	data, err := json.Marshal(resp)
-	if err != nil {
-		return models.GetTransactionsResponse{}, &apperr.WrappedError{
-			Op:  op,
-			Err: fmt.Errorf("marshal response: %w", err),
-		}
-	}
-	if err := r.cache.Set(ctx, cacheKey, string(data)); err != nil {
-	}
-
-	return resp, nil
+	return models.GetTransactionResponse{
+		Transaction: &row.Transaction,
+	}, nil
 }
 
 // UpdateTransactionStatus обновляет статус платежа
@@ -187,22 +155,7 @@ func (r *TransactionRepository) UpdateTransactionStatus(ctx context.Context, req
 					WHERE id = $3
 	`
 
-	err := r.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
-		result, err := tx.ExecContext(ctx, query, req.Status, time.Now(), req.ID)
-		if err != nil {
-			return err
-		}
-
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if rowsAffected == 0 {
-			return apperr.ErrTransactionNotFound
-		}
-
-		return nil
-	})
+	result, err := r.db.ExecContext(ctx, query, req.Status, time.Now(), req.ID)
 	if err != nil {
 		return &apperr.WrappedError{
 			Op:  op,
@@ -210,25 +163,16 @@ func (r *TransactionRepository) UpdateTransactionStatus(ctx context.Context, req
 		}
 	}
 
-	go r.tryInvalidateAccountTransactionsCache(ctx, op, req.SenderAccountCode)
-	go r.tryInvalidateAccountTransactionsCache(ctx, op, req.RecipientAccountCode)
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
+	}
+	if rowsAffected == 0 {
+		return apperr.ErrTransactionNotFound
+	}
 
 	return nil
-}
-
-const cacheInvalidationTimeout = 5 * time.Second
-
-// invalidateAccountTransactionsCache инвалидирует кэш по номеру счёта
-func (r *TransactionRepository) tryInvalidateAccountTransactionsCache(ctx context.Context, op string, account string) {
-	defer func() {
-		if p := recover(); p != nil {
-		}
-	}()
-
-	ctx, cancel := context.WithTimeout(ctx, cacheInvalidationTimeout)
-	defer cancel()
-
-	cacheKey := fmt.Sprintf("account_transactions:%s", account)
-	if err := r.cache.DeleteByPrefix(ctx, cacheKey); err != nil {
-	}
 }
