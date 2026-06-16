@@ -31,12 +31,13 @@ func (r *TransactionRepository) CreateTransaction(
 	ctx context.Context,
 	req *models.CreateTransactionRequest,
 	event *models.CreateEventRequest,
+	step *models.CreateSagaStepRequest,
 ) error {
 	const op = "transaction.CreateTransaction"
 
 	const queryTransactions = `
-		INSERT INTO transactions (id, idempotency_key, parent_transaction_id, type, status, amount, currency, initiator, description)
-		VALUES (:id, :idempotency_key, :parent_transaction_id, :type, :status, :amount, :currency, :initiator, :description)
+		INSERT INTO transactions (id, idempotency_key, parent_transaction_id, type, status, amount, currency, description)
+		VALUES (:id, :idempotency_key, :parent_transaction_id, :type, :status, :amount, :currency, :description)
 	`
 
 	const queryParties = `
@@ -47,6 +48,11 @@ func (r *TransactionRepository) CreateTransaction(
 	const queryEvents = `
 		INSERT INTO events (id, transaction_id, partition_key, type, status, source, trace_id, span_id, payload)
 		VALUES (:id, :transaction_id, :partition_key, :type, :status, :source, :trace_id, :span_id, :payload)
+	`
+
+	const querySagaStep = `
+		INSERT INTO saga_steps (id, transaction_id, event_id, step_name, step_kind, status)
+		VALUES (:id, :transaction_id, :event_id, :step_name, :step_kind, :status)
 	`
 
 	err := r.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
@@ -61,7 +67,6 @@ func (r *TransactionRepository) CreateTransaction(
 
 		for _, party := range req.Parties {
 			_, err = tx.NamedExecContext(ctx, queryParties, party)
-
 			if err != nil {
 				if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
 					return apperr.ErrTransactionPartiesAlreadyExist
@@ -71,10 +76,17 @@ func (r *TransactionRepository) CreateTransaction(
 		}
 
 		_, err = tx.NamedExecContext(ctx, queryEvents, event)
-
 		if err != nil {
 			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
 				return apperr.ErrEventIDNotUnique
+			}
+			return err
+		}
+
+		_, err = tx.NamedExecContext(ctx, querySagaStep, step)
+		if err != nil {
+			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
+				return apperr.ErrSagaStepAlreadyExists
 			}
 			return err
 		}

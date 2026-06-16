@@ -100,7 +100,33 @@ var (
 	}
 )
 
-// Classify определяет, является ли ошибка retryable или terminal.
+// Ошибки саги
+var (
+	// ErrSagaAlreadyAdvanced - сага уже продвинута до целевого состояния
+	ErrSagaAlreadyAdvanced = &Error{
+		Code:    "SAGA__ALREADY_ADVANCED",
+		Message: "Saga already advanced to target state",
+	}
+	// ErrSagaStepAlreadyExists - шаг саги уже существует
+	ErrSagaStepAlreadyExists = &Error{
+		Code:    "SAGA_STEP_ALREADY_EXISTS",
+		Message: "Saga step already exists",
+	}
+
+	// ErrSagaStepNotFound - шаг саги не найден
+	ErrSagaStepNotFound = &Error{
+		Code:    "SAGA_STEP_NOT_FOUND",
+		Message: "Saga step not found",
+	}
+
+	// ErrInvalidSagaState - не верный saga state
+	ErrInvalidSagaState = &Error{
+		Code:    "INVALID_SAGA_STATE",
+		Message: "Invalid saga state transition",
+	}
+)
+
+// Classify определяет, является ли ошибка retryable или terminal
 func Classify(err error) (retryable bool, terminal bool) {
 	if err == nil {
 		return false, false

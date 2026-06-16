@@ -17,10 +17,25 @@ CREATE TYPE transaction_type AS ENUM (
     'ADJUSTMENT'                 -- Административная операция
 );
 
+-- Типы саг
+CREATE TYPE saga_type AS ENUM (
+    'ON_US_TRANSFER',
+    'OUTBOUND_REMITTANCE',
+    'INBOUND_REMITTANCE',
+    'TOPUP_REQUEST',
+    'REFUND_INTERNAL',
+    'REFUND_OUTBOUND',
+    'REFUND_INBOUND',
+    'CHARGEBACK_INTERNAL',
+    'CHARGEBACK_OUTBOUND',
+    'CHARGEBACK_INBOUND',
+    'ADJUSTMENT_DEBIT',
+    'ADJUSTMENT_CREDIT'
+);
+
 -- Статусы транзакций
 CREATE TYPE transaction_status AS ENUM (
     'PROCESSING',                -- Активная сага, выполняются шаги
-    'AWAITING_EXTERNAL',         -- Ожидаем ответа/средств от внешней системы
     'COMPLETED',                 -- Успешно завершена
     'CANCELLED',                 -- Отменена
     'BLOCKED'                    -- Счета заблокированы, требуется ручное вмешательство
@@ -44,6 +59,10 @@ CREATE TABLE transactions (
 
     -- Тип транзакции: transaction_type
     type                        transaction_type NOT NULL,
+    -- Тип саги 
+    saga_type                   saga_type NOT NULL,
+    -- Текущее состояние в state machine
+    saga_state                   VARCHAR(50) NOT NULL DEFAULT 'INIT',
     -- Статус транзакции: transaction_status
     status                      transaction_status NOT NULL DEFAULT 'PROCESSING',
 
@@ -51,9 +70,6 @@ CREATE TABLE transactions (
     amount                      DECIMAL(12, 2) NOT NULL CHECK (amount > 0),
     -- Валюта транзакции в формате ISO 4217
     currency                    VARCHAR(3) NOT NULL,
-
-    -- Инициатор
-    initiator                   initiator_type NOT NULL,
 
     -- Описание платежа
     description                 TEXT,

@@ -50,16 +50,16 @@ type Config struct {
 
 // EventHandler определяет интерфейс для обработки событий
 type EventHandler interface {
-	HandleTransactionResponse(ctx context.Context, event *models.Event) error
+	HandleTransactionCreate(ctx context.Context, event *models.Event) error
 	HandleFreezeResponse(ctx context.Context, event *models.Event) error
-	HandleReserveResponse(ctx context.Context, event *models.Event) error
-	HandleExternalResponse(ctx context.Context, event *models.Event) error
-	HandleWithdrawResponse(ctx context.Context, event *models.Event) error
+	HandleExternalPaymentResponse(ctx context.Context, event *models.Event) error
+	HandleCaptureResponse(ctx context.Context, event *models.Event) error
 	HandleDepositResponse(ctx context.Context, event *models.Event) error
+	HandleCreditResponse(ctx context.Context, event *models.Event) error
+	HandleDebitResponse(ctx context.Context, event *models.Event) error
 	HandleUnfreezeResponse(ctx context.Context, event *models.Event) error
-	HandleUnreserveResponse(ctx context.Context, event *models.Event) error
+	HandleExternalCommitResponse(ctx context.Context, event *models.Event) error
 	HandleExternalRollbackResponse(ctx context.Context, event *models.Event) error
-	HandleRefundResponse(ctx context.Context, event *models.Event) error
 	HandleBlockAccountResponse(ctx context.Context, event *models.Event) error
 }
 
@@ -377,26 +377,26 @@ func (c *Consumer) processMessage(ctx context.Context, topic string, message kaf
 // routeEvent направляет событие соответствующему обработчику
 func (c *Consumer) routeEvent(ctx context.Context, event *models.Event) error {
 	switch event.Type {
-	case models.EventTransactionRequest:
-		return c.handler.HandleTransactionResponse(ctx, event)
+	case models.EventTransactionCreate:
+		return c.handler.HandleTransactionCreate(ctx, event)
 	case models.EventFreezeResponse:
 		return c.handler.HandleFreezeResponse(ctx, event)
-	case models.EventReserveResponse:
-		return c.handler.HandleReserveResponse(ctx, event)
-	case models.EventExternalResponse:
-		return c.handler.HandleExternalResponse(ctx, event)
-	case models.EventWithdrawResponse:
-		return c.handler.HandleWithdrawResponse(ctx, event)
+	case models.EventPaymentResponse:
+		return c.handler.HandleExternalPaymentResponse(ctx, event)
+	case models.EventCaptureResponse:
+		return c.handler.HandleCaptureResponse(ctx, event)
 	case models.EventDepositResponse:
 		return c.handler.HandleDepositResponse(ctx, event)
+	case models.EventCreditResponse:
+		return c.handler.HandleCreditResponse(ctx, event)
+	case models.EventDebitResponse:
+		return c.handler.HandleDebitResponse(ctx, event)
 	case models.EventUnfreezeResponse:
 		return c.handler.HandleUnfreezeResponse(ctx, event)
-	case models.EventUnreserveResponse:
-		return c.handler.HandleUnreserveResponse(ctx, event)
-	case models.EventExternalRollback:
+	case models.EventCommitResponse:
+		return c.handler.HandleExternalCommitResponse(ctx, event)
+	case models.EventRollbackResponse:
 		return c.handler.HandleExternalRollbackResponse(ctx, event)
-	case models.EventRefundResponse:
-		return c.handler.HandleRefundResponse(ctx, event)
 	case models.EventBlockResponse:
 		return c.handler.HandleBlockAccountResponse(ctx, event)
 	default:
