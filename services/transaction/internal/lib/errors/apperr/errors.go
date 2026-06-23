@@ -74,6 +74,11 @@ var (
 		Code:    "UNKNOWN_TRANSACTION_TYPE",
 		Message: "unknown transaction type",
 	}
+	// ErrInvalidParentTransactionID - parent transaction uuid не валиден
+	ErrInvalidParentTransactionID = &Error{
+		Code:    "INVALID_PARENT_TRANSACTION_ID",
+		Message: "parent_transaction_id is not a valid uuid",
+	}
 )
 
 // Ошибки событий

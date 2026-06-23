@@ -1,6 +1,8 @@
 package saga
 
-import "transaction-service/internal/models"
+import (
+	"transaction-service/internal/models"
+)
 
 const (
 	StateInit                  = "INIT"

@@ -3,6 +3,7 @@ package saga
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"transaction-service/internal/lib/errors/apperr"
 	"transaction-service/internal/models"
 
@@ -61,20 +62,20 @@ func (o *Orchestrator) Apply(ctx context.Context, apply Apply) error {
 
 	var events []*models.CreateEventRequest
 	for _, cmd := range transition.Commands {
-		payload, partitionKey, err := cmd.BuildPayload(transaction)
+		payload, err := cmd.BuildPayload(transaction)
 		if err != nil {
 			return err
 		}
-		ev := o.buildEvent(models.BuildEventRequest{
+		event := o.buildEvent(models.BuildEventRequest{
 			Transaction:  transaction,
 			StepName:     cmd.StepName,
-			PartitionKey: partitionKey,
+			PartitionKey: transaction.ID.String(),
 			EventType:    cmd.EventType,
 			TraceID:      apply.TraceID,
 			SpanID:       apply.SpanID,
 			Payload:      payload,
 		})
-		events = append(events, ev)
+		events = append(events, event)
 	}
 
 	advanceRequest := &models.AdvanceRequest{
@@ -129,4 +130,87 @@ func (o *Orchestrator) buildEvent(
 			Payload:       payloadBytes,
 		},
 	}
+}
+
+func (o *Orchestrator) ResolveSagaType(txnType string, parentType *string) (string, error) {
+	const op = "saga.ResolveSagaType"
+
+	switch txnType {
+	case models.TransactionTypeOnUsTransfer,
+		models.TransactionTypeDirectDebit:
+		return models.SagaOnUsTransfer, nil
+
+	case models.TransactionTypeOutboundRemittance,
+		models.TransactionTypeOutboundDirectDebit:
+		return models.SagaOutboundRemittance, nil
+
+	case models.TransactionTypeInboundRemittance,
+		models.TransactionTypeInboundDirectDebit:
+		return models.SagaInboundRemittance, nil
+
+	case models.TransactionTypeTopUpRequest:
+		return models.SagaTopUpRequest, nil
+
+	case models.TransactionTypeRefund:
+		if parentType == nil {
+			return "", &apperr.WrappedError{
+				Op:  op,
+				Err: apperr.ErrInvalidParentTransactionID,
+			}
+		}
+		switch *parentType {
+		case models.TransactionTypeOnUsTransfer,
+			models.TransactionTypeDirectDebit:
+			return models.SagaRefundInternal, nil
+		case models.TransactionTypeOutboundRemittance,
+			models.TransactionTypeOutboundDirectDebit:
+			return models.SagaRefundOutbound, nil
+		case models.TransactionTypeInboundRemittance,
+			models.TransactionTypeInboundDirectDebit:
+			return models.SagaRefundInbound, nil
+		default:
+			return "", &apperr.WrappedError{
+				Op:  op,
+				Err: fmt.Errorf("refund not supported for parent type: %s", *parentType),
+			}
+		}
+
+	case models.TransactionTypeChargeback:
+		if parentType == nil {
+			return "", &apperr.WrappedError{
+				Op:  op,
+				Err: apperr.ErrInvalidParentTransactionID,
+			}
+		}
+		switch *parentType {
+		case models.TransactionTypeOnUsTransfer,
+			models.TransactionTypeDirectDebit:
+			return models.SagaChargebackInternal, nil
+		case models.TransactionTypeOutboundRemittance,
+			models.TransactionTypeOutboundDirectDebit:
+			return models.SagaChargebackOutbound, nil
+		case models.TransactionTypeInboundRemittance,
+			models.TransactionTypeInboundDirectDebit:
+			return models.SagaChargebackInbound, nil
+		default:
+			return "", &apperr.WrappedError{
+				Op:  op,
+				Err: fmt.Errorf("chargeback not supported for parent type: %s", *parentType),
+			}
+		}
+
+	case models.TransactionTypeAdjustment:
+		return models.SagaAdjustmentCredit, nil
+
+	default:
+		return "", &apperr.WrappedError{
+			Op:  op,
+			Err: apperr.ErrUnknownTransactionType,
+		}
+	}
+}
+
+func (o *Orchestrator) Definition(sagaType string) (Definition, bool) {
+	def, ok := o.definition[sagaType]
+	return def, ok
 }

@@ -15,10 +15,10 @@ func partyIdentifiers(transaction *models.Transaction, role string) (map[string]
 	return nil, false
 }
 
-func accountPayload(transaction *models.Transaction, role string, stepName string) (any, string, error) {
+func accountPayload(transaction *models.Transaction, role string, stepName string) (any, error) {
 	identifiers, ok := partyIdentifiers(transaction, role)
 	if !ok {
-		return nil, "", &apperr.WrappedError{
+		return nil, &apperr.WrappedError{
 			Op:  "saga.accountPayload",
 			Err: fmt.Errorf("party %q not found", role),
 		}
@@ -30,7 +30,7 @@ func accountPayload(transaction *models.Transaction, role string, stepName strin
 		AccountCode:   code,
 		Amount:        transaction.Amount,
 		Currency:      transaction.Currency,
-	}, code, nil
+	}, nil
 }
 
 func freezeSenderCmd() Command {
@@ -38,7 +38,7 @@ func freezeSenderCmd() Command {
 		EventType: models.EventFreezeRequest,
 		StepName:  StepFreezeSender,
 		StepKind:  models.StepKindAction,
-		BuildPayload: func(transaction *models.Transaction) (any, string, error) {
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
 			return accountPayload(transaction, models.PartyRoleSender, StepFreezeSender)
 		},
 	}
@@ -49,7 +49,7 @@ func depositRecipientCmd() Command {
 		EventType: models.EventDepositRequest,
 		StepName:  StepDepositRecipient,
 		StepKind:  models.StepKindAction,
-		BuildPayload: func(transaction *models.Transaction) (any, string, error) {
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
 			return accountPayload(transaction, models.PartyRoleRecipient, StepDepositRecipient)
 		},
 	}
@@ -60,7 +60,7 @@ func captureSenderCmd() Command {
 		EventType: models.EventCaptureRequest,
 		StepName:  StepCaptureSender,
 		StepKind:  models.StepKindAction,
-		BuildPayload: func(transaction *models.Transaction) (any, string, error) {
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
 			return accountPayload(transaction, models.PartyRoleSender, StepCaptureSender)
 		},
 	}
@@ -71,7 +71,7 @@ func reversingRecipientCmd() Command {
 		EventType: models.EventDebitRequest,
 		StepName:  StepReversingRecipient,
 		StepKind:  models.StepKindCompensation,
-		BuildPayload: func(transaction *models.Transaction) (any, string, error) {
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
 			return accountPayload(transaction, models.PartyRoleRecipient, StepReversingRecipient)
 		},
 	}
@@ -82,7 +82,7 @@ func unfreezeSenderCmd() Command {
 		EventType: models.EventUnfreezeRequest,
 		StepName:  StepUnfreezeSender,
 		StepKind:  models.StepKindCompensation,
-		BuildPayload: func(transaction *models.Transaction) (any, string, error) {
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
 			return accountPayload(transaction, models.PartyRoleSender, StepUnfreezeSender)
 		},
 	}
@@ -93,7 +93,7 @@ func blockSenderCmd() Command {
 		EventType: models.EventBlockRequest,
 		StepName:  StepBlockSender,
 		StepKind:  models.StepKindCompensation,
-		BuildPayload: func(transaction *models.Transaction) (any, string, error) {
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
 			return accountPayload(transaction, models.PartyRoleSender, StepBlockSender)
 		},
 	}
@@ -104,7 +104,7 @@ func blockRecipientCmd() Command {
 		EventType: models.EventBlockRequest,
 		StepName:  StepBlockRecipient,
 		StepKind:  models.StepKindCompensation,
-		BuildPayload: func(transaction *models.Transaction) (any, string, error) {
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
 			return accountPayload(transaction, models.PartyRoleRecipient, StepBlockRecipient)
 		},
 	}
@@ -115,8 +115,8 @@ func transactionCompletedCmd() Command {
 		EventType: models.EventTransactionCompleted,
 		StepName:  "transaction_completed",
 		StepKind:  models.StepKindAction,
-		BuildPayload: func(transaction *models.Transaction) (any, string, error) {
-			return models.TransactionCompletedPayload{CompletedAt: transaction.UpdatedAt}, transaction.ID.String(), nil
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
+			return models.TransactionCompletedPayload{CompletedAt: transaction.UpdatedAt}, nil
 		},
 	}
 }
@@ -126,8 +126,8 @@ func transactionCancelledCmd(reason string) Command {
 		EventType: models.EventTransactionCancelled,
 		StepName:  "transaction_cancelled",
 		StepKind:  models.StepKindAction,
-		BuildPayload: func(transaction *models.Transaction) (any, string, error) {
-			return models.TransactionCancelledPayload{Reason: reason, CancelledAt: transaction.UpdatedAt}, transaction.ID.String(), nil
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
+			return models.TransactionCancelledPayload{Reason: reason, CancelledAt: transaction.UpdatedAt}, nil
 		},
 	}
 }
@@ -137,11 +137,11 @@ func transactionBlockedCmd() Command {
 		EventType: models.EventTransactionBlocked,
 		StepName:  "transaction_blocked",
 		StepKind:  models.StepKindAction,
-		BuildPayload: func(transaction *models.Transaction) (any, string, error) {
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
 			return models.TransactionCancelledPayload{
 				Reason:      "blocked, manual intervention required",
 				CancelledAt: transaction.UpdatedAt,
-			}, transaction.ID.String(), nil
+			}, nil
 		},
 	}
 }

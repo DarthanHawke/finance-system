@@ -22,7 +22,7 @@ type Command struct {
 	EventType    string
 	StepName     string
 	StepKind     string
-	BuildPayload func(transaction *models.Transaction) (any, string, error)
+	BuildPayload func(transaction *models.Transaction) (any, error)
 }
 
 type Transition struct {
