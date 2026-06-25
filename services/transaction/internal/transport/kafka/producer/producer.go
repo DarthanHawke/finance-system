@@ -82,7 +82,7 @@ func createWriter(brokers []string, topic string, batchSize int, batchTimeout ti
 		RequiredAcks:           kafka.RequiredAcks(requiredAcks),
 		MaxAttempts:            maxAttempts,
 		WriteTimeout:           writeTimeout,
-		AllowAutoTopicCreation: true,
+		AllowAutoTopicCreation: false,
 		Compression:            kafka.Snappy,
 	}
 }

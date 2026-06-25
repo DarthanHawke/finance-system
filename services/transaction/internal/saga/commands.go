@@ -33,6 +33,32 @@ func accountPayload(transaction *models.Transaction, role string, stepName strin
 	}, nil
 }
 
+func switchPayload(transaction *models.Transaction, stepName string) (any, error) {
+	senderIdentifiers, ok := partyIdentifiers(transaction, models.PartyRoleSender)
+	if !ok {
+		return nil, &apperr.WrappedError{
+			Op:  "saga.switchPayload",
+			Err: fmt.Errorf("party SENDER not found"),
+		}
+	}
+	recipientIdentifiers, ok := partyIdentifiers(transaction, models.PartyRoleRecipient)
+	if !ok {
+		return nil, &apperr.WrappedError{
+			Op:  "saga.switchPayload",
+			Err: fmt.Errorf("party RECIPIENT not found"),
+		}
+	}
+	return models.SwitchCommandPayload{
+		TransactionID: transaction.ID.String(),
+		StepName:      stepName,
+		Amount:        transaction.Amount,
+		Currency:      transaction.Currency,
+		Sender:        senderIdentifiers,
+		Recipient:     recipientIdentifiers,
+		Description:   transaction.Description,
+	}, nil
+}
+
 func freezeSenderCmd() Command {
 	return Command{
 		EventType: models.EventFreezeRequest,
@@ -44,13 +70,35 @@ func freezeSenderCmd() Command {
 	}
 }
 
-func depositRecipientCmd() Command {
+func creditRecipientCmd() Command {
 	return Command{
-		EventType: models.EventDepositRequest,
-		StepName:  StepDepositRecipient,
+		EventType: models.EventCreditRequest,
+		StepName:  StepCreditRecipient,
 		StepKind:  models.StepKindAction,
 		BuildPayload: func(transaction *models.Transaction) (any, error) {
-			return accountPayload(transaction, models.PartyRoleRecipient, StepDepositRecipient)
+			return accountPayload(transaction, models.PartyRoleRecipient, StepCreditRecipient)
+		},
+	}
+}
+
+func debitRecipientCmd() Command {
+	return Command{
+		EventType: models.EventDebitRequest,
+		StepName:  StepDebitRecipient,
+		StepKind:  models.StepKindAction,
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
+			return accountPayload(transaction, models.PartyRoleRecipient, StepDebitRecipient)
+		},
+	}
+}
+
+func creditSenderCmd() Command {
+	return Command{
+		EventType: models.EventCreditRequest,
+		StepName:  StepCreditSender,
+		StepKind:  models.StepKindAction,
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
+			return accountPayload(transaction, models.PartyRoleSender, StepCreditSender)
 		},
 	}
 }
@@ -106,6 +154,72 @@ func blockRecipientCmd() Command {
 		StepKind:  models.StepKindCompensation,
 		BuildPayload: func(transaction *models.Transaction) (any, error) {
 			return accountPayload(transaction, models.PartyRoleRecipient, StepBlockRecipient)
+		},
+	}
+}
+
+func outboundPaymentCmd() Command {
+	return Command{
+		EventType: models.EventPaymentRequest,
+		StepName:  StepOutboundPayment,
+		StepKind:  models.StepKindAction,
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
+			return switchPayload(transaction, StepOutboundPayment)
+		},
+	}
+}
+
+func inboundPaymentCmd() Command {
+	return Command{
+		EventType: models.EventPaymentRequest,
+		StepName:  StepInboundPayment,
+		StepKind:  models.StepKindAction,
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
+			return switchPayload(transaction, StepInboundPayment)
+		},
+	}
+}
+
+func rollbackPaymentCmd() Command {
+	return Command{
+		EventType: models.EventRollbackRequest,
+		StepName:  StepRollbackPayment,
+		StepKind:  models.StepKindCompensation,
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
+			return switchPayload(transaction, StepRollbackPayment)
+		},
+	}
+}
+
+func topUpRequestCmd() Command {
+	return Command{
+		EventType: models.EventPaymentRequest,
+		StepName:  StepTopupRequest,
+		StepKind:  models.StepKindAction,
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
+			return switchPayload(transaction, StepTopupRequest)
+		},
+	}
+}
+
+func refundPaymentCmd() Command {
+	return Command{
+		EventType: models.EventPaymentRequest,
+		StepName:  StepRefundPayment,
+		StepKind:  models.StepKindAction,
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
+			return switchPayload(transaction, StepRefundPayment)
+		},
+	}
+}
+
+func chargebackPaymentCmd() Command {
+	return Command{
+		EventType: models.EventPaymentRequest,
+		StepName:  StepChargebackPayment,
+		StepKind:  models.StepKindAction,
+		BuildPayload: func(tx *models.Transaction) (any, error) {
+			return switchPayload(tx, StepChargebackPayment)
 		},
 	}
 }

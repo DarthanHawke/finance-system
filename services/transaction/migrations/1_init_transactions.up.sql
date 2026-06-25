@@ -55,14 +55,14 @@ CREATE TABLE transactions (
     -- Идемпотентность(для ON_US_TRANSFER, при работе с внешними сервисами используем external_reference)
     idempotency_key             VARCHAR(64) UNIQUE,
     -- Исходная операция(при возврате)
-    parent_transaction_id       UUID REFERENCES transactions(id),
+    parent_transaction_id       UUID,
 
     -- Тип транзакции: transaction_type
     type                        transaction_type NOT NULL,
     -- Тип саги 
     saga_type                   saga_type NOT NULL,
     -- Текущее состояние в state machine
-    saga_state                   VARCHAR(50) NOT NULL DEFAULT 'INIT',
+    saga_state                  TEXT NOT NULL DEFAULT 'INIT',
     -- Статус транзакции: transaction_status
     status                      transaction_status NOT NULL DEFAULT 'PROCESSING',
 

@@ -7,32 +7,70 @@ import (
 const (
 	StateInit                  = "INIT"
 	StateSenderFreezing        = "SENDER_FREEZING"
-	StateRecipientDepositing   = "RECIPIENT_DEPOSITING"
+	StateExternalPayment       = "EXTERNAL_PAYMENT"
+	StateCreditingRecipient    = "CREDITING_RECIPIENT"
+	StateCreditingSender       = "CREDITING_SENDER"
+	StateDebitingRecipient     = "DEBITING_RECIPIENT"
 	StateSenderCapturing       = "SENDER_CAPTURING"
 	StateCompensatingRecipient = "COMPENSATING_RECIPIENT"
 	StateCompensatingSender    = "COMPENSATING_SENDER"
+	StateCompensatingExternal  = "COMPENSATING_EXTERNAL"
 	StateCompleted             = "COMPLETED"
 	StateCancelled             = "CANCELLED"
 	StateBlocked               = "BLOCKED"
 )
 
 const (
-	StepFreezeSender       = "freeze_sender"
-	StepDepositRecipient   = "deposit_recipient"
-	StepCaptureSender      = "capture_sender"
+	StepFreezeSender    = "freeze_sender"
+	StepCreditSender    = "credit_sender"
+	StepCreditRecipient = "credit_recipient"
+	StepCaptureSender   = "capture_sender"
+	StepDebitRecipient  = "debit_recipient"
+
+	StepTopupRequest      = "topup_request"
+	StepOutboundPayment   = "outbound_payment"
+	StepInboundPayment    = "inbound_payment"
+	StepRefundPayment     = "refund_payment"
+	StepRollbackPayment   = "rollback_payment"
+	StepChargebackPayment = "chargeback_payment"
+
 	StepReversingRecipient = "reversing_recipient"
 	StepUnfreezeSender     = "unfreeze_sender"
 	StepBlockSender        = "block_sender"
 	StepBlockRecipient     = "block_recipient"
 )
 
+func Register() map[string]Definition {
+	return map[string]Definition{
+		models.SagaOnUsTransfer:       buildOnUsTransfer(),
+		models.SagaOutboundRemittance: buildOutboundRemittance(),
+		models.SagaInboundRemittance:  buildInboundRemittance(),
+		models.SagaTopUpRequest:       buildTopUpRequest(),
+		models.SagaRefundInternal:     buildRefundInternal(),
+		models.SagaRefundOutbound:     buildRefundOutbound(),
+		models.SagaRefundInbound:      buildRefundInbound(),
+		models.SagaChargebackInternal: buildChargebackInternal(),
+		models.SagaChargebackOutbound: buildChargebackOutbound(),
+		models.SagaChargebackInbound:  buildChargebackInbound(),
+		models.SagaAdjustmentCredit:   buildAdjustmentCredit(),
+		models.SagaAdjustmentDebit:    buildAdjustmentDebit(),
+	}
+}
+
 func buildOnUsTransfer() Definition {
 	transaction := map[string]map[int]Transition{}
 
+	transaction[StateInit] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateInit, NewState: StateSenderFreezing,
+			Commands: []Command{freezeSenderCmd()},
+		},
+	}
+
 	transaction[StateSenderFreezing] = map[int]Transition{
 		OutcomeSuccess: {
-			From: StateSenderFreezing, NewState: StateRecipientDepositing,
-			Commands: []Command{depositRecipientCmd()},
+			From: StateSenderFreezing, NewState: StateCreditingRecipient,
+			Commands: []Command{creditRecipientCmd()},
 		},
 		OutcomeFailed: {
 			From: StateSenderFreezing, NewState: StateCancelled,
@@ -41,13 +79,13 @@ func buildOnUsTransfer() Definition {
 		},
 	}
 
-	transaction[StateRecipientDepositing] = map[int]Transition{
+	transaction[StateCreditingRecipient] = map[int]Transition{
 		OutcomeSuccess: {
-			From: StateRecipientDepositing, NewState: StateSenderCapturing,
+			From: StateCreditingRecipient, NewState: StateSenderCapturing,
 			Commands: []Command{captureSenderCmd()},
 		},
 		OutcomeFailed: {
-			From: StateRecipientDepositing, NewState: StateCompensatingSender,
+			From: StateCreditingRecipient, NewState: StateCompensatingSender,
 			Commands: []Command{unfreezeSenderCmd()},
 		},
 	}
@@ -91,5 +129,399 @@ func buildOnUsTransfer() Definition {
 
 	return Definition{
 		SagaType: models.SagaOnUsTransfer, InitState: StateInit, Transitions: transaction,
+	}
+}
+
+func buildOutboundRemittance() Definition {
+	t := map[string]map[int]Transition{}
+
+	t[StateInit] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateInit, NewState: StateSenderFreezing,
+			Commands: []Command{freezeSenderCmd()},
+		},
+	}
+
+	t[StateSenderFreezing] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateSenderFreezing, NewState: StateExternalPayment,
+			Commands: []Command{outboundPaymentCmd()},
+		},
+		OutcomeFailed: {
+			From: StateSenderFreezing, NewState: StateCancelled,
+			NewStatus: models.TransactionStatusCancelled,
+			Commands:  []Command{transactionCancelledCmd("sender freeze rejected")},
+		},
+	}
+
+	t[StateExternalPayment] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateExternalPayment, NewState: StateSenderCapturing,
+			Commands: []Command{captureSenderCmd()},
+		},
+		OutcomeFailed: {
+			From: StateExternalPayment, NewState: StateCompensatingSender,
+			Commands: []Command{unfreezeSenderCmd()},
+		},
+	}
+
+	t[StateSenderCapturing] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateSenderCapturing, NewState: StateCompleted,
+			NewStatus: models.TransactionStatusCompleted,
+			Commands:  []Command{transactionCompletedCmd()},
+		},
+		OutcomeFailed: {
+			From: StateSenderCapturing, NewState: StateCompensatingExternal,
+			Commands: []Command{rollbackPaymentCmd()},
+		},
+	}
+
+	t[StateCompensatingExternal] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateCompensatingExternal, NewState: StateCompensatingSender,
+			Commands: []Command{unfreezeSenderCmd()},
+		},
+		OutcomeFailed: {
+			From: StateCompensatingExternal, NewState: StateBlocked,
+			NewStatus: models.TransactionStatusBlocked, Terminal: true,
+			Commands: []Command{blockSenderCmd(), transactionBlockedCmd()},
+		},
+	}
+
+	t[StateCompensatingSender] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateCompensatingSender, NewState: StateCancelled,
+			NewStatus: models.TransactionStatusCancelled,
+			Commands:  []Command{transactionCancelledCmd("compensated")},
+		},
+		OutcomeFailed: {
+			From: StateCompensatingSender, NewState: StateBlocked,
+			NewStatus: models.TransactionStatusBlocked, Terminal: true,
+			Commands: []Command{blockSenderCmd(), transactionBlockedCmd()},
+		},
+	}
+
+	return Definition{
+		SagaType: models.SagaOutboundRemittance, InitState: StateInit, Transitions: t,
+	}
+}
+
+func buildInboundRemittance() Definition {
+	t := map[string]map[int]Transition{}
+
+	t[StateInit] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateInit, NewState: StateCreditingRecipient,
+			Commands: []Command{creditRecipientCmd()},
+		},
+	}
+
+	t[StateCreditingRecipient] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateCreditingRecipient, NewState: StateCompleted,
+			NewStatus: models.TransactionStatusCompleted,
+			Commands:  []Command{transactionCompletedCmd()},
+		},
+		OutcomeFailed: {
+			From: StateCreditingRecipient, NewState: StateBlocked,
+			NewStatus: models.TransactionStatusBlocked, Terminal: true,
+			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+		},
+	}
+
+	return Definition{
+		SagaType: models.SagaInboundRemittance, InitState: StateInit, Transitions: t,
+	}
+}
+
+func buildTopUpRequest() Definition {
+	t := map[string]map[int]Transition{}
+
+	t[StateInit] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateInit, NewState: StateCompleted,
+			NewStatus: models.TransactionStatusCompleted,
+			Commands: []Command{
+				topUpRequestCmd(),
+				transactionCompletedCmd(),
+			},
+		},
+	}
+
+	return Definition{
+		SagaType: models.SagaTopUpRequest, InitState: StateInit, Transitions: t,
+	}
+}
+
+func buildRefundInternal() Definition {
+	t := map[string]map[int]Transition{}
+
+	t[StateInit] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateInit, NewState: StateCreditingSender,
+			Commands: []Command{creditSenderCmd()},
+		},
+	}
+
+	t[StateCreditingSender] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateCreditingSender, NewState: StateDebitingRecipient,
+			Commands: []Command{debitRecipientCmd()},
+		},
+		OutcomeFailed: {
+			From: StateCreditingSender, NewState: StateBlocked,
+			NewStatus: models.TransactionStatusBlocked, Terminal: true,
+			Commands: []Command{blockSenderCmd(), transactionBlockedCmd()},
+		},
+	}
+
+	t[StateDebitingRecipient] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateDebitingRecipient, NewState: StateCompleted,
+			NewStatus: models.TransactionStatusCompleted,
+			Commands:  []Command{transactionCompletedCmd()},
+		},
+		OutcomeFailed: {
+			From: StateDebitingRecipient, NewState: StateBlocked,
+			NewStatus: models.TransactionStatusBlocked, Terminal: true,
+			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+		},
+	}
+
+	return Definition{
+		SagaType: models.SagaRefundInternal, InitState: StateInit, Transitions: t,
+	}
+}
+
+func buildRefundOutbound() Definition {
+	t := map[string]map[int]Transition{}
+
+	t[StateInit] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateInit, NewState: StateCreditingSender,
+			Commands: []Command{creditSenderCmd()},
+		},
+	}
+
+	t[StateCreditingSender] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateCreditingSender, NewState: StateCompleted,
+			NewStatus: models.TransactionStatusCompleted,
+			Commands:  []Command{transactionCompletedCmd()},
+		},
+		OutcomeFailed: {
+			From: StateCreditingSender, NewState: StateBlocked,
+			NewStatus: models.TransactionStatusBlocked, Terminal: true,
+			Commands: []Command{blockSenderCmd(), transactionBlockedCmd()},
+		},
+	}
+
+	return Definition{
+		SagaType: models.SagaRefundOutbound, InitState: StateInit, Transitions: t,
+	}
+}
+
+func buildRefundInbound() Definition {
+	t := map[string]map[int]Transition{}
+
+	t[StateInit] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateInit, NewState: StateDebitingRecipient,
+			Commands: []Command{debitRecipientCmd()},
+		},
+	}
+
+	t[StateDebitingRecipient] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateDebitingRecipient, NewState: StateExternalPayment,
+			Commands: []Command{refundPaymentCmd()},
+		},
+		OutcomeFailed: {
+			From: StateDebitingRecipient, NewState: StateBlocked,
+			NewStatus: models.TransactionStatusBlocked, Terminal: true,
+			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+		},
+	}
+
+	t[StateExternalPayment] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateExternalPayment, NewState: StateCompleted,
+			NewStatus: models.TransactionStatusCompleted,
+			Commands:  []Command{transactionCompletedCmd()},
+		},
+		OutcomeFailed: {
+			From: StateExternalPayment, NewState: StateBlocked,
+			NewStatus: models.TransactionStatusBlocked, Terminal: true,
+			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+		},
+	}
+
+	return Definition{
+		SagaType: models.SagaRefundInbound, InitState: StateInit, Transitions: t,
+	}
+}
+
+func buildChargebackInternal() Definition {
+	t := map[string]map[int]Transition{}
+
+	t[StateInit] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateInit, NewState: StateDebitingRecipient,
+			Commands: []Command{debitRecipientCmd()},
+		},
+	}
+
+	t[StateDebitingRecipient] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateDebitingRecipient, NewState: StateCreditingSender,
+			Commands: []Command{creditSenderCmd()},
+		},
+		OutcomeFailed: {
+			From: StateDebitingRecipient, NewState: StateBlocked,
+			NewStatus: models.TransactionStatusBlocked, Terminal: true,
+			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+		},
+	}
+
+	t[StateCreditingSender] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateCreditingSender, NewState: StateCompleted,
+			NewStatus: models.TransactionStatusCompleted,
+			Commands:  []Command{transactionCompletedCmd()},
+		},
+		OutcomeFailed: {
+			From: StateCreditingSender, NewState: StateBlocked,
+			NewStatus: models.TransactionStatusBlocked, Terminal: true,
+			Commands: []Command{blockSenderCmd(), transactionBlockedCmd()},
+		},
+	}
+
+	return Definition{
+		SagaType: models.SagaChargebackInternal, InitState: StateInit, Transitions: t,
+	}
+}
+
+func buildChargebackOutbound() Definition {
+	t := map[string]map[int]Transition{}
+
+	t[StateInit] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateInit, NewState: StateCreditingSender,
+			Commands: []Command{creditSenderCmd()},
+		},
+	}
+
+	t[StateCreditingSender] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateCreditingSender, NewState: StateCompleted,
+			NewStatus: models.TransactionStatusCompleted,
+			Commands:  []Command{transactionCompletedCmd()},
+		},
+		OutcomeFailed: {
+			From: StateCreditingSender, NewState: StateBlocked,
+			NewStatus: models.TransactionStatusBlocked, Terminal: true,
+			Commands: []Command{blockSenderCmd(), transactionBlockedCmd()},
+		},
+	}
+
+	return Definition{
+		SagaType: models.SagaChargebackOutbound, InitState: StateInit, Transitions: t,
+	}
+}
+
+func buildChargebackInbound() Definition {
+	t := map[string]map[int]Transition{}
+
+	t[StateInit] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateInit, NewState: StateDebitingRecipient,
+			Commands: []Command{debitRecipientCmd()},
+		},
+	}
+
+	t[StateDebitingRecipient] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateDebitingRecipient, NewState: StateExternalPayment,
+			Commands: []Command{chargebackPaymentCmd()},
+		},
+		OutcomeFailed: {
+			From: StateDebitingRecipient, NewState: StateBlocked,
+			NewStatus: models.TransactionStatusBlocked, Terminal: true,
+			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+		},
+	}
+
+	t[StateExternalPayment] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateExternalPayment, NewState: StateCompleted,
+			NewStatus: models.TransactionStatusCompleted,
+			Commands:  []Command{transactionCompletedCmd()},
+		},
+		OutcomeFailed: {
+			From: StateExternalPayment, NewState: StateBlocked,
+			NewStatus: models.TransactionStatusBlocked, Terminal: true,
+			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+		},
+	}
+
+	return Definition{
+		SagaType: models.SagaChargebackInbound, InitState: StateInit, Transitions: t,
+	}
+}
+
+func buildAdjustmentCredit() Definition {
+	t := map[string]map[int]Transition{}
+
+	t[StateInit] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateInit, NewState: StateCreditingRecipient,
+			Commands: []Command{creditRecipientCmd()},
+		},
+	}
+
+	t[StateCreditingRecipient] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateCreditingRecipient, NewState: StateCompleted,
+			NewStatus: models.TransactionStatusCompleted,
+			Commands:  []Command{transactionCompletedCmd()},
+		},
+		OutcomeFailed: {
+			From: StateCreditingRecipient, NewState: StateBlocked,
+			NewStatus: models.TransactionStatusBlocked, Terminal: true,
+			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+		},
+	}
+
+	return Definition{
+		SagaType: models.SagaAdjustmentCredit, InitState: StateInit, Transitions: t,
+	}
+}
+
+func buildAdjustmentDebit() Definition {
+	t := map[string]map[int]Transition{}
+
+	t[StateInit] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateInit, NewState: StateDebitingRecipient,
+			Commands: []Command{debitRecipientCmd()},
+		},
+	}
+
+	t[StateDebitingRecipient] = map[int]Transition{
+		OutcomeSuccess: {
+			From: StateDebitingRecipient, NewState: StateCompleted,
+			NewStatus: models.TransactionStatusCompleted,
+			Commands:  []Command{transactionCompletedCmd()},
+		},
+		OutcomeFailed: {
+			From: StateDebitingRecipient, NewState: StateBlocked,
+			NewStatus: models.TransactionStatusBlocked, Terminal: true,
+			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+		},
+	}
+
+	return Definition{
+		SagaType: models.SagaAdjustmentDebit, InitState: StateInit, Transitions: t,
 	}
 }

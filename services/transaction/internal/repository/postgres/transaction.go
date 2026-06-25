@@ -1,4 +1,3 @@
-// Пакет postgres реализовывает работу с базами данных
 package postgres
 
 import (
@@ -26,77 +25,106 @@ func NewTransactionRepository(db *Database) *TransactionRepository {
 	}
 }
 
-// CreateTransaction создаёт новый платёж
-func (r *TransactionRepository) CreateTransaction(
+// InsertTransaction создаёт новый платёж
+func (r *TransactionRepository) InsertTransaction(
 	ctx context.Context,
-	req *models.CreateTransactionRequest,
-	event *models.CreateEventRequest,
-	step *models.CreateSagaStepRequest,
+	tx *sqlx.Tx,
+	req *models.InsertTransactionRequest,
 ) error {
-	const op = "transaction.CreateTransaction"
+	const op = "transaction.InsertTransaction"
 
-	const queryTransactions = `
+	const queryTransaction = `
 		INSERT INTO transactions (id, idempotency_key, parent_transaction_id, type, status, amount, currency, description)
 		VALUES (:id, :idempotency_key, :parent_transaction_id, :type, :status, :amount, :currency, :description)
 	`
 
+	_, err := tx.NamedExecContext(ctx, queryTransaction, req)
+
+	if err != nil {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
+			return apperr.ErrTransactionIDNotUnique
+		}
+		return &apperr.WrappedError{
+			Op:  op,
+			Err: err,
+		}
+	}
+
+	return nil
+}
+
+// InsertParties вставляет Parties в транзакцию
+func (r *TransactionRepository) InsertParties(
+	ctx context.Context,
+	tx *sqlx.Tx,
+	req *models.InsertPartiesRequest,
+) error {
+	const op = "transaction.InsertParties"
+
 	const queryParties = `
-		INSERT INTO transaction_parties (transaction_id, role, party_type, identifiers)
-		VALUES (:transaction_id, :role, :party_type, :identifiers)
+		INSERT INTO transaction_parties (transaction_id, party_role, party_type, identifiers)
+		VALUES (:transaction_id, :party_role, :party_type, :identifiers)
 	`
-
-	const queryEvents = `
-		INSERT INTO events (id, transaction_id, partition_key, type, status, source, trace_id, span_id, payload)
-		VALUES (:id, :transaction_id, :partition_key, :type, :status, :source, :trace_id, :span_id, :payload)
-	`
-
-	const querySagaStep = `
-		INSERT INTO saga_steps (id, transaction_id, event_id, step_name, step_kind, status)
-		VALUES (:id, :transaction_id, :event_id, :step_name, :step_kind, :status)
-	`
-
-	err := r.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
-		_, err := tx.NamedExecContext(ctx, queryTransactions, req)
-
+	var err error
+	for _, party := range req.Parties {
+		_, err = tx.NamedExecContext(ctx, queryParties, party)
 		if err != nil {
 			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
-				return apperr.ErrTransactionIDNotUnique
+				return apperr.ErrTransactionPartiesAlreadyExist
 			}
-			return err
-		}
-
-		for _, party := range req.Parties {
-			_, err = tx.NamedExecContext(ctx, queryParties, party)
-			if err != nil {
-				if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
-					return apperr.ErrTransactionPartiesAlreadyExist
-				}
-				return err
+			return &apperr.WrappedError{
+				Op:  op,
+				Err: err,
 			}
 		}
+	}
 
-		_, err = tx.NamedExecContext(ctx, queryEvents, event)
-		if err != nil {
-			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
-				return apperr.ErrEventIDNotUnique
-			}
-			return err
-		}
+	return nil
+}
 
-		_, err = tx.NamedExecContext(ctx, querySagaStep, step)
-		if err != nil {
-			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
-				return apperr.ErrSagaStepAlreadyExists
-			}
-			return err
-		}
+// UpdateSagaState обновляет состояние саги и статус транзакции
+func (r *TransactionRepository) UpdateSagaState(
+	ctx context.Context,
+	tx *sqlx.Tx,
+	req *models.UpdateSagaStateRequest,
+) error {
+	const op = "saga.UpdateSagaState"
 
-		return nil
-	})
+	querySagaState := `
+		UPDATE transactions
+		SET saga_state = $1,
+			status     = COALESCE($2, status),
+			updated_at = $3
+		WHERE id = $4
+		AND saga_state = $5
+	`
+
+	result, err := tx.ExecContext(ctx, querySagaState, req.SagaState, req.Status, time.Now(), req.TransactionID, req.ExpectedFrom)
 	if err != nil {
 		return &apperr.WrappedError{
 			Op:  op,
 			Err: err,
+		}
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		var current string
+		errSel := tx.GetContext(ctx, &current,
+			`SELECT saga_state FROM transactions WHERE id = $1`, req.TransactionID)
+		if errors.Is(errSel, sql.ErrNoRows) {
+			return apperr.ErrTransactionNotFound
+		}
+		if errSel != nil {
+			return fmt.Errorf("read current state: %w", errSel)
+		}
+		if current == req.SagaState {
+			return apperr.ErrSagaAlreadyAdvanced
+		}
+		return &apperr.WrappedError{
+			Op: op,
+			Err: fmt.Errorf("%w: expected %q got %q",
+				apperr.ErrInvalidSagaState, req.ExpectedFrom, current),
 		}
 	}
 
@@ -113,7 +141,7 @@ func (r *TransactionRepository) GetTransaction(
 	query := `
         SELECT t.id, t.idempotency_key, t.parent_transaction_id, 
 			t.type::text, t.status::text, t.amount::float8, t.currency,
-            t.initiator::text, t.description, t.created_at, t.updated_at,
+            t.description, t.created_at, t.updated_at,
             COALESCE(
                 jsonb_agg(
                     jsonb_build_object(
@@ -156,35 +184,4 @@ func (r *TransactionRepository) GetTransaction(
 	return models.GetTransactionResponse{
 		Transaction: &row.Transaction,
 	}, nil
-}
-
-// UpdateTransactionStatus обновляет статус платежа
-func (r *TransactionRepository) UpdateTransactionStatus(ctx context.Context, req *models.UpdateTransactionStatusRequest) error {
-	const op = "transaction.UpdateTransactionStatus"
-
-	const query = `UPDATE transactions 
-					SET status = $1, updated_at = $2
-					WHERE id = $3
-	`
-
-	result, err := r.db.ExecContext(ctx, query, req.Status, time.Now(), req.ID)
-	if err != nil {
-		return &apperr.WrappedError{
-			Op:  op,
-			Err: err,
-		}
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return &apperr.WrappedError{
-			Op:  op,
-			Err: err,
-		}
-	}
-	if rowsAffected == 0 {
-		return apperr.ErrTransactionNotFound
-	}
-
-	return nil
 }

@@ -52,10 +52,6 @@ const (
 	EventCaptureRequest string = "capture.request"
 	// EventCaptureResponse - событие: ответ на запрос о списании средств из замороженных
 	EventCaptureResponse string = "capture.response"
-	// EventDepositRequest - событие: запрос на пополнения средств из резерва
-	EventDepositRequest string = "deposit.request"
-	// EventDepositResponse - событие: ответ на запрос о пополнении средств из резерва
-	EventDepositResponse string = "deposit.response"
 
 	// EventCreditRequest - событие: запрос на прямое пополнение средств
 	EventCreditRequest string = "credit.request"
@@ -108,12 +104,14 @@ type AccountCommandPayload struct {
 	Currency      string  `json:"currency"`
 }
 
-type SwitchRequestPayload struct {
-	Amount      float64           `json:"amount"`
-	Currency    string            `json:"currency"`
-	Sender      map[string]string `json:"sender"`
-	Recipient   map[string]string `json:"recipient"`
-	Description string            `json:"description,omitempty"`
+type SwitchCommandPayload struct {
+	TransactionID string            `json:"transaction_id"`
+	StepName      string            `json:"step_name"`
+	Amount        float64           `json:"amount"`
+	Currency      string            `json:"currency"`
+	Sender        map[string]string `json:"sender"`
+	Recipient     map[string]string `json:"recipient"`
+	Description   string            `json:"description,omitempty"`
 }
 
 type TransactionCreatedPayload struct {
@@ -155,7 +153,7 @@ type BuildEventRequest struct {
 	Payload      any
 }
 
-type CreateEventRequest struct {
+type InsertEventRequest struct {
 	*Event
 }
 
@@ -190,8 +188,6 @@ var TopicMap = map[string]string{
 
 	EventCaptureRequest:  TopicAccountCommands,
 	EventCaptureResponse: TopicAccountEvents,
-	EventDepositRequest:  TopicAccountCommands,
-	EventDepositResponse: TopicAccountEvents,
 
 	EventCreditRequest:  TopicAccountCommands,
 	EventCreditResponse: TopicAccountEvents,

@@ -54,7 +54,6 @@ type EventHandler interface {
 	HandleFreezeResponse(ctx context.Context, event *models.Event) error
 	HandleExternalPaymentResponse(ctx context.Context, event *models.Event) error
 	HandleCaptureResponse(ctx context.Context, event *models.Event) error
-	HandleDepositResponse(ctx context.Context, event *models.Event) error
 	HandleCreditResponse(ctx context.Context, event *models.Event) error
 	HandleDebitResponse(ctx context.Context, event *models.Event) error
 	HandleUnfreezeResponse(ctx context.Context, event *models.Event) error
@@ -385,8 +384,6 @@ func (c *Consumer) routeEvent(ctx context.Context, event *models.Event) error {
 		return c.handler.HandleExternalPaymentResponse(ctx, event)
 	case models.EventCaptureResponse:
 		return c.handler.HandleCaptureResponse(ctx, event)
-	case models.EventDepositResponse:
-		return c.handler.HandleDepositResponse(ctx, event)
 	case models.EventCreditResponse:
 		return c.handler.HandleCreditResponse(ctx, event)
 	case models.EventDebitResponse:

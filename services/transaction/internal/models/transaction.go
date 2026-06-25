@@ -54,7 +54,10 @@ const (
 	TransactionTypeChargeback string = "CHARGEBACK"
 
 	// TransactionTypeAdjustment - административная операция
-	TransactionTypeAdjustment string = "ADJUSTMENT"
+	TransactionTypeAdjustmentCredit string = "ADJUSTMENT_CREDIT"
+
+	// TransactionTypeAdjustment - административная операция
+	TransactionTypeAdjustmentDebit string = "ADJUSTMENT_DEBIT"
 )
 
 // Типы саг
@@ -115,13 +118,35 @@ type Transaction struct {
 }
 
 type TransactionParty struct {
-	PartyRole   string            `db:"role" json:"role"`
-	PartyType   string            `db:"party_type" json:"party_type"`
-	Identifiers map[string]string `db:"identifiers" json:"identifiers"`
+	TransactionID uuid.UUID         `db:"transaction_id" json:"transaction_id" validate:"required"`
+	PartyRole     string            `db:"party_role" json:"party_role" validate:"required"`
+	PartyType     string            `db:"party_type" json:"party_type" validate:"required"`
+	Identifiers   map[string]string `db:"identifiers" json:"identifiers" validate:"required"`
 }
 
-type CreateTransactionRequest struct {
+func CleanMap(m map[string]string) map[string]string {
+	result := make(map[string]string, len(m))
+	for k, v := range m {
+		if v != "" {
+			result[k] = v
+		}
+	}
+	return result
+}
+
+type InsertTransactionRequest struct {
 	*Transaction
+}
+
+type InsertPartiesRequest struct {
+	Parties []TransactionParty `json:"parties"`
+}
+
+type UpdateSagaStateRequest struct {
+	TransactionID uuid.UUID `db:"id" json:"id" validate:"required"`
+	ExpectedFrom  string    `db:"-" json:"-,omitempty"`
+	SagaState     string    `db:"saga_state" json:"saga_state" validate:"required"`
+	Status        *string   `db:"status" json:"status,omitempty"`
 }
 
 type GetTransactionRequest struct {
@@ -143,10 +168,8 @@ type GetTransactionsResponse struct {
 }
 
 type UpdateTransactionStatusRequest struct {
-	ID                   uuid.UUID `json:"id" validate:"required"`
-	SenderAccountCode    string    `db:"sender_account_code" json:"sender_account_code"`
-	RecipientAccountCode string    `db:"recipient_account_code" json:"recipient_account_code"`
-	Status               string    `json:"status" validate:"required,oneof=completed cancelled blocked pending"`
+	ID     uuid.UUID `db:"id" json:"id"`
+	Status string    `json:"status" validate:"required,oneof=completed cancelled blocked pending"`
 }
 
 type TransactionPayload struct {

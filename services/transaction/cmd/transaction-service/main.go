@@ -26,11 +26,6 @@ func main() {
 		slog.Error("Failed to load config", "error", err)
 		return
 	}
-	iso8583cfg, err := config.LoadISO8583Config(cfg.ISO8583ConfigPath)
-	if err != nil {
-		slog.Error("Failed to load ISO8583 config", "error", err)
-		return
-	}
 
 	log := logger.New(logger.Config{
 		Env:        cfg.Env,
@@ -43,7 +38,7 @@ func main() {
 	})
 
 	// Создаем сервер
-	server, err := app.NewApp(cfg, iso8583cfg, log)
+	server, err := app.NewApp(cfg, log)
 	if err != nil {
 		slog.Error("Failed to create server", "error", err)
 	}

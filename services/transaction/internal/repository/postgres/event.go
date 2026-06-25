@@ -9,6 +9,7 @@ import (
 	"transaction-service/internal/models"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jmoiron/sqlx"
 )
 
 // EventRepository структура релизующая методы для работы с событиями
@@ -22,16 +23,21 @@ func NewEventRepository(db *Database) *EventRepository {
 	}
 }
 
-// CreateEvent создает событие
-func (r *EventRepository) CreateEvent(ctx context.Context, req *models.CreateEventRequest) error {
-	const op = "event.CreateEvent"
+// InsertEvent создает событие
+func (r *EventRepository) InsertEvent(
+	ctx context.Context,
+	tx *sqlx.Tx,
+	req *models.InsertEventRequest,
+) error {
+	const op = "event.InsertEvent"
 
-	const query = `
-		INSERT INTO events (id, transaction_id, partition_key, type, status, source, trace_id, span_id, payload)
-		VALUES (:id, :transaction_id, :partition_key, :type, :status, :source, :trace_id, :span_id, :payload)
+	const queryEvent = `
+		INSERT INTO events (id, transaction_id, partition_key, type, step_name, status, source, trace_id, span_id, payload)
+		VALUES (:id, :transaction_id, :partition_key, :type, :step_name, :status, :source, :trace_id, :span_id, :payload)
+		ON CONFLICT (transaction_id, type, step_name) DO NOTHING
 	`
 
-	_, err := r.db.NamedExecContext(ctx, query, req)
+	_, err := tx.NamedExecContext(ctx, queryEvent, req)
 
 	if err != nil {
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {

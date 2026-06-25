@@ -4,10 +4,10 @@
 -- =======================================================================
 
 -- Роли участников
-CREATE TYPE party_role AS ENUM ('SENDER', 'RECIPIENT');
+CREATE TYPE party_roles AS ENUM ('SENDER', 'RECIPIENT');
 
 -- Типы участников
-CREATE TYPE party_type AS ENUM ('INTERNAL', 'EXTERNAL');
+CREATE TYPE party_types AS ENUM ('INTERNAL', 'EXTERNAL');
 
 -- Участники транзакции
 CREATE TABLE transaction_parties (
@@ -15,10 +15,10 @@ CREATE TABLE transaction_parties (
     transaction_id              UUID NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
 
     -- Роли участников: party_role
-    role                        party_role NOT NULL,
+    party_role                  party_roles NOT NULL,
 
     -- Типы участников: party_type
-    party_type                  party_type NOT NULL,
+    party_type                  party_types NOT NULL,
 
     -- Реквизиты как key-value
     -- Для INTERNAL:
@@ -34,5 +34,5 @@ CREATE TABLE transaction_parties (
     -- {"CARD_NUMBER": "411111******1111", "NAME": "IVAN IVANOV"}
     identifiers   JSONB NOT NULL DEFAULT '{}',
 
-    PRIMARY KEY (transaction_id, role)
+    PRIMARY KEY (transaction_id, party_role)
 );
