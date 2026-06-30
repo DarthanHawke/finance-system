@@ -1,3 +1,4 @@
+// Пакет tracing содержит настройки для трассировок
 package tracing
 
 import (

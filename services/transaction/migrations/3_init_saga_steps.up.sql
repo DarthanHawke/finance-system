@@ -30,12 +30,12 @@ CREATE TABLE saga_steps (
     --Тип шага
     step_kind       step_kind NOT NULL,
     -- Статус
-    status          step_status NOT NULL,
+    saga_status     step_status NOT NULL,
 
     -- Дата создания записи о шаге саги
-    created_at                  TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at                  TIMESTAMP NOT NULL,
     -- Дата последнего обновления
-    updated_at                  TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at                  TIMESTAMP NOT NULL,
 
     UNIQUE(transaction_id, step_name, step_kind)
 );

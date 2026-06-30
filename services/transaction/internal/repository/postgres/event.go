@@ -1,10 +1,9 @@
-// Пакет postgres реализовывает работу с базами данных
+// Пакет postgres реализовывает работу с PostgreSQL
 package postgres
 
 import (
 	"context"
 	"errors"
-	"time"
 	"transaction-service/internal/lib/errors/apperr"
 	"transaction-service/internal/models"
 
@@ -12,11 +11,12 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// EventRepository структура релизующая методы для работы с событиями
+// EventRepository реализует методы для работы с событиями
 type EventRepository struct {
 	db *Database
 }
 
+// NewEventRepository создает обертку над бд, реализуюзую методы для работы с таблицей events
 func NewEventRepository(db *Database) *EventRepository {
 	return &EventRepository{
 		db: db,
@@ -32,9 +32,11 @@ func (r *EventRepository) InsertEvent(
 	const op = "event.InsertEvent"
 
 	const queryEvent = `
-		INSERT INTO events (id, transaction_id, partition_key, type, step_name, status, source, trace_id, span_id, payload)
-		VALUES (:id, :transaction_id, :partition_key, :type, :step_name, :status, :source, :trace_id, :span_id, :payload)
-		ON CONFLICT (transaction_id, type, step_name) DO NOTHING
+		INSERT INTO events (id, transaction_id, partition_key, event_type, 
+		step_name, event_status, source, trace_id, span_id, created_at, payload)
+		VALUES (:id, :transaction_id, :partition_key, :event_type, 
+		:step_name, :event_status, :source, :trace_id, :span_id, :created_at, :payload)
+		ON CONFLICT (transaction_id, event_type, step_name) DO NOTHING
 	`
 
 	_, err := tx.NamedExecContext(ctx, queryEvent, req)
@@ -52,35 +54,31 @@ func (r *EventRepository) InsertEvent(
 	return nil
 }
 
-// GetPendingEvents возвращает не завершненные события
+// GetPendingEvents возвращает незавершненные события
 func (r *EventRepository) GetPendingEvents(ctx context.Context, req *models.GetEventRequest) (models.GetEventResponse, error) {
 	const op = "event.GetPendingEvents"
 
-	// Апдейтим processed_at, чтоб дргуие потоки не взяли эти же значения
-	// и возвращам события
 	const query = `
 		UPDATE events 
 		SET processed_at = $1
 		WHERE id IN (
 			SELECT id 
 			FROM events 
-			WHERE status = $2 
+			WHERE event_status = $2 
 			AND (processed_at IS NULL OR processed_at < $3)
 			ORDER BY created_at ASC 
 			LIMIT $4
 			FOR UPDATE SKIP LOCKED
 		)
-		RETURNING id, transaction_id, partition_key, type, status, source, 
+		RETURNING id, transaction_id, partition_key, event_type, event_status, source, 
 			trace_id, span_id, created_at, processed_at, payload
 	`
 
-	fiveMinutesAgo := time.Now().Add(-5 * time.Minute)
-
 	var events []models.Event
 	err := r.db.SelectContext(ctx, &events, query,
-		time.Now(),
+		req.ProcessedAt,
 		models.EventStatusPending,
-		fiveMinutesAgo,
+		req.FiveMinutesAgo,
 		req.Limit,
 	)
 	if err != nil {
@@ -104,12 +102,12 @@ func (r *EventRepository) UpdateEventStatus(ctx context.Context, req *models.Upd
 
 	const query = `
 		UPDATE events 
-		SET status = $1, 
+		SET event_status = $1, 
 			processed_at = $2
 		WHERE id = $3
 	`
 
-	result, err := r.db.ExecContext(ctx, query, req.Status, time.Now(), req.ID)
+	result, err := r.db.ExecContext(ctx, query, req.Status, req.ProcessedAt, req.ID)
 	if err != nil {
 		return &apperr.WrappedError{
 			Op:  op,

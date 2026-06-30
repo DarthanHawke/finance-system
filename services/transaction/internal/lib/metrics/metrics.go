@@ -1,3 +1,4 @@
+// Пакет metrics содержит настройки для метрик prometheus
 package metrics
 
 import (

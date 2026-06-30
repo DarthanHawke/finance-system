@@ -24,10 +24,10 @@ CREATE TABLE events (
     partition_key   VARCHAR(64) NOT NULL,
 
     -- Тип события
-    type            VARCHAR(50) NOT NULL,
+    event_type            VARCHAR(50) NOT NULL,
 
     -- Статус события
-    status          event_status NOT NULL DEFAULT 'pending',
+    event_status          event_status NOT NULL,
     
     -- Сервис в котором создано событие
     source          VARCHAR(50) NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE events (
     span_id         VARCHAR(16) NOT NULL,
 
     -- Время создания события
-    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL,
 
     -- Время начала работы с событием
     processed_at    TIMESTAMP WITH TIME ZONE,
@@ -46,9 +46,9 @@ CREATE TABLE events (
     payload         JSONB NOT NULL,
 
     -- Для транзакции и шага выполнится не более 1 одинакового события
-    UNIQUE(transaction_id, type, step_name)
+    UNIQUE(transaction_id, event_type, step_name)
 );
 
 -- Для быстрого поиска pending событий
-CREATE INDEX idx_events_pending ON events(status, processed_at, created_at)
+CREATE INDEX idx_events_pending ON events(event_status, processed_at, created_at)
     WHERE status = 'pending';

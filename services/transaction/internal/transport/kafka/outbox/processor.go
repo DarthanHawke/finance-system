@@ -97,7 +97,13 @@ func (p *OutboxProcessor) fetchAndDispatch(ctx context.Context) {
 
 	log := p.logger.With("op", op)
 
-	events, err := p.outboxManager.GetPendingEvents(ctx, &models.GetEventRequest{Limit: p.batchSize})
+	now := time.Now()
+	fiveMinutesAgo := now.Add(-5 * time.Minute)
+	events, err := p.outboxManager.GetPendingEvents(ctx, &models.GetEventRequest{
+		ProcessedAt:    now,
+		FiveMinutesAgo: fiveMinutesAgo,
+		Limit:          p.batchSize,
+	})
 	if err != nil {
 		log.Error("failed to get pending events", "error", err)
 		metrics.OutboxGetEventsErrors.Inc()
@@ -152,6 +158,7 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 	messageKey := event.PartitionKey
 	topic := models.TopicMap[event.Type]
 
+	now := time.Now()
 	err := p.producer.Produce(ctx, topic, messageKey, event)
 	if err != nil {
 		retryable, isTerminal := apperr.Classify(err)
@@ -173,8 +180,9 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 			if err := p.outboxManager.UpdateEventStatus(
 				ctx,
 				&models.UpdateEventStatusRequest{
-					ID:     event.ID,
-					Status: models.EventStatusCompleted,
+					ID:          event.ID,
+					Status:      models.EventStatusCompleted,
+					ProcessedAt: now,
 				},
 			); err != nil {
 				return &apperr.WrappedError{
@@ -202,8 +210,9 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 			if err := p.outboxManager.UpdateEventStatus(
 				ctx,
 				&models.UpdateEventStatusRequest{
-					ID:     event.ID,
-					Status: models.EventStatusCompleted,
+					ID:          event.ID,
+					Status:      models.EventStatusCompleted,
+					ProcessedAt: now,
 				},
 			); err != nil {
 				return &apperr.WrappedError{
@@ -231,8 +240,9 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 			if err := p.outboxManager.UpdateEventStatus(
 				ctx,
 				&models.UpdateEventStatusRequest{
-					ID:     event.ID,
-					Status: models.EventStatusCompleted,
+					ID:          event.ID,
+					Status:      models.EventStatusCompleted,
+					ProcessedAt: now,
 				},
 			); err != nil {
 				return &apperr.WrappedError{
@@ -252,8 +262,9 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 	if err := p.outboxManager.UpdateEventStatus(
 		ctx,
 		&models.UpdateEventStatusRequest{
-			ID:     event.ID,
-			Status: models.EventStatusCompleted,
+			ID:          event.ID,
+			Status:      models.EventStatusCompleted,
+			ProcessedAt: now,
 		},
 	); err != nil {
 		return &apperr.WrappedError{

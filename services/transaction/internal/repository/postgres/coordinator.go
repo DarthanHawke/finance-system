@@ -1,4 +1,4 @@
-// Пакет postgres реализовывает работу с базами данных
+// Пакет postgres реализовывает работу с PostgreSQL
 package postgres
 
 import (
@@ -8,6 +8,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// SagaCoordinator реализует методы для продвижения саги в одной транзакции
 type SagaCoordinator struct {
 	db                    *Database
 	transactionRepository *TransactionRepository
@@ -15,6 +16,7 @@ type SagaCoordinator struct {
 	eventRepository       *EventRepository
 }
 
+// NewSagaRepository создает обертку над бд, реализуюзую методы для продвижения саги в одной транзакции
 func NewSagaCoordinator(
 	db *Database,
 	transactionRepository *TransactionRepository,
@@ -29,6 +31,7 @@ func NewSagaCoordinator(
 	}
 }
 
+// Advance продвигает сагу(создает событие, новый шаг, обновляет статус саги)
 func (c *SagaCoordinator) Advance(ctx context.Context, req *models.AdvanceRequest) error {
 	return c.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		for _, event := range req.Events {
@@ -45,6 +48,7 @@ func (c *SagaCoordinator) Advance(ctx context.Context, req *models.AdvanceReques
 	})
 }
 
+// AdvanceWithFirstStep первый шаг саги(создает транзакцию, событие, новый шаг, обновляет статус саги)
 func (c *SagaCoordinator) AdvanceWithFirstStep(ctx context.Context, req *models.AdvanceWithFirstStepRequest) error {
 	return c.db.WithTransaction(ctx, func(tx *sqlx.Tx) error {
 		if err := c.transactionRepository.InsertTransaction(ctx, tx, &req.InsertTransactionRequest); err != nil {

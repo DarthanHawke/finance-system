@@ -6,15 +6,6 @@ import (
 	"transaction-service/internal/models"
 )
 
-func partyIdentifiers(transaction *models.Transaction, role string) (map[string]string, bool) {
-	for _, p := range transaction.Parties {
-		if p.PartyRole == role {
-			return p.Identifiers, true
-		}
-	}
-	return nil, false
-}
-
 func accountPayload(transaction *models.Transaction, role string, stepName string) (any, error) {
 	identifiers, ok := partyIdentifiers(transaction, role)
 	if !ok {
@@ -220,42 +211,6 @@ func chargebackPaymentCmd() Command {
 		StepKind:  models.StepKindAction,
 		BuildPayload: func(tx *models.Transaction) (any, error) {
 			return switchPayload(tx, StepChargebackPayment)
-		},
-	}
-}
-
-func transactionCompletedCmd() Command {
-	return Command{
-		EventType: models.EventTransactionCompleted,
-		StepName:  "transaction_completed",
-		StepKind:  models.StepKindAction,
-		BuildPayload: func(transaction *models.Transaction) (any, error) {
-			return models.TransactionCompletedPayload{CompletedAt: transaction.UpdatedAt}, nil
-		},
-	}
-}
-
-func transactionCancelledCmd(reason string) Command {
-	return Command{
-		EventType: models.EventTransactionCancelled,
-		StepName:  "transaction_cancelled",
-		StepKind:  models.StepKindAction,
-		BuildPayload: func(transaction *models.Transaction) (any, error) {
-			return models.TransactionCancelledPayload{Reason: reason, CancelledAt: transaction.UpdatedAt}, nil
-		},
-	}
-}
-
-func transactionBlockedCmd() Command {
-	return Command{
-		EventType: models.EventTransactionBlocked,
-		StepName:  "transaction_blocked",
-		StepKind:  models.StepKindAction,
-		BuildPayload: func(transaction *models.Transaction) (any, error) {
-			return models.TransactionCancelledPayload{
-				Reason:      "blocked, manual intervention required",
-				CancelledAt: transaction.UpdatedAt,
-			}, nil
 		},
 	}
 }

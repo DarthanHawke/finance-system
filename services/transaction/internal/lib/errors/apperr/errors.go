@@ -12,6 +12,7 @@ type Error struct {
 	Message string
 }
 
+// Error - возвращает Error в виде строки
 func (e *Error) Error() string {
 	return fmt.Sprintf("%s: %s", e.Code, e.Message)
 }
@@ -22,6 +23,7 @@ type WrappedError struct {
 	Err error
 }
 
+// Error - возвращает WrappedError в виде строки
 func (e *WrappedError) Error() string {
 	if e.Err == nil {
 		return e.Op
@@ -29,6 +31,7 @@ func (e *WrappedError) Error() string {
 	return fmt.Sprintf("%s: %v", e.Op, e.Err)
 }
 
+// Unwrap - возвращает ошибку типа Error содержащуюся в WrappedError
 func (e *WrappedError) Unwrap() error {
 	return e.Err
 }
@@ -40,6 +43,7 @@ type TerminalError struct {
 	Err     error
 }
 
+// Error - возвращает TerminalError в виде строки
 func (e *TerminalError) Error() string {
 	if e.Err == nil {
 		return fmt.Sprintf("TERMINAL %s: %s", e.Op, e.Context)
@@ -47,6 +51,7 @@ func (e *TerminalError) Error() string {
 	return fmt.Sprintf("TERMINAL %s: %s: %v", e.Op, e.Context, e.Err)
 }
 
+// Unwrap - возвращает ошибку типа Error содержащуюся в TerminalError
 func (e *TerminalError) Unwrap() error {
 	return e.Err
 }

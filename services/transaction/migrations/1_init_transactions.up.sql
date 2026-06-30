@@ -58,13 +58,13 @@ CREATE TABLE transactions (
     parent_transaction_id       UUID,
 
     -- Тип транзакции: transaction_type
-    type                        transaction_type NOT NULL,
+    transaction_type            transaction_type NOT NULL,
     -- Тип саги 
     saga_type                   saga_type NOT NULL,
     -- Текущее состояние в state machine
-    saga_state                  TEXT NOT NULL DEFAULT 'INIT',
+    saga_state                  TEXT NOT NULL,
     -- Статус транзакции: transaction_status
-    status                      transaction_status NOT NULL DEFAULT 'PROCESSING',
+    transaction_status          transaction_status NOT NULL,
 
     -- Сумма транзакции
     amount                      DECIMAL(12, 2) NOT NULL CHECK (amount > 0),
@@ -72,12 +72,12 @@ CREATE TABLE transactions (
     currency                    VARCHAR(3) NOT NULL,
 
     -- Описание платежа
-    description                 TEXT,
+    transaction_description     TEXT,
 
     -- Дата создания записи о транзакции
-    created_at                  TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at                  TIMESTAMP NOT NULL,
     -- Дата последнего обновления
-    updated_at                  TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at                  TIMESTAMP NOT NULL,
 ); 
 
 -- Поиск рефандов по исходной транзакции для валидации при создании рефанда

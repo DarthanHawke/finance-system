@@ -11,8 +11,9 @@ import (
 	"github.com/google/uuid"
 )
 
-type TransactionManager interface {
-	GetTransaction(ctx context.Context, req *models.GetTransactionRequest) (models.GetTransactionResponse, error)
+type Orchestrator struct {
+	sagaManager SagaManager
+	definition  map[string]Definition
 }
 
 type SagaManager interface {
@@ -20,32 +21,22 @@ type SagaManager interface {
 	AdvanceWithFirstStep(ctx context.Context, req *models.AdvanceWithFirstStepRequest) error
 }
 
-type Orchestrator struct {
-	transactionManager TransactionManager
-	sagaManager        SagaManager
-	definition         map[string]Definition
-}
-
 func NewOrchestrator(
-	transactionManager TransactionManager,
 	sagaManager SagaManager,
 	definition map[string]Definition,
 ) *Orchestrator {
 	return &Orchestrator{
-		transactionManager: transactionManager,
-		sagaManager:        sagaManager,
-		definition:         definition,
+		sagaManager: sagaManager,
+		definition:  definition,
 	}
 }
 
-func (o *Orchestrator) Apply(ctx context.Context, apply Apply) error {
+func (o *Orchestrator) Apply(ctx context.Context, transaction *models.Transaction, apply Apply) error {
 	const op = "saga.Apply"
 
-	resp, err := o.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: apply.TransactionID})
-	if err != nil {
-		return err
-	}
-	transaction := resp.Transaction
+	now := time.Now()
+	transaction.CreatedAt = now
+	transaction.UpdatedAt = now
 
 	def, ok := o.definition[transaction.SagaType]
 	if !ok {
@@ -62,46 +53,9 @@ func (o *Orchestrator) Apply(ctx context.Context, apply Apply) error {
 		return nil
 	}
 
-	var events []models.InsertEventRequest
-	var steps []models.InsertSagaStepRequest
-
-	for _, cmd := range transition.Commands {
-		payload, err := cmd.BuildPayload(transaction)
-		if err != nil {
-			return err
-		}
-		payloadBytes, err := json.Marshal(payload)
-		if err != nil {
-			return err
-		}
-
-		event := models.InsertEventRequest{
-			Event: &models.Event{
-				ID:            uuid.New(),
-				TransactionID: transaction.ID,
-				StepName:      cmd.StepName,
-				PartitionKey:  transaction.ID.String(),
-				Type:          cmd.EventType,
-				Status:        models.EventStatusPending,
-				Source:        models.Source,
-				TraceID:       apply.TraceID,
-				SpanID:        apply.SpanID,
-				Payload:       payloadBytes,
-			},
-		}
-		events = append(events, event)
-
-		step := models.InsertSagaStepRequest{
-			SagaStep: &models.SagaStep{
-				ID:            uuid.New(),
-				TransactionID: transaction.ID,
-				EventID:       event.Event.ID,
-				StepName:      cmd.StepName,
-				StepKind:      cmd.StepKind,
-				Status:        models.StepStatusStarted,
-			},
-		}
-		steps = append(steps, step)
+	events, steps, err := o.CreateEventAndSteps(transition, transaction, apply.TraceID, apply.SpanID, now)
+	if err != nil {
+		return err
 	}
 
 	updateState := &models.UpdateSagaStateRequest{
@@ -109,6 +63,7 @@ func (o *Orchestrator) Apply(ctx context.Context, apply Apply) error {
 		ExpectedFrom:  transition.From,
 		SagaState:     transition.NewState,
 		Status:        &transition.NewStatus,
+		UpdatedAt:     now,
 	}
 
 	advanceRequest := &models.AdvanceRequest{
@@ -124,71 +79,26 @@ func (o *Orchestrator) Apply(ctx context.Context, apply Apply) error {
 	return nil
 }
 
-func (o *Orchestrator) ApplyWithFirstStep(ctx context.Context, transactionPayload *models.TransactionPayload, apply Apply) error {
+func (o *Orchestrator) ApplyWithFirstStep(
+	ctx context.Context,
+	transaction *models.Transaction,
+	transactionParent *models.Transaction,
+	apply Apply,
+) error {
 	const op = "saga.ApplyWithFirstStep"
-
 	now := time.Now()
-	transaction := &models.Transaction{
-		ID:             uuid.New(),
-		IdempotencyKey: transactionPayload.IdempotencyKey,
-		Type:           transactionPayload.Type,
-		Status:         models.TransactionStatusProcessing,
-		SagaState:      StateInit,
-		Amount:         transactionPayload.Amount,
-		Currency:       transactionPayload.Currency,
-		Description:    transactionPayload.Description,
-		CreatedAt:      now,
-		UpdatedAt:      now,
-	}
 
-	var parentType *string
-	if transactionPayload.ParentTransactionID != "" {
-		parentID, err := uuid.Parse(transactionPayload.ParentTransactionID)
-		if err != nil {
-			return &apperr.WrappedError{Op: op, Err: apperr.ErrInvalidParentTransactionID}
-		}
-		transaction.ParentTransactionID = parentID
-
-		parentResp, err := o.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{
-			ID: parentID,
-		})
-		if err != nil {
-			return err
-		}
-		parentTransaction := parentResp.Transaction
-
-		// Проверяем, что родительская транзакция завершена
-		if parentTransaction.Status != models.TransactionStatusCompleted {
-			return &apperr.WrappedError{
-				Op:  op,
-				Err: fmt.Errorf("parent transaction %s is not completed", parentTransaction.ID),
-			}
-		}
-		parentType = &parentTransaction.Type
-	}
-
-	sagaType, err := o.ResolveSagaType(transaction.Type, parentType)
+	sagaType, err := o.ResolveSagaType(transaction.Type, &transactionParent.Type)
 	if err != nil {
 		return &apperr.WrappedError{Op: op, Err: err}
 	}
+	transaction.CreatedAt = now
+	transaction.UpdatedAt = now
 	transaction.SagaType = sagaType
 
 	_, ok := o.Definition(sagaType)
 	if !ok {
 		return &apperr.TerminalError{Op: op, Context: "no saga definition for " + sagaType}
-	}
-
-	transaction.Parties = []models.TransactionParty{
-		{
-			PartyRole:   models.PartyRoleSender,
-			PartyType:   transactionPayload.SenderType(),
-			Identifiers: models.CleanMap(transactionPayload.SenderFields()),
-		},
-		{
-			PartyRole:   models.PartyRoleRecipient,
-			PartyType:   transactionPayload.RecipientType(),
-			Identifiers: models.CleanMap(transactionPayload.RecipientFields()),
-		},
 	}
 
 	def, ok := o.definition[transaction.SagaType]
@@ -205,40 +115,11 @@ func (o *Orchestrator) ApplyWithFirstStep(ctx context.Context, transactionPayloa
 		return &apperr.TerminalError{Op: op, Context: "no start command"}
 	}
 
-	cmd := transition.Commands[0]
-	payload, err := cmd.BuildPayload(transaction)
-	if err != nil {
-		return err
-	}
-	payloadBytes, err := json.Marshal(payload)
+	events, steps, err := o.CreateEventAndSteps(transition, transaction, apply.TraceID, apply.SpanID, now)
 	if err != nil {
 		return err
 	}
 
-	event := models.InsertEventRequest{
-		Event: &models.Event{
-			ID:            uuid.New(),
-			TransactionID: transaction.ID,
-			StepName:      cmd.StepName,
-			PartitionKey:  transaction.ID.String(),
-			Type:          cmd.EventType,
-			Status:        models.EventStatusPending,
-			Source:        models.Source,
-			TraceID:       apply.TraceID,
-			SpanID:        apply.SpanID,
-			Payload:       payloadBytes,
-		},
-	}
-	step := models.InsertSagaStepRequest{
-		SagaStep: &models.SagaStep{
-			ID:            uuid.New(),
-			TransactionID: transaction.ID,
-			EventID:       event.Event.ID,
-			StepName:      cmd.StepName,
-			StepKind:      cmd.StepKind,
-			Status:        models.StepStatusStarted,
-		},
-	}
 	var newStatus *string
 	if transition.NewStatus != "" {
 		newStatus = &transition.NewStatus
@@ -248,13 +129,14 @@ func (o *Orchestrator) ApplyWithFirstStep(ctx context.Context, transactionPayloa
 		ExpectedFrom:  transition.From,
 		SagaState:     transition.NewState,
 		Status:        newStatus,
+		UpdatedAt:     transaction.UpdatedAt,
 	}
 
 	advanceRequest := &models.AdvanceWithFirstStepRequest{
 		InsertTransactionRequest: models.InsertTransactionRequest{Transaction: transaction},
 		InsertPartiesRequest:     models.InsertPartiesRequest{Parties: transaction.Parties},
-		Events:                   []models.InsertEventRequest{event},
-		Steps:                    []models.InsertSagaStepRequest{step},
+		Events:                   events,
+		Steps:                    steps,
 		UpdateSagaStateRequest:   updateState,
 	}
 
@@ -265,10 +147,10 @@ func (o *Orchestrator) ApplyWithFirstStep(ctx context.Context, transactionPayloa
 	return nil
 }
 
-func (o *Orchestrator) ResolveSagaType(txnType string, parentType *string) (string, error) {
+func (o *Orchestrator) ResolveSagaType(transactionType string, parentType *string) (string, error) {
 	const op = "saga.ResolveSagaType"
 
-	switch txnType {
+	switch transactionType {
 	case models.TransactionTypeOnUsTransfer,
 		models.TransactionTypeDirectDebit:
 		return models.SagaOnUsTransfer, nil
@@ -344,6 +226,92 @@ func (o *Orchestrator) ResolveSagaType(txnType string, parentType *string) (stri
 			Err: apperr.ErrUnknownTransactionType,
 		}
 	}
+}
+
+func (o *Orchestrator) CreateEventAndSteps(
+	transition Transition,
+	transaction *models.Transaction,
+	traceID string,
+	spanID string,
+	now time.Time,
+) ([]models.InsertEventRequest,
+	[]models.InsertSagaStepRequest,
+	error,
+) {
+	var events []models.InsertEventRequest
+	var steps []models.InsertSagaStepRequest
+
+	for _, cmd := range transition.Commands {
+		payload, err := cmd.BuildPayload(transaction)
+		if err != nil {
+			return nil, nil, err
+		}
+		payloadBytes, err := json.Marshal(payload)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		event := models.InsertEventRequest{
+			Event: &models.Event{
+				ID:            uuid.New(),
+				TransactionID: transaction.ID,
+				StepName:      cmd.StepName,
+				PartitionKey:  transaction.ID.String(),
+				Type:          cmd.EventType,
+				Status:        models.EventStatusPending,
+				Source:        models.Source,
+				TraceID:       traceID,
+				SpanID:        spanID,
+				CreatedAt:     now,
+				Payload:       payloadBytes,
+			},
+		}
+		events = append(events, event)
+
+		step := models.InsertSagaStepRequest{
+			SagaStep: &models.SagaStep{
+				ID:            uuid.New(),
+				TransactionID: transaction.ID,
+				EventID:       event.Event.ID,
+				StepName:      cmd.StepName,
+				StepKind:      cmd.StepKind,
+				Status:        models.StepStatusStarted,
+				CreatedAt:     now,
+				UpdatedAt:     now,
+			},
+		}
+		steps = append(steps, step)
+	}
+
+	for _, notif := range transition.Notifications {
+		payload, err := notif.BuildPayload(transaction)
+		if err != nil {
+			return nil, nil, err
+		}
+		payloadBytes, err := json.Marshal(payload)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		event := models.InsertEventRequest{
+			Event: &models.Event{
+				ID:            uuid.New(),
+				TransactionID: transaction.ID,
+				StepName:      notif.StepName,
+				PartitionKey:  transaction.ID.String(),
+				Type:          notif.EventType,
+				Status:        models.EventStatusPending,
+				Source:        models.Source,
+				TraceID:       traceID,
+				SpanID:        spanID,
+				CreatedAt:     now,
+				Payload:       payloadBytes,
+			},
+		}
+		events = append(events, event)
+	}
+
+	return events, steps, nil
 }
 
 func (o *Orchestrator) Definition(sagaType string) (Definition, bool) {

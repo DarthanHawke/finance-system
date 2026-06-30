@@ -1,3 +1,4 @@
+// Пакет postgres реализовывает работу с PostgreSQL
 package postgres
 
 import (
@@ -6,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 	"transaction-service/internal/lib/errors/apperr"
 	"transaction-service/internal/models"
 
@@ -14,18 +14,19 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// TransactionRepository структура релизующая методы для работы со платежами
+// TransactionRepository реализует методы для работы с транзакциями
 type TransactionRepository struct {
 	db *Database
 }
 
+// NewTransactionRepository создает обертку над бд, реализуюзую методы для работы с таблицей transaction и transaction_parties
 func NewTransactionRepository(db *Database) *TransactionRepository {
 	return &TransactionRepository{
 		db: db,
 	}
 }
 
-// InsertTransaction создаёт новый платёж
+// InsertTransaction создаёт новую транзакцию
 func (r *TransactionRepository) InsertTransaction(
 	ctx context.Context,
 	tx *sqlx.Tx,
@@ -34,8 +35,10 @@ func (r *TransactionRepository) InsertTransaction(
 	const op = "transaction.InsertTransaction"
 
 	const queryTransaction = `
-		INSERT INTO transactions (id, idempotency_key, parent_transaction_id, type, status, amount, currency, description)
-		VALUES (:id, :idempotency_key, :parent_transaction_id, :type, :status, :amount, :currency, :description)
+		INSERT INTO transactions (id, idempotency_key, parent_transaction_id, transaction_type, transaction_status, 
+		amount, currency, transaction_description, created_at, updated_at)
+		VALUES (:id, :idempotency_key, :parent_transaction_id, :transaction_type, :transaction_status, 
+		:amount, :currency, :transaction_description, :created_at, :updated_at)
 	`
 
 	_, err := tx.NamedExecContext(ctx, queryTransaction, req)
@@ -93,13 +96,13 @@ func (r *TransactionRepository) UpdateSagaState(
 	querySagaState := `
 		UPDATE transactions
 		SET saga_state = $1,
-			status     = COALESCE($2, status),
+			transaction_status = COALESCE($2, transaction_status),
 			updated_at = $3
 		WHERE id = $4
 		AND saga_state = $5
 	`
 
-	result, err := tx.ExecContext(ctx, querySagaState, req.SagaState, req.Status, time.Now(), req.TransactionID, req.ExpectedFrom)
+	result, err := tx.ExecContext(ctx, querySagaState, req.SagaState, req.Status, req.UpdatedAt, req.TransactionID, req.ExpectedFrom)
 	if err != nil {
 		return &apperr.WrappedError{
 			Op:  op,
@@ -140,8 +143,8 @@ func (r *TransactionRepository) GetTransaction(
 
 	query := `
         SELECT t.id, t.idempotency_key, t.parent_transaction_id, 
-			t.type::text, t.status::text, t.amount::float8, t.currency,
-            t.description, t.created_at, t.updated_at,
+			t.transaction_type::text, t.transaction_status::text, t.amount::float8, t.currency,
+            t.transaction_description, t.created_at, t.updated_at,
             COALESCE(
                 jsonb_agg(
                     jsonb_build_object(

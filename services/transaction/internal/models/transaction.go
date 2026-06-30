@@ -88,6 +88,14 @@ const (
 	PartyTypeExternal string = "EXTERNAL"
 )
 
+// Причины отмены транзакции
+const (
+	ReasonTransactionCannotBeComplited string = "blocked, transaction cannot be completed"
+	ReasonSenderFreezeRejected         string = "sender freeze rejected"
+	ReasonCompensated                  string = "compensated"
+	ReasonCompleted                    string = ""
+)
+
 // Валюты:
 const (
 	// CurrencyUSD - доллары
@@ -100,23 +108,24 @@ const (
 	CurrencyRUB string = "RUB"
 )
 
-// Transaction - дтошка платежа
+// Transaction структура транзакции
 type Transaction struct {
 	ID                  uuid.UUID          `db:"id" json:"id"`
 	IdempotencyKey      string             `db:"idempotency_key" json:"idempotency_key"`
 	ParentTransactionID uuid.UUID          `db:"parent_transaction_id" json:"parent_transaction_id,omitempty"`
-	Type                string             `db:"type" json:"type" validate:"required"`
+	Type                string             `db:"transaction_type" json:"transaction_type" validate:"required"`
 	SagaType            string             `db:"saga_type" json:"saga_type"`
 	SagaState           string             `db:"saga_state" json:"saga_state"`
-	Status              string             `db:"status" json:"status"`
+	Status              string             `db:"transaction_status" json:"transaction_status"`
 	Amount              float64            `db:"amount" json:"amount" validate:"required"`
 	Currency            string             `db:"currency" json:"currency" validate:"required"`
-	Description         string             `db:"description" json:"description,omitempty"`
+	Description         string             `db:"transaction_description" json:"transaction_description,omitempty"`
 	CreatedAt           time.Time          `db:"created_at" json:"created_at"`
 	UpdatedAt           time.Time          `db:"updated_at" json:"updated_at"`
 	Parties             []TransactionParty `json:"parties"`
 }
 
+// TransactionParty структура реквизитов
 type TransactionParty struct {
 	TransactionID uuid.UUID         `db:"transaction_id" json:"transaction_id" validate:"required"`
 	PartyRole     string            `db:"party_role" json:"party_role" validate:"required"`
@@ -124,56 +133,55 @@ type TransactionParty struct {
 	Identifiers   map[string]string `db:"identifiers" json:"identifiers" validate:"required"`
 }
 
+// CleanMap сохраняет только не пустые значения map
 func CleanMap(m map[string]string) map[string]string {
 	result := make(map[string]string, len(m))
-	for k, v := range m {
-		if v != "" {
-			result[k] = v
+	for key, value := range m {
+		if value != "" {
+			result[key] = value
 		}
 	}
 	return result
 }
 
+// InsertTransactionRequest обертка для вставки транзакции в бд
 type InsertTransactionRequest struct {
 	*Transaction
 }
 
+// InsertPartiesRequest обертка для вставки реквизитов в бд
 type InsertPartiesRequest struct {
 	Parties []TransactionParty `json:"parties"`
 }
 
+// UpdateSagaStateRequest структура для запроса на обновление состояния саги
 type UpdateSagaStateRequest struct {
 	TransactionID uuid.UUID `db:"id" json:"id" validate:"required"`
 	ExpectedFrom  string    `db:"-" json:"-,omitempty"`
 	SagaState     string    `db:"saga_state" json:"saga_state" validate:"required"`
-	Status        *string   `db:"status" json:"status,omitempty"`
+	Status        *string   `db:"transaction_status" json:"transaction_status,omitempty"`
+	UpdatedAt     time.Time `db:"updated_at" json:"updated_at"`
 }
 
+// GetTransactionRequest структура для запроса на получение транзакции
 type GetTransactionRequest struct {
 	ID uuid.UUID `db:"internal__id" json:"internal__id" validate:"required"`
 }
 
+// GetTransactionResponse обертка для транзакции из бд при вызове Get
 type GetTransactionResponse struct {
 	*Transaction
 }
 
-type GetTransactionsRequest struct {
-	AccountCode string `json:"code" validate:"required"`
-	Limit       int    `db:"limit" json:"limit" validate:"required"`
-	Offset      int    `db:"offset" json:"offset" validate:"required"`
-}
-
-type GetTransactionsResponse struct {
-	Transactions []Transaction `json:"transactions"`
-}
-
+// UpdateTransactionStatusRequest структура для запроса на обновление статуса транзкации
 type UpdateTransactionStatusRequest struct {
 	ID     uuid.UUID `db:"id" json:"id"`
-	Status string    `json:"status" validate:"required,oneof=completed cancelled blocked pending"`
+	Status string    `json:"transaction_status" validate:"required,oneof=completed cancelled blocked pending"`
 }
 
+// TransactionPayload payload с информацией о платеже для создания транзакции
 type TransactionPayload struct {
-	Type           string  `json:"type" validate:"required"`
+	Type           string  `json:"transaction_type" validate:"required"`
 	Amount         float64 `json:"amount" validate:"required"`
 	Currency       string  `json:"currency" validate:"required"`
 	IdempotencyKey string  `json:"idempotency_key" validate:"required"`

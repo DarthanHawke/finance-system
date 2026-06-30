@@ -1,4 +1,4 @@
-// Пакет logger предоставляет настроенный slog.Logger для продакшена.
+// Пакет logger предоставляет настроенный slog.Logger
 package logger
 
 import (
@@ -74,7 +74,6 @@ func New(cfg Config) *slog.Logger {
 	return logger
 }
 
-// devHandler — цветной текст в stdout, JSON в файл.
 type devHandler struct {
 	stdoutHandler slog.Handler
 	fileHandler   slog.Handler
@@ -204,7 +203,6 @@ func (h *prettyHandler) Handle(ctx context.Context, r slog.Record) error {
 		return true
 	})
 
-	// Пишем: время уровень сообщение атрибуты
 	msg := timeStr + " " + level + " " + r.Message
 	if len(attrs) > 0 {
 		msg += " " + strings.Join(attrs, " ")
@@ -225,7 +223,6 @@ func replaceAttr() func(groups []string, a slog.Attr) slog.Attr {
 			// Уровень в верхнем регистре
 			a.Value = slog.StringValue(strings.ToUpper(a.Value.String()))
 		case slog.MessageKey:
-			// Можно оставить как есть
 		}
 		return a
 	}

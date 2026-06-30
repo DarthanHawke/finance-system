@@ -38,6 +38,11 @@ const (
 	StepUnfreezeSender     = "unfreeze_sender"
 	StepBlockSender        = "block_sender"
 	StepBlockRecipient     = "block_recipient"
+
+	StepTransactionCreated   = "transaction_created"
+	StepTransactionCompleted = "transaction_completed"
+	StepTransactionCancelled = "transaction_cancelled"
+	StepTransactionBlocked   = "transaction_blocked"
 )
 
 func Register() map[string]Definition {
@@ -74,8 +79,8 @@ func buildOnUsTransfer() Definition {
 		},
 		OutcomeFailed: {
 			From: StateSenderFreezing, NewState: StateCancelled,
-			NewStatus: models.TransactionStatusCancelled,
-			Commands:  []Command{transactionCancelledCmd("sender freeze rejected")},
+			NewStatus:     models.TransactionStatusCancelled,
+			Notifications: []Notification{transactionCancelledNotif(models.ReasonSenderFreezeRejected)},
 		},
 	}
 
@@ -93,8 +98,8 @@ func buildOnUsTransfer() Definition {
 	transaction[StateSenderCapturing] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateSenderCapturing, NewState: StateCompleted,
-			NewStatus: models.TransactionStatusCompleted,
-			Commands:  []Command{transactionCompletedCmd()},
+			NewStatus:     models.TransactionStatusCompleted,
+			Notifications: []Notification{transactionCompletedNotif()},
 		},
 		OutcomeFailed: {
 			From: StateSenderCapturing, NewState: StateCompensatingRecipient,
@@ -110,20 +115,22 @@ func buildOnUsTransfer() Definition {
 		OutcomeFailed: {
 			From: StateCompensatingRecipient, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockSenderCmd(), blockRecipientCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockSenderCmd(), blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
 	transaction[StateCompensatingSender] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateCompensatingSender, NewState: StateCancelled,
-			NewStatus: models.TransactionStatusCancelled,
-			Commands:  []Command{transactionCancelledCmd("compensated")},
+			NewStatus:     models.TransactionStatusCancelled,
+			Notifications: []Notification{transactionCancelledNotif(models.ReasonCompensated)},
 		},
 		OutcomeFailed: {
 			From: StateCompensatingSender, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockSenderCmd(), blockRecipientCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockSenderCmd(), blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
@@ -149,8 +156,8 @@ func buildOutboundRemittance() Definition {
 		},
 		OutcomeFailed: {
 			From: StateSenderFreezing, NewState: StateCancelled,
-			NewStatus: models.TransactionStatusCancelled,
-			Commands:  []Command{transactionCancelledCmd("sender freeze rejected")},
+			NewStatus:     models.TransactionStatusCancelled,
+			Notifications: []Notification{transactionCancelledNotif(models.ReasonSenderFreezeRejected)},
 		},
 	}
 
@@ -168,8 +175,8 @@ func buildOutboundRemittance() Definition {
 	t[StateSenderCapturing] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateSenderCapturing, NewState: StateCompleted,
-			NewStatus: models.TransactionStatusCompleted,
-			Commands:  []Command{transactionCompletedCmd()},
+			NewStatus:     models.TransactionStatusCompleted,
+			Notifications: []Notification{transactionCompletedNotif()},
 		},
 		OutcomeFailed: {
 			From: StateSenderCapturing, NewState: StateCompensatingExternal,
@@ -185,20 +192,22 @@ func buildOutboundRemittance() Definition {
 		OutcomeFailed: {
 			From: StateCompensatingExternal, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockSenderCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockSenderCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
 	t[StateCompensatingSender] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateCompensatingSender, NewState: StateCancelled,
-			NewStatus: models.TransactionStatusCancelled,
-			Commands:  []Command{transactionCancelledCmd("compensated")},
+			NewStatus:     models.TransactionStatusCancelled,
+			Notifications: []Notification{transactionCancelledNotif(models.ReasonCompensated)},
 		},
 		OutcomeFailed: {
 			From: StateCompensatingSender, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockSenderCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockSenderCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
@@ -220,13 +229,14 @@ func buildInboundRemittance() Definition {
 	t[StateCreditingRecipient] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateCreditingRecipient, NewState: StateCompleted,
-			NewStatus: models.TransactionStatusCompleted,
-			Commands:  []Command{transactionCompletedCmd()},
+			NewStatus:     models.TransactionStatusCompleted,
+			Notifications: []Notification{transactionCompletedNotif()},
 		},
 		OutcomeFailed: {
 			From: StateCreditingRecipient, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
@@ -241,11 +251,9 @@ func buildTopUpRequest() Definition {
 	t[StateInit] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateInit, NewState: StateCompleted,
-			NewStatus: models.TransactionStatusCompleted,
-			Commands: []Command{
-				topUpRequestCmd(),
-				transactionCompletedCmd(),
-			},
+			NewStatus:     models.TransactionStatusCompleted,
+			Commands:      []Command{topUpRequestCmd()},
+			Notifications: []Notification{transactionCompletedNotif()},
 		},
 	}
 
@@ -272,20 +280,22 @@ func buildRefundInternal() Definition {
 		OutcomeFailed: {
 			From: StateCreditingSender, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockSenderCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockSenderCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
 	t[StateDebitingRecipient] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateDebitingRecipient, NewState: StateCompleted,
-			NewStatus: models.TransactionStatusCompleted,
-			Commands:  []Command{transactionCompletedCmd()},
+			NewStatus:     models.TransactionStatusCompleted,
+			Notifications: []Notification{transactionCompletedNotif()},
 		},
 		OutcomeFailed: {
 			From: StateDebitingRecipient, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
@@ -307,13 +317,14 @@ func buildRefundOutbound() Definition {
 	t[StateCreditingSender] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateCreditingSender, NewState: StateCompleted,
-			NewStatus: models.TransactionStatusCompleted,
-			Commands:  []Command{transactionCompletedCmd()},
+			NewStatus:     models.TransactionStatusCompleted,
+			Notifications: []Notification{transactionCompletedNotif()},
 		},
 		OutcomeFailed: {
 			From: StateCreditingSender, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockSenderCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockSenderCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
@@ -340,20 +351,22 @@ func buildRefundInbound() Definition {
 		OutcomeFailed: {
 			From: StateDebitingRecipient, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
 	t[StateExternalPayment] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateExternalPayment, NewState: StateCompleted,
-			NewStatus: models.TransactionStatusCompleted,
-			Commands:  []Command{transactionCompletedCmd()},
+			NewStatus:     models.TransactionStatusCompleted,
+			Notifications: []Notification{transactionCompletedNotif()},
 		},
 		OutcomeFailed: {
 			From: StateExternalPayment, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
@@ -380,20 +393,22 @@ func buildChargebackInternal() Definition {
 		OutcomeFailed: {
 			From: StateDebitingRecipient, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
 	t[StateCreditingSender] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateCreditingSender, NewState: StateCompleted,
-			NewStatus: models.TransactionStatusCompleted,
-			Commands:  []Command{transactionCompletedCmd()},
+			NewStatus:     models.TransactionStatusCompleted,
+			Notifications: []Notification{transactionCompletedNotif()},
 		},
 		OutcomeFailed: {
 			From: StateCreditingSender, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockSenderCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockSenderCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
@@ -415,13 +430,14 @@ func buildChargebackOutbound() Definition {
 	t[StateCreditingSender] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateCreditingSender, NewState: StateCompleted,
-			NewStatus: models.TransactionStatusCompleted,
-			Commands:  []Command{transactionCompletedCmd()},
+			NewStatus:     models.TransactionStatusCompleted,
+			Notifications: []Notification{transactionCompletedNotif()},
 		},
 		OutcomeFailed: {
 			From: StateCreditingSender, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockSenderCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockSenderCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
@@ -448,20 +464,22 @@ func buildChargebackInbound() Definition {
 		OutcomeFailed: {
 			From: StateDebitingRecipient, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
 	t[StateExternalPayment] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateExternalPayment, NewState: StateCompleted,
-			NewStatus: models.TransactionStatusCompleted,
-			Commands:  []Command{transactionCompletedCmd()},
+			NewStatus:     models.TransactionStatusCompleted,
+			Notifications: []Notification{transactionCompletedNotif()},
 		},
 		OutcomeFailed: {
 			From: StateExternalPayment, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
@@ -483,13 +501,14 @@ func buildAdjustmentCredit() Definition {
 	t[StateCreditingRecipient] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateCreditingRecipient, NewState: StateCompleted,
-			NewStatus: models.TransactionStatusCompleted,
-			Commands:  []Command{transactionCompletedCmd()},
+			NewStatus:     models.TransactionStatusCompleted,
+			Notifications: []Notification{transactionCompletedNotif()},
 		},
 		OutcomeFailed: {
 			From: StateCreditingRecipient, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 
@@ -511,13 +530,14 @@ func buildAdjustmentDebit() Definition {
 	t[StateDebitingRecipient] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateDebitingRecipient, NewState: StateCompleted,
-			NewStatus: models.TransactionStatusCompleted,
-			Commands:  []Command{transactionCompletedCmd()},
+			NewStatus:     models.TransactionStatusCompleted,
+			Notifications: []Notification{transactionCompletedNotif()},
 		},
 		OutcomeFailed: {
 			From: StateDebitingRecipient, NewState: StateBlocked,
 			NewStatus: models.TransactionStatusBlocked, Terminal: true,
-			Commands: []Command{blockRecipientCmd(), transactionBlockedCmd()},
+			Commands:      []Command{blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
 		},
 	}
 

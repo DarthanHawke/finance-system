@@ -1,3 +1,4 @@
+// Пакет app реализовывает создание и настройку всех компонентов сервиса
 package app
 
 import (
@@ -41,6 +42,7 @@ type App struct {
 func NewApp(cfg *config.Configuration, log *slog.Logger) (*App, error) {
 	log.Info("initializing server", "env", cfg.Env, "port", cfg.GRPCServer.Port)
 
+	// инициализируем трассировки
 	tracer, err := tracing.InitTracer(
 		context.Background(),
 		"transaction-service",
@@ -51,12 +53,14 @@ func NewApp(cfg *config.Configuration, log *slog.Logger) (*App, error) {
 		return nil, fmt.Errorf("init tracer: %w", err)
 	}
 
+	// подключаемся к бд
 	dataBase, err := postgres.NewDatabase(cfg.DataBase.DSN())
 	if err != nil {
 		return nil, fmt.Errorf("connect to database: %w", err)
 	}
 	log.Info("database connected")
 
+	// соединяемся с редисом
 	redisClient, err := redis.NewClient(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
 	if err != nil {
 		dataBase.Close()
@@ -64,16 +68,22 @@ func NewApp(cfg *config.Configuration, log *slog.Logger) (*App, error) {
 	}
 	log.Info("Redis connection success", "address", cfg.Redis.Addr)
 
+	// инициализируем дедупликатор для проверки дубликатов транзакций(чтоб не доходили до UNIQUE в бд)
 	deduplicator := redis.NewDeduplicator(redisClient, 24*time.Hour)
 
+	// обертки бд для работы с транзакциями(платежами), сагой, событиями
 	transactionRepository := postgres.NewTransactionRepository(dataBase)
 	sagaRepository := postgres.NewSagaRepository(dataBase)
 	eventRepository := postgres.NewEventRepository(dataBase)
-
+	// инициализируем sagaCoordinator, который реализует вызов
+	// методов из transactionRepository, sagaRepository и eventRepository в пределах одной транзакции
 	sagaCoordinator := postgres.NewSagaCoordinator(dataBase, transactionRepository, sagaRepository, eventRepository)
-	sagaOrchestrator := saga.NewOrchestrator(transactionRepository, sagaCoordinator, saga.Register())
-	eventHandlers := handlers.New(sagaOrchestrator)
+	// stateMachine для работы с сагами
+	sagaOrchestrator := saga.NewOrchestrator(sagaCoordinator, saga.Register())
+	// хэндлеры всех событий из кафки
+	eventHandlers := handlers.New(sagaOrchestrator, transactionRepository)
 
+	// продьюсер Kafka
 	producer := producer.NewProducer(
 		&producer.Config{
 			Brokers:      splitBrokers(cfg.Kafka.Brokers),
@@ -99,7 +109,7 @@ func NewApp(cfg *config.Configuration, log *slog.Logger) (*App, error) {
 		},
 		log,
 	)
-
+	// консьюмер Kafka
 	consumer := consumer.NewConsumer(
 		splitTopics(cfg.Kafka.ConsumerTopics),
 		&consumer.Config{
@@ -119,6 +129,7 @@ func NewApp(cfg *config.Configuration, log *slog.Logger) (*App, error) {
 		log,
 	)
 
+	// outbox для гарантии сохранности сообщений и их отправки в Kafka
 	outboxProcessor := processor.NewOutboxProcessor(
 		eventRepository,
 		producer,
@@ -130,6 +141,7 @@ func NewApp(cfg *config.Configuration, log *slog.Logger) (*App, error) {
 		},
 	)
 
+	// открываем http сервер для метрик Prometheus
 	metric := &http.Server{
 		Addr:    ":9090",
 		Handler: promhttp.Handler(),
@@ -201,6 +213,7 @@ func (app *App) Run() error {
 	return nil
 }
 
+// закрываем все соединения
 func (app *App) shutdown() {
 	app.logger.Info("shutting down resources")
 
@@ -233,10 +246,12 @@ func (app *App) shutdown() {
 	app.logger.Info("resources released")
 }
 
+// splitBrokers - парсим все указанные в конфиге брокеры в []string
 func splitBrokers(brokers string) []string {
 	return strings.Split(brokers, ",")
 }
 
+// splitTopics - парсим топики в []string
 func splitTopics(topics string) []string {
 	parts := strings.Split(topics, ",")
 	for i := range parts {
@@ -245,6 +260,7 @@ func splitTopics(topics string) []string {
 	return parts
 }
 
+// runMetricServer - заускаем http сервер для метрик prometheus
 func (app *App) runMetricServer() {
 	app.logger.Info("starting metrics server", "port", 9090)
 	if err := app.metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -252,6 +268,7 @@ func (app *App) runMetricServer() {
 	}
 }
 
+// stopMetricServer - отсанавливаем http сервер
 func (app *App) stopMetricServer() {
 	if app.metricsServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
