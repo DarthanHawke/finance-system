@@ -12,6 +12,7 @@ const (
 	StateCreditingSender       = "CREDITING_SENDER"
 	StateDebitingRecipient     = "DEBITING_RECIPIENT"
 	StateSenderCapturing       = "SENDER_CAPTURING"
+	StateRequestingTopUp       = "REQUESTING_TOP_UP"
 	StateCompensatingRecipient = "COMPENSATING_RECIPIENT"
 	StateCompensatingSender    = "COMPENSATING_SENDER"
 	StateCompensatingExternal  = "COMPENSATING_EXTERNAL"
@@ -68,7 +69,8 @@ func buildOnUsTransfer() Definition {
 	transaction[StateInit] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateInit, NewState: StateSenderFreezing,
-			Commands: []Command{freezeSenderCmd()},
+			Commands:      []Command{freezeSenderCmd()},
+			Notifications: []Notification{transactionCreatedNotif()},
 		},
 	}
 
@@ -145,7 +147,8 @@ func buildOutboundRemittance() Definition {
 	t[StateInit] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateInit, NewState: StateSenderFreezing,
-			Commands: []Command{freezeSenderCmd()},
+			Commands:      []Command{freezeSenderCmd()},
+			Notifications: []Notification{transactionCreatedNotif()},
 		},
 	}
 
@@ -222,7 +225,8 @@ func buildInboundRemittance() Definition {
 	t[StateInit] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateInit, NewState: StateCreditingRecipient,
-			Commands: []Command{creditRecipientCmd()},
+			Commands:      []Command{creditRecipientCmd()},
+			Notifications: []Notification{transactionCreatedNotif()},
 		},
 	}
 
@@ -250,10 +254,25 @@ func buildTopUpRequest() Definition {
 
 	t[StateInit] = map[int]Transition{
 		OutcomeSuccess: {
-			From: StateInit, NewState: StateCompleted,
-			NewStatus:     models.TransactionStatusCompleted,
+			From:          StateInit,
+			NewState:      StateRequestingTopUp,
 			Commands:      []Command{topUpRequestCmd()},
+			Notifications: []Notification{transactionCreatedNotif()},
+		},
+	}
+
+	t[StateRequestingTopUp] = map[int]Transition{
+		OutcomeSuccess: {
+			From:          StateRequestingTopUp,
+			NewState:      StateCompleted,
+			NewStatus:     models.TransactionStatusCompleted,
 			Notifications: []Notification{transactionCompletedNotif()},
+		},
+		OutcomeFailed: {
+			From:          StateRequestingTopUp,
+			NewState:      StateCancelled,
+			NewStatus:     models.TransactionStatusCancelled,
+			Notifications: []Notification{transactionCancelledNotif(models.ReasonTopUpRejected)},
 		},
 	}
 
@@ -268,7 +287,8 @@ func buildRefundInternal() Definition {
 	t[StateInit] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateInit, NewState: StateCreditingSender,
-			Commands: []Command{creditSenderCmd()},
+			Commands:      []Command{creditSenderCmd()},
+			Notifications: []Notification{transactionCreatedNotif()},
 		},
 	}
 
@@ -310,7 +330,8 @@ func buildRefundOutbound() Definition {
 	t[StateInit] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateInit, NewState: StateCreditingSender,
-			Commands: []Command{creditSenderCmd()},
+			Commands:      []Command{creditSenderCmd()},
+			Notifications: []Notification{transactionCreatedNotif()},
 		},
 	}
 
@@ -339,7 +360,8 @@ func buildRefundInbound() Definition {
 	t[StateInit] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateInit, NewState: StateDebitingRecipient,
-			Commands: []Command{debitRecipientCmd()},
+			Commands:      []Command{debitRecipientCmd()},
+			Notifications: []Notification{transactionCreatedNotif()},
 		},
 	}
 
@@ -381,7 +403,8 @@ func buildChargebackInternal() Definition {
 	t[StateInit] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateInit, NewState: StateDebitingRecipient,
-			Commands: []Command{debitRecipientCmd()},
+			Commands:      []Command{debitRecipientCmd()},
+			Notifications: []Notification{transactionCreatedNotif()},
 		},
 	}
 
@@ -423,7 +446,8 @@ func buildChargebackOutbound() Definition {
 	t[StateInit] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateInit, NewState: StateCreditingSender,
-			Commands: []Command{creditSenderCmd()},
+			Commands:      []Command{creditSenderCmd()},
+			Notifications: []Notification{transactionCreatedNotif()},
 		},
 	}
 
@@ -452,7 +476,8 @@ func buildChargebackInbound() Definition {
 	t[StateInit] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateInit, NewState: StateDebitingRecipient,
-			Commands: []Command{debitRecipientCmd()},
+			Commands:      []Command{debitRecipientCmd()},
+			Notifications: []Notification{transactionCreatedNotif()},
 		},
 	}
 
@@ -494,7 +519,8 @@ func buildAdjustmentCredit() Definition {
 	t[StateInit] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateInit, NewState: StateCreditingRecipient,
-			Commands: []Command{creditRecipientCmd()},
+			Commands:      []Command{creditRecipientCmd()},
+			Notifications: []Notification{transactionCreatedNotif()},
 		},
 	}
 
@@ -523,7 +549,8 @@ func buildAdjustmentDebit() Definition {
 	t[StateInit] = map[int]Transition{
 		OutcomeSuccess: {
 			From: StateInit, NewState: StateDebitingRecipient,
-			Commands: []Command{debitRecipientCmd()},
+			Commands:      []Command{debitRecipientCmd()},
+			Notifications: []Notification{transactionCreatedNotif()},
 		},
 	}
 

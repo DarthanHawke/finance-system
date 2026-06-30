@@ -93,6 +93,7 @@ const (
 	ReasonTransactionCannotBeComplited string = "blocked, transaction cannot be completed"
 	ReasonSenderFreezeRejected         string = "sender freeze rejected"
 	ReasonCompensated                  string = "compensated"
+	ReasonTopUpRejected                string = "topup_request_rejected"
 	ReasonCompleted                    string = ""
 )
 

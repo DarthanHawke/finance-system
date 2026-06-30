@@ -1,3 +1,4 @@
+// handler содержит хэндлеры для Transaction service
 package handler
 
 import (
@@ -12,11 +13,13 @@ import (
 	"github.com/google/uuid"
 )
 
+// Handlers реализует хэндлер методы Transaction service
 type Handlers struct {
 	orchestratorManager OrchestratorManager
 	transactionManager  TransactionManager
 }
 
+// OrchestratorManager предоставляет методы работы с сагой
 type OrchestratorManager interface {
 	Apply(ctx context.Context, transaction *models.Transaction, apply saga.Apply) error
 	ApplyWithFirstStep(
@@ -27,11 +30,13 @@ type OrchestratorManager interface {
 	) error
 }
 
+// TransactionManager предоставляет методы работы с таблицей бд Transaction
 type TransactionManager interface {
 	GetTransaction(ctx context.Context, req *models.GetTransactionRequest) (models.GetTransactionResponse, error)
 }
 
-func New(
+// NewHandlers создает новый экземпляр Handlers
+func NewHandlers(
 	orchestrator *saga.Orchestrator,
 	transactionManager TransactionManager,
 ) *Handlers {
@@ -41,21 +46,7 @@ func New(
 	}
 }
 
-func outcomeFromResponse(event *models.Event) (int, error) {
-	var payload models.ResponsePayload
-	if err := json.Unmarshal(event.Payload, &payload); err != nil {
-		return 0, &apperr.TerminalError{
-			Op:      "handler.outcome",
-			Context: "bad response payload",
-			Err:     err,
-		}
-	}
-	if payload.Success {
-		return saga.OutcomeSuccess, nil
-	}
-	return saga.OutcomeFailed, nil
-}
-
+// HandleTransactionCreate запускает создание транзакции
 func (h *Handlers) HandleTransactionCreate(ctx context.Context, event *models.Event) error {
 	const op = "handlers.HandleTransactionCreate"
 
@@ -100,6 +91,7 @@ func (h *Handlers) HandleTransactionCreate(ctx context.Context, event *models.Ev
 	)
 }
 
+// HandleFreezeResponse получает результат заморозки средств и вызывает State Machine
 func (h *Handlers) HandleFreezeResponse(ctx context.Context, event *models.Event) error {
 	outcome, err := outcomeFromResponse(event)
 	if err != nil {
@@ -120,6 +112,7 @@ func (h *Handlers) HandleFreezeResponse(ctx context.Context, event *models.Event
 	})
 }
 
+// HandleCaptureResponse получает результат заморозки средств и вызывает State Machine
 func (h *Handlers) HandleCaptureResponse(ctx context.Context, event *models.Event) error {
 	outcome, err := outcomeFromResponse(event)
 	if err != nil {
@@ -140,6 +133,7 @@ func (h *Handlers) HandleCaptureResponse(ctx context.Context, event *models.Even
 	})
 }
 
+// HandleCreditResponse получает результат заморозки средств и вызывает State Machine
 func (h *Handlers) HandleCreditResponse(ctx context.Context, event *models.Event) error {
 	outcome, err := outcomeFromResponse(event)
 	if err != nil {
@@ -160,6 +154,7 @@ func (h *Handlers) HandleCreditResponse(ctx context.Context, event *models.Event
 	})
 }
 
+// HandleDebitResponse получает результат заморозки средств и вызывает State Machine
 func (h *Handlers) HandleDebitResponse(ctx context.Context, event *models.Event) error {
 	outcome, err := outcomeFromResponse(event)
 	if err != nil {
@@ -180,6 +175,7 @@ func (h *Handlers) HandleDebitResponse(ctx context.Context, event *models.Event)
 	})
 }
 
+// HandleUnfreezeResponse получает результат заморозки средств и вызывает State Machine
 func (h *Handlers) HandleUnfreezeResponse(ctx context.Context, event *models.Event) error {
 	outcome, err := outcomeFromResponse(event)
 	if err != nil {
@@ -200,6 +196,7 @@ func (h *Handlers) HandleUnfreezeResponse(ctx context.Context, event *models.Eve
 	})
 }
 
+// HandleExternalPaymentResponse получает результат заморозки средств и вызывает State Machine
 func (h *Handlers) HandleExternalPaymentResponse(ctx context.Context, event *models.Event) error {
 	outcome, err := outcomeFromResponse(event)
 	if err != nil {
@@ -220,6 +217,7 @@ func (h *Handlers) HandleExternalPaymentResponse(ctx context.Context, event *mod
 	})
 }
 
+// HandleExternalCommitResponse получает результат заморозки средств и вызывает State Machine
 func (h *Handlers) HandleExternalCommitResponse(ctx context.Context, event *models.Event) error {
 	outcome, err := outcomeFromResponse(event)
 	if err != nil {
@@ -240,6 +238,7 @@ func (h *Handlers) HandleExternalCommitResponse(ctx context.Context, event *mode
 	})
 }
 
+// HandleExternalRollbackResponse получает результат заморозки средств и вызывает State Machine
 func (h *Handlers) HandleExternalRollbackResponse(ctx context.Context, event *models.Event) error {
 	outcome, err := outcomeFromResponse(event)
 	if err != nil {
@@ -260,6 +259,7 @@ func (h *Handlers) HandleExternalRollbackResponse(ctx context.Context, event *mo
 	})
 }
 
+// HandleBlockAccountResponse получает результат заморозки средств и вызывает State Machine
 func (h *Handlers) HandleBlockAccountResponse(ctx context.Context, event *models.Event) error {
 	outcome, err := outcomeFromResponse(event)
 	if err != nil {
@@ -274,6 +274,7 @@ func (h *Handlers) HandleBlockAccountResponse(ctx context.Context, event *models
 	return nil
 }
 
+// createTransaciton создает models.Transaction
 func (h *Handlers) createTransaciton(
 	transactionPayload *models.TransactionPayload,
 ) (*models.Transaction, error) {
@@ -311,4 +312,20 @@ func (h *Handlers) createTransaciton(
 		},
 	}
 	return transaction, nil
+}
+
+// outcomeFromResponse достает и анмаршалит payload из пришедшего события
+func outcomeFromResponse(event *models.Event) (int, error) {
+	var payload models.ResponsePayload
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		return 0, &apperr.TerminalError{
+			Op:      "handler.outcome",
+			Context: "bad response payload",
+			Err:     err,
+		}
+	}
+	if payload.Success {
+		return saga.OutcomeSuccess, nil
+	}
+	return saga.OutcomeFailed, nil
 }

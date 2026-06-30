@@ -87,8 +87,12 @@ func (o *Orchestrator) ApplyWithFirstStep(
 ) error {
 	const op = "saga.ApplyWithFirstStep"
 	now := time.Now()
+	var parentType *string
+	if transactionParent != nil {
+		parentType = &transactionParent.Type
+	}
 
-	sagaType, err := o.ResolveSagaType(transaction.Type, &transactionParent.Type)
+	sagaType, err := o.ResolveSagaType(transaction.Type, parentType)
 	if err != nil {
 		return &apperr.WrappedError{Op: op, Err: err}
 	}

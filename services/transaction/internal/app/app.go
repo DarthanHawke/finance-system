@@ -81,7 +81,7 @@ func NewApp(cfg *config.Configuration, log *slog.Logger) (*App, error) {
 	// stateMachine для работы с сагами
 	sagaOrchestrator := saga.NewOrchestrator(sagaCoordinator, saga.Register())
 	// хэндлеры всех событий из кафки
-	eventHandlers := handlers.New(sagaOrchestrator, transactionRepository)
+	eventHandlers := handlers.NewHandlers(sagaOrchestrator, transactionRepository)
 
 	// продьюсер Kafka
 	producer := producer.NewProducer(

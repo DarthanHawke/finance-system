@@ -1,4 +1,4 @@
-// Пакет kafka предоставляет реализацию консьюмера для Kafka
+// Пакет kafka предоставляет реализацию Consumer/Producer для Kafka
 package kafka
 
 import (
