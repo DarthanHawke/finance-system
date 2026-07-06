@@ -12,6 +12,7 @@ type Error struct {
 	Message string
 }
 
+// Error - возвращает Error в виде строки
 func (e *Error) Error() string {
 	return fmt.Sprintf("%s: %s", e.Code, e.Message)
 }
@@ -22,6 +23,7 @@ type WrappedError struct {
 	Err error
 }
 
+// Error - возвращает WrappedError в виде строки
 func (e *WrappedError) Error() string {
 	if e.Err == nil {
 		return e.Op
@@ -29,6 +31,7 @@ func (e *WrappedError) Error() string {
 	return fmt.Sprintf("%s: %v", e.Op, e.Err)
 }
 
+// Unwrap - возвращает ошибку типа Error содержащуюся в WrappedError
 func (e *WrappedError) Unwrap() error {
 	return e.Err
 }
@@ -40,6 +43,7 @@ type TerminalError struct {
 	Err     error
 }
 
+// Error - возвращает TerminalError в виде строки
 func (e *TerminalError) Error() string {
 	if e.Err == nil {
 		return fmt.Sprintf("TERMINAL %s: %s", e.Op, e.Context)
@@ -47,6 +51,7 @@ func (e *TerminalError) Error() string {
 	return fmt.Sprintf("TERMINAL %s: %s: %v", e.Op, e.Context, e.Err)
 }
 
+// Unwrap - возвращает ошибку типа Error содержащуюся в TerminalError
 func (e *TerminalError) Unwrap() error {
 	return e.Err
 }
@@ -59,6 +64,11 @@ var (
 		Code:    "TRANSACTION_ID_NOT_UNIQUE",
 		Message: "transaction code not unique",
 	}
+	// ErrTransactionPartiesAlreadyExist - ID платежа уже занят
+	ErrTransactionPartiesAlreadyExist = &Error{
+		Code:    "TRANSACTION_PARTIES_ALREADY_EXIST",
+		Message: "parties for this transaction already exist",
+	}
 	// ErrTransactionNotFound - платеж не найден
 	ErrTransactionNotFound = &Error{
 		Code:    "TRANSACTION_NOT_FOUND",
@@ -68,6 +78,11 @@ var (
 	ErrUnknownTransactionType = &Error{
 		Code:    "UNKNOWN_TRANSACTION_TYPE",
 		Message: "unknown transaction type",
+	}
+	// ErrInvalidParentTransactionID - parent transaction uuid не валиден
+	ErrInvalidParentTransactionID = &Error{
+		Code:    "INVALID_PARENT_TRANSACTION_ID",
+		Message: "parent_transaction_id is not a valid uuid",
 	}
 )
 
@@ -95,7 +110,33 @@ var (
 	}
 )
 
-// Classify определяет, является ли ошибка retryable или terminal.
+// Ошибки саги
+var (
+	// ErrSagaAlreadyAdvanced - сага уже продвинута до целевого состояния
+	ErrSagaAlreadyAdvanced = &Error{
+		Code:    "SAGA__ALREADY_ADVANCED",
+		Message: "Saga already advanced to target state",
+	}
+	// ErrSagaStepAlreadyExists - шаг саги уже существует
+	ErrSagaStepAlreadyExists = &Error{
+		Code:    "SAGA_STEP_ALREADY_EXISTS",
+		Message: "Saga step already exists",
+	}
+
+	// ErrSagaStepNotFound - шаг саги не найден
+	ErrSagaStepNotFound = &Error{
+		Code:    "SAGA_STEP_NOT_FOUND",
+		Message: "Saga step not found",
+	}
+
+	// ErrInvalidSagaState - не верный saga state
+	ErrInvalidSagaState = &Error{
+		Code:    "INVALID_SAGA_STATE",
+		Message: "Invalid saga state transition",
+	}
+)
+
+// Classify определяет, является ли ошибка retryable или terminal
 func Classify(err error) (retryable bool, terminal bool) {
 	if err == nil {
 		return false, false

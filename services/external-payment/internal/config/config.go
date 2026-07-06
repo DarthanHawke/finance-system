@@ -7,9 +7,10 @@ import (
 )
 
 type Configuration struct {
-	Env        string `mapstructure:"ENV" env-default:"prod"`
-	HTTPServer `mapstructure:",squash"`
-	Kafka      `mapstructure:",squash"`
+	Env               string `mapstructure:"ENV" env-default:"prod"`
+	ISO8583ConfigPath string `mapstructure:"ISO8583_CONFIG_PATH" env-default:"iso8583.example"`
+	HTTPServer        `mapstructure:",squash"`
+	Kafka             `mapstructure:",squash"`
 }
 
 type HTTPServer struct {

@@ -1,4 +1,4 @@
-// kafka предоставляет реализацию Producer для Kafka
+// kafka предоставляет реализацию Consumer/Producer для Kafka
 package kafka
 
 import (
@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// Producer реализует Kafka producer для обработки событий
 type Producer struct {
 	writer      *kafka.Writer
 	dlqWriter   *kafka.Writer
@@ -72,6 +73,7 @@ func NewProducer(
 	}
 }
 
+// createWriter собирает kafka.Writer
 func createWriter(brokers []string, topic string, batchSize int, batchTimeout time.Duration, requiredAcks, maxAttempts int, writeTimeout time.Duration) *kafka.Writer {
 	return &kafka.Writer{
 		Addr:                   kafka.TCP(brokers...),
@@ -82,7 +84,7 @@ func createWriter(brokers []string, topic string, batchSize int, batchTimeout ti
 		RequiredAcks:           kafka.RequiredAcks(requiredAcks),
 		MaxAttempts:            maxAttempts,
 		WriteTimeout:           writeTimeout,
-		AllowAutoTopicCreation: true,
+		AllowAutoTopicCreation: false,
 		Compression:            kafka.Snappy,
 	}
 }

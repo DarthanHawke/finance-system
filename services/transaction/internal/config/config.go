@@ -1,3 +1,4 @@
+// Пакет config реализовывает работу с конфиигурациями сервиса
 package config
 
 import (
@@ -6,22 +7,24 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Configuration конфиг сервиса Transaction
 type Configuration struct {
-	Env               string `mapstructure:"ENV" env-default:"prod"`
-	ISO8583ConfigPath string `mapstructure:"ISO8583_CONFIG_PATH" env-default:"iso8583.example"`
-	GRPCServer        `mapstructure:",squash"`
-	DataBase          `mapstructure:",squash"`
-	Redis             `mapstructure:",squash"`
-	Kafka             `mapstructure:",squash"`
-	Logs              `mapstructure:",squash"`
-	Tracing           `mapstructure:",squash"`
+	Env        string `mapstructure:"ENV" env-default:"prod"`
+	GRPCServer `mapstructure:",squash"`
+	DataBase   `mapstructure:",squash"`
+	Redis      `mapstructure:",squash"`
+	Kafka      `mapstructure:",squash"`
+	Logs       `mapstructure:",squash"`
+	Tracing    `mapstructure:",squash"`
 }
 
+// GRPCServer конфиг для gRPC сервера
 type GRPCServer struct {
 	Port    int `mapstructure:"SERVER_PORT" env-default:"50058"`
 	Timeout int `mapstructure:"SERVER_TIMEOUT" env-default:"10"`
 }
 
+// DataBase конфиг для подключения к бд
 type DataBase struct {
 	Host     string `mapstructure:"DB_HOST" env-default:"postgres"`
 	Port     int    `mapstructure:"DB_PORT" env-default:"5432"`
@@ -34,12 +37,14 @@ type DataBase struct {
 	Key      string `mapstructure:"DB_KEY" env-default:""`
 }
 
+// Redis конфиг для установки соединения с Redis
 type Redis struct {
 	Addr     string `mapstructure:"REDIS_ADDR"`
 	Password string `mapstructure:"REDIS_PASSWORD"`
 	DB       int    `mapstructure:"REDIS_DB"`
 }
 
+// Kafka конфигурация кафки(и продьюсера и консьюмера, плюс колличество потоков для создания воркеров в outbox - Concurrency)
 type Kafka struct {
 	Brokers                  string  `mapstructure:"KAFKA_BROKERS" env-default:"localhost:9092"`
 	ConsumerTopics           string  `mapstructure:"KAFKA_CONSUMER_TOPICS"`
@@ -71,6 +76,7 @@ type Kafka struct {
 	Concurrency              int     `mapstructure:"KAFKA_CONCURRENCY" env-default:"8"`
 }
 
+// Logs конфиг для хранения логов
 type Logs struct {
 	LogFile    string `mapstructure:"LOG_FILE" env-default:""`
 	MaxSize    int    `mapstructure:"LOG_MAX_SIZE" env-default:"10"`
@@ -79,10 +85,12 @@ type Logs struct {
 	AddSource  bool   `mapstructure:"LOG_SOURCE" env-default:"true"`
 }
 
+// Tracing конфиг для соединения с grafana/tempo
 type Tracing struct {
 	OTLPEndpoint string `mapstructure:"TRACING_OTLP_ENDPOINT" env-default:"tempo:4317"`
 }
 
+// DSN собираем dns строку для конекта с бд
 func (c DataBase) DSN() string {
 	return fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
@@ -95,6 +103,7 @@ func (c DataBase) DSN() string {
 	)
 }
 
+// LoadConfig грузит конфиг из файла .env.&, где & - example/development/production
 func LoadConfig(env string) (config *Configuration, err error) {
 	v := viper.New()
 	v.SetConfigName(fmt.Sprintf(".env.%s", env))

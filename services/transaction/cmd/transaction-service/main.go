@@ -17,19 +17,19 @@ const (
 func main() {
 	env := os.Getenv("APP_ENV")
 	if env == "" {
-		env = example // значение по умолчанию (например, production)
+		env = example
 	}
 
 	// Загружаем конфиг
 	cfg, err := config.LoadConfig(env)
 	if err != nil {
 		slog.Error("Failed to load config", "error", err)
-		return
+		os.Exit(1)
 	}
-	iso8583cfg, err := config.LoadISO8583Config(cfg.ISO8583ConfigPath)
-	if err != nil {
-		slog.Error("Failed to load ISO8583 config", "error", err)
-		return
+
+	if err := cfg.Validate(); err != nil {
+		slog.Error("Invalid configuration", "error", err)
+		os.Exit(1)
 	}
 
 	log := logger.New(logger.Config{
@@ -42,14 +42,29 @@ func main() {
 		AddSource:  cfg.Logs.AddSource,
 	})
 
+	log.Info("Configuration:",
+		"env", cfg.Env,
+		"grpc_port", cfg.GRPCServer.Port,
+		"db_host", cfg.DataBase.Host,
+		"db_name", cfg.DataBase.Name,
+		"redis_addr", cfg.Redis.Addr,
+		"kafka_brokers", cfg.Kafka.Brokers,
+		"kafka_concurrency", cfg.Kafka.Concurrency,
+		"kafka_consumer_group", cfg.Kafka.ConsumerGroupID,
+		"kafka_producer_topic", cfg.Kafka.ProducerTopic,
+		"kafka_dlq_topic", cfg.Kafka.DLQTopic,
+	)
+
 	// Создаем сервер
-	server, err := app.NewApp(cfg, iso8583cfg, log)
+	server, err := app.NewApp(cfg, log)
 	if err != nil {
 		slog.Error("Failed to create server", "error", err)
+		os.Exit(1)
 	}
 
 	// Запускаем сервер
 	if err := server.Run(); err != nil {
 		slog.Error("Server error", "error", err)
+		os.Exit(1)
 	}
 }

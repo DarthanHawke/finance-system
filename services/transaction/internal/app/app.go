@@ -1,3 +1,4 @@
+// Пакет app реализовывает создание и настройку всех компонентов сервиса
 package app
 
 import (
@@ -11,15 +12,13 @@ import (
 	"syscall"
 	"time"
 
-	grpc "transaction-service/internal/app/grpc"
 	config "transaction-service/internal/config"
-	iso8583 "transaction-service/internal/lib/iso8583"
-	stan "transaction-service/internal/lib/stan"
 	tracing "transaction-service/internal/lib/tracing"
 	postgres "transaction-service/internal/repository/postgres"
 	redis "transaction-service/internal/repository/redis"
-	service "transaction-service/internal/service/transaction"
+	saga "transaction-service/internal/saga"
 	consumer "transaction-service/internal/transport/kafka/consumer"
+	handlers "transaction-service/internal/transport/kafka/handlers"
 	processor "transaction-service/internal/transport/kafka/outbox"
 	producer "transaction-service/internal/transport/kafka/producer"
 
@@ -32,19 +31,18 @@ type App struct {
 	logger          *slog.Logger
 	postgres        *postgres.Database
 	redis           *redis.Client
-	grpc            *grpc.App
 	consumer        *consumer.Consumer
 	producer        *producer.Producer
 	outboxProcessor *processor.OutboxProcessor
-	stanManager     *stan.STAN
 	tracerProvider  *trace.TracerProvider
 	metricsServer   *http.Server
 }
 
 // NewApp создает все компоненты и настраивает зависимости
-func NewApp(cfg *config.Configuration, iso8583cfg *config.ISO8583Config, log *slog.Logger) (*App, error) {
+func NewApp(cfg *config.Configuration, log *slog.Logger) (*App, error) {
 	log.Info("initializing server", "env", cfg.Env, "port", cfg.GRPCServer.Port)
 
+	// инициализируем трассировки
 	tracer, err := tracing.InitTracer(
 		context.Background(),
 		"transaction-service",
@@ -55,12 +53,14 @@ func NewApp(cfg *config.Configuration, iso8583cfg *config.ISO8583Config, log *sl
 		return nil, fmt.Errorf("init tracer: %w", err)
 	}
 
+	// подключаемся к бд
 	dataBase, err := postgres.NewDatabase(cfg.DataBase.DSN())
 	if err != nil {
 		return nil, fmt.Errorf("connect to database: %w", err)
 	}
 	log.Info("database connected")
 
+	// соединяемся с редисом
 	redisClient, err := redis.NewClient(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
 	if err != nil {
 		dataBase.Close()
@@ -68,26 +68,22 @@ func NewApp(cfg *config.Configuration, iso8583cfg *config.ISO8583Config, log *sl
 	}
 	log.Info("Redis connection success", "address", cfg.Redis.Addr)
 
-	cache := redis.NewCache(redisClient, 10*time.Minute)
+	// инициализируем дедупликатор для проверки дубликатов транзакций(чтоб не доходили до UNIQUE в бд)
 	deduplicator := redis.NewDeduplicator(redisClient, 24*time.Hour)
 
-	stanManager := stan.NewSTAN()
-	iso8583Manager := iso8583.NewISO8583(iso8583cfg)
-
-	transactionRepository := postgres.NewTransactionRepository(dataBase, cache)
+	// обертки бд для работы с транзакциями(платежами), сагой, событиями
+	transactionRepository := postgres.NewTransactionRepository(dataBase)
+	sagaRepository := postgres.NewSagaRepository(dataBase)
 	eventRepository := postgres.NewEventRepository(dataBase)
+	// инициализируем sagaCoordinator, который реализует вызов
+	// методов из transactionRepository, sagaRepository и eventRepository в пределах одной транзакции
+	sagaCoordinator := postgres.NewSagaCoordinator(dataBase, transactionRepository, sagaRepository, eventRepository)
+	// stateMachine для работы с сагами
+	sagaOrchestrator := saga.NewOrchestrator(sagaCoordinator, saga.Register())
+	// хэндлеры всех событий из кафки
+	eventHandlers := handlers.NewHandlers(sagaOrchestrator, transactionRepository)
 
-	operationService := service.NewOperationService(
-		transactionRepository,
-	)
-
-	transactionService := service.NewTransactionService(
-		transactionRepository,
-		eventRepository,
-		iso8583Manager,
-		stanManager,
-	)
-
+	// продьюсер Kafka
 	producer := producer.NewProducer(
 		&producer.Config{
 			Brokers:      splitBrokers(cfg.Kafka.Brokers),
@@ -113,7 +109,7 @@ func NewApp(cfg *config.Configuration, iso8583cfg *config.ISO8583Config, log *sl
 		},
 		log,
 	)
-
+	// консьюмер Kafka
 	consumer := consumer.NewConsumer(
 		splitTopics(cfg.Kafka.ConsumerTopics),
 		&consumer.Config{
@@ -128,11 +124,12 @@ func NewApp(cfg *config.Configuration, iso8583cfg *config.ISO8583Config, log *sl
 			StartOffset:      cfg.Kafka.ConsumerStartOffset,
 			Concurrency:      cfg.Kafka.ConsumerConcurrency,
 		},
-		transactionService,
+		eventHandlers,
 		deduplicator,
 		log,
 	)
 
+	// outbox для гарантии сохранности сообщений и их отправки в Kafka
 	outboxProcessor := processor.NewOutboxProcessor(
 		eventRepository,
 		producer,
@@ -144,25 +141,19 @@ func NewApp(cfg *config.Configuration, iso8583cfg *config.ISO8583Config, log *sl
 		},
 	)
 
+	// открываем http сервер для метрик Prometheus
 	metric := &http.Server{
 		Addr:    ":9090",
 		Handler: promhttp.Handler(),
 	}
 
-	grpc := grpc.New(
-		log,
-		cfg.GRPCServer.Port,
-		operationService,
-	)
 	return &App{
 		logger:          log,
 		postgres:        dataBase,
 		redis:           redisClient,
-		grpc:            grpc,
 		consumer:        consumer,
 		producer:        producer,
 		outboxProcessor: outboxProcessor,
-		stanManager:     stanManager,
 		tracerProvider:  tracer,
 		metricsServer:   metric,
 	}, nil
@@ -180,9 +171,6 @@ func (app *App) Run() error {
 	// запускаем http сервер для prometheus
 	go app.runMetricServer()
 
-	// запускаем gRPC сервер
-	go app.grpc.MustRun()
-
 	// запускаем Kafka consumer
 	app.consumer.Run(ctx)
 
@@ -191,13 +179,6 @@ func (app *App) Run() error {
 	go func() {
 		defer close(outboxDone)
 		app.outboxProcessor.Run(ctx)
-	}()
-
-	// запускаем планировщик сброса счётчиков STAN
-	stanDone := make(chan struct{})
-	go func() {
-		defer close(stanDone)
-		app.runSTANResetScheduler(ctx)
 	}()
 
 	app.logger.Info("server started successfully")
@@ -212,12 +193,8 @@ func (app *App) Run() error {
 		app.logger.Info("context cancelled")
 	}
 
-	app.stopMetricServer(ctx)
+	app.stopMetricServer()
 	app.logger.Info("http prometheus server stopped")
-
-	// останавливаем gRPC
-	app.grpc.Stop()
-	app.logger.Info("grpc server stopped")
 
 	// в сулчае нормального завершения сразу отправляем отмену для consumer и outbox,
 	// чтоб не висели в таймауте в ожидании defer
@@ -226,10 +203,6 @@ func (app *App) Run() error {
 	// ждем завершения outbox processor
 	<-outboxDone
 	app.logger.Info("outbox processor stopped")
-
-	// ждем завершения STAN scheduler
-	<-stanDone
-	app.logger.Info("stan scheduler stopped")
 
 	// останавливаем consumer
 	if err := app.consumer.Stop(); err != nil {
@@ -240,6 +213,7 @@ func (app *App) Run() error {
 	return nil
 }
 
+// закрываем все соединения
 func (app *App) shutdown() {
 	app.logger.Info("shutting down resources")
 
@@ -272,10 +246,12 @@ func (app *App) shutdown() {
 	app.logger.Info("resources released")
 }
 
+// splitBrokers - парсим все указанные в конфиге брокеры в []string
 func splitBrokers(brokers string) []string {
 	return strings.Split(brokers, ",")
 }
 
+// splitTopics - парсим топики в []string
 func splitTopics(topics string) []string {
 	parts := strings.Split(topics, ",")
 	for i := range parts {
@@ -284,25 +260,7 @@ func splitTopics(topics string) []string {
 	return parts
 }
 
-// runSTANResetScheduler сбрасывает счётчики STAN каждый день в полночь
-func (app *App) runSTANResetScheduler(ctx context.Context) {
-	app.logger.Info("starting STAN reset scheduler")
-
-	for {
-		now := time.Now()
-		next := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
-
-		select {
-		case <-time.After(next.Sub(now)):
-			app.stanManager.ResetCounters()
-			app.logger.Info("STAN counters reset")
-		case <-ctx.Done():
-			app.logger.Info("STAN reset scheduler stopped")
-			return
-		}
-	}
-}
-
+// runMetricServer - заускаем http сервер для метрик prometheus
 func (app *App) runMetricServer() {
 	app.logger.Info("starting metrics server", "port", 9090)
 	if err := app.metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -310,7 +268,8 @@ func (app *App) runMetricServer() {
 	}
 }
 
-func (app *App) stopMetricServer(ctx context.Context) {
+// stopMetricServer - отсанавливаем http сервер
+func (app *App) stopMetricServer() {
 	if app.metricsServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()

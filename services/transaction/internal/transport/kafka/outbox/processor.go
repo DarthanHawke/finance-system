@@ -1,4 +1,4 @@
-// kafka
+// Пакет kafka предоставляет реализацию Consumer/Producer для Kafka
 package kafka
 
 import (
@@ -13,47 +13,52 @@ import (
 	"transaction-service/internal/models"
 )
 
+// OutboxProcessor реализует outbox для обработки событий
 type OutboxProcessor struct {
-	outboxManager OutboxManager
-	producer      Producer
-	logger        *slog.Logger
-	batchSize     int
-	handlePeriod  time.Duration
-	concurrency   int
-	eventsCh      chan models.Event
-	wg            sync.WaitGroup
+	eventManager EventManager
+	producer     Producer
+	logger       *slog.Logger
+	batchSize    int
+	handlePeriod time.Duration
+	concurrency  int
+	eventsCh     chan models.Event
+	wg           sync.WaitGroup
 }
 
+// Config конфиг OutboxProcessor
 type Config struct {
 	BatchSize    int
 	HandlePeriod time.Duration
 	Concurrency  int
 }
 
+// Producer предоставляет методы Kafka Producer
 type Producer interface {
 	Produce(ctx context.Context, topic string, key string, event any) error
 	ProduceDLQ(ctx context.Context, key string, event any, err error) error
 }
 
-type OutboxManager interface {
+// EventManager предоставляет методы работы с таблицей Events
+type EventManager interface {
 	GetPendingEvents(ctx context.Context, req *models.GetEventRequest) (models.GetEventResponse, error)
 	UpdateEventStatus(ctx context.Context, req *models.UpdateEventStatusRequest) error
 }
 
+// NewOutboxProcessor создает новый экземпляр OutboxProcessor
 func NewOutboxProcessor(
-	outboxManager OutboxManager,
+	eventManager EventManager,
 	producer Producer,
 	logger *slog.Logger,
 	config *Config,
 ) *OutboxProcessor {
 	return &OutboxProcessor{
-		outboxManager: outboxManager,
-		producer:      producer,
-		logger:        logger.With("component", "outbox_processor"),
-		batchSize:     config.BatchSize,
-		handlePeriod:  config.HandlePeriod,
-		concurrency:   config.Concurrency,
-		eventsCh:      make(chan models.Event, config.Concurrency*2),
+		eventManager: eventManager,
+		producer:     producer,
+		logger:       logger.With("component", "outbox_processor"),
+		batchSize:    config.BatchSize,
+		handlePeriod: config.HandlePeriod,
+		concurrency:  config.Concurrency,
+		eventsCh:     make(chan models.Event, config.Concurrency*2),
 	}
 }
 
@@ -97,7 +102,13 @@ func (p *OutboxProcessor) fetchAndDispatch(ctx context.Context) {
 
 	log := p.logger.With("op", op)
 
-	events, err := p.outboxManager.GetPendingEvents(ctx, &models.GetEventRequest{Limit: p.batchSize})
+	now := time.Now()
+	fiveMinutesAgo := now.Add(-5 * time.Minute)
+	events, err := p.eventManager.GetPendingEvents(ctx, &models.GetEventRequest{
+		ProcessedAt:    now,
+		FiveMinutesAgo: fiveMinutesAgo,
+		Limit:          p.batchSize,
+	})
 	if err != nil {
 		log.Error("failed to get pending events", "error", err)
 		metrics.OutboxGetEventsErrors.Inc()
@@ -152,6 +163,7 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 	messageKey := event.PartitionKey
 	topic := models.TopicMap[event.Type]
 
+	now := time.Now()
 	err := p.producer.Produce(ctx, topic, messageKey, event)
 	if err != nil {
 		retryable, isTerminal := apperr.Classify(err)
@@ -170,11 +182,12 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 				}
 			}
 			metrics.OutboxEventsProcessed.WithLabelValues("dlq").Inc()
-			if err := p.outboxManager.UpdateEventStatus(
+			if err := p.eventManager.UpdateEventStatus(
 				ctx,
 				&models.UpdateEventStatusRequest{
-					ID:     event.ID,
-					Status: models.EventStatusCompleted,
+					ID:          event.ID,
+					Status:      models.EventStatusCompleted,
+					ProcessedAt: now,
 				},
 			); err != nil {
 				return &apperr.WrappedError{
@@ -199,11 +212,12 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 				}
 			}
 			metrics.OutboxEventsProcessed.WithLabelValues("dlq").Inc()
-			if err := p.outboxManager.UpdateEventStatus(
+			if err := p.eventManager.UpdateEventStatus(
 				ctx,
 				&models.UpdateEventStatusRequest{
-					ID:     event.ID,
-					Status: models.EventStatusCompleted,
+					ID:          event.ID,
+					Status:      models.EventStatusCompleted,
+					ProcessedAt: now,
 				},
 			); err != nil {
 				return &apperr.WrappedError{
@@ -228,11 +242,12 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 				}
 			}
 			metrics.OutboxEventsProcessed.WithLabelValues("dlq").Inc()
-			if err := p.outboxManager.UpdateEventStatus(
+			if err := p.eventManager.UpdateEventStatus(
 				ctx,
 				&models.UpdateEventStatusRequest{
-					ID:     event.ID,
-					Status: models.EventStatusCompleted,
+					ID:          event.ID,
+					Status:      models.EventStatusCompleted,
+					ProcessedAt: now,
 				},
 			); err != nil {
 				return &apperr.WrappedError{
@@ -249,11 +264,12 @@ func (p *OutboxProcessor) processEvent(ctx context.Context, event models.Event) 
 		}
 	}
 
-	if err := p.outboxManager.UpdateEventStatus(
+	if err := p.eventManager.UpdateEventStatus(
 		ctx,
 		&models.UpdateEventStatusRequest{
-			ID:     event.ID,
-			Status: models.EventStatusCompleted,
+			ID:          event.ID,
+			Status:      models.EventStatusCompleted,
+			ProcessedAt: now,
 		},
 	); err != nil {
 		return &apperr.WrappedError{

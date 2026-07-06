@@ -1,3 +1,4 @@
+// Пакет redis реализовывает работу с redis
 package redis
 
 import (

@@ -3,13 +3,13 @@ package iso8583
 
 import (
 	"encoding/json"
+	"external-payment-service/internal/config"
+	"external-payment-service/internal/models"
 	"fmt"
 	"math"
 	"strconv"
 	"strings"
 	"time"
-	"transaction-service/internal/config"
-	"transaction-service/internal/models"
 
 	"github.com/google/uuid"
 )
