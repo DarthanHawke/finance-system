@@ -200,6 +200,7 @@ type TransactionPayload struct {
 	SenderBankCode     string `json:"sender_bank_code,omitempty"`
 	SenderBankCodeType string `json:"sender_bank_code_type,omitempty"`
 	SenderName         string `json:"sender_name,omitempty"`
+	SenderMandateID    string `json:"sender_mandate_id,omitempty"`
 
 	// Получатель
 	RecipientAccountCode  string `json:"recipient_account_code,omitempty"`
@@ -210,6 +211,7 @@ type TransactionPayload struct {
 	RecipientBankCode     string `json:"recipient_bank_code,omitempty"`
 	RecipientBankCodeType string `json:"recipient_bank_code_type,omitempty"`
 	RecipientName         string `json:"recipient_name,omitempty"`
+	RecipientMandateID    string `json:"recipient_mandate_id,omitempty"`
 }
 
 // SenderType возвращает party type для sender исходя из transaction type
@@ -243,6 +245,7 @@ func (p *TransactionPayload) SenderFields() map[string]string {
 		"BANK_CODE":      p.SenderBankCode,
 		"BANK_CODE_TYPE": p.SenderBankCodeType,
 		"NAME":           p.SenderName,
+		"MANDATE_ID":     p.SenderMandateID,
 	}
 }
 
@@ -257,5 +260,6 @@ func (p *TransactionPayload) RecipientFields() map[string]string {
 		"BANK_CODE":      p.RecipientBankCode,
 		"BANK_CODE_TYPE": p.RecipientBankCodeType,
 		"NAME":           p.RecipientName,
+		"MANDATE_ID":     p.RecipientMandateID,
 	}
 }

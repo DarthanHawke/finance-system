@@ -30,13 +30,13 @@ const (
 const (
 	// EventTransactionCreate - событие: создание транзакции
 	EventTransactionCreate string = "transaction.create"
-	// EventTransactionCreated — событие: транзакция создана
+	// EventTransactionCreated - событие: транзакция создана
 	EventTransactionCreated string = "transaction.created"
-	// EventTransactionCompleted — событие: транзакция успешно завершена
+	// EventTransactionCompleted - событие: транзакция успешно завершена
 	EventTransactionCompleted string = "transaction.completed"
-	// EventTransactionCancelled — событие: транзакция отменена
+	// EventTransactionCancelled - событие: транзакция отменена
 	EventTransactionCancelled string = "transaction.cancelled"
-	// EventTransactionBlocked — событие: транзакция заблокирована, требуется ручное вмешательство
+	// EventTransactionBlocked - событие: транзакция заблокирована, требуется ручное вмешательство
 	EventTransactionBlocked string = "transaction.blocked"
 
 	// EventFreezeRequest - событие: запрос на заморозку сердтв для списания
