@@ -1,31 +1,29 @@
 # Finance System
-
 Микросервисная платежная система
-
 > [!WARNING]
-
 > Проект ещё находится в активной разработке и не все представленные функции реализованы.
 > P.s. это уже третья итерация данного проекта, снова все пересобираю, потому много чего ещё не готово(хотя оно присутствовало в старых решениях). Сейчас я закончил рефактор ядра, на очереди работа со счетом, проводки, сервис аналитики, Api-gateway, проводки, и уже дальше буду наращивать функции и тестировать под нагрузкой. 
 
 ## Содержание
+
 - [Архитектура проекта](#архитектура-проекта)
-  - [Transaction Service](#transaction-service)
-  - [Account Service](#account-service)
-  - [Switch Service](#switch-service)
-  - [Analytics Service](#analytics-service)
-  - [Ledger Service](#ledger-service)
-  - [Currency Service](#currency-service)
-  - [API Gateway](#api-gateway)
-  - [Auth Service](#auth-service)
-  - [ReBAC Service](#rebac-service)
+  - [Transaction Service](#transaction-service)
+  - [Account Service](#account-service)
+  - [Switch Service](#switch-service)
+  - [Analytics Service](#analytics-service)
+  - [Ledger Service](#ledger-service)
+  - [Currency Service](#currency-service)
+  - [API Gateway](#api-gateway)
+  - [Auth Service](#auth-service)
+  - [ReBAC Service](#rebac-service)
 - [Схема транзакций](#схема-транзакций)
-  - [On-Us Transfer](#on-us-transfer)
-  - [Outbound Remittance](#outbound-remittance)
-  - [Inbound Remittance](#inbound-remittance)
-  - [Top-Up Request](#top-up-request)
-  - [Refund](#refund)
-  - [Chargeback](#chargeback)
-  - [Adjustment](#adjustment)
+  - [On-Us Transfer](#on-us-transfer)
+  - [Outbound Remittance](#outbound-remittance)
+  - [Inbound Remittance](#inbound-remittance)
+  - [Top-Up Request](#top-up-request)
+  - [Refund](#refund)
+  - [Chargeback](#chargeback)
+  - [Adjustment](#adjustment)
 - [Топики Kafka](#топики-kafka)
 - [Отказоустойчивость, идемпотентность, масштабируемость](#отказоустойчивость-идемпотентность-масштабируемость)
 - [Дальнейшие планы](#дальнейшие-планы)
@@ -68,7 +66,7 @@ Outbox-процессор гарантирует, что ни одно собы�
 Каждый тип транзакции - это отдельная сага со своей картой переходов. Ниже перечислены все поддерживаемые типы.
 ### On-Us Transfer, Direct Debit
 Перевод между двумя внутренними счетами.
-[![On-Us Transfer, Direct Debit](assets/Finance-service On-Us Transfer, Direct Debit Physical Diagram.png)](https://raw.githubusercontent.com/DarthanHawke/finance-system/refs/heads/develop/assets/Finance-service On-Us Transfer, Direct Debit Physical Diagram.png)
+[![On-Us Transfer, Direct Debit](assets/Finance-service_On_Us_Transfer-Direct_Debit_Physical_Diagram.png)](https://raw.githubusercontent.com/DarthanHawke/finance-system/refs/heads/develop/assets/Finance-service_On_Us_Transfer-Direct_Debit_Physical_Diagram.png)
 1. Заморозка средств отправителя
 2. Пополнение счёта получателя
 3. Списание замороженных средств отправителя
@@ -76,7 +74,7 @@ Outbox-процессор гарантирует, что ни одно собы�
 При отказе на шаге 1 - отмена транзакции. На шаге 2 - разморозка средств отправителя. На шаге 3 - возврат средств получателю и разморозка отправителя. Если компенсация падает - блокировка обоих счетов и передача на ручное расследование.
 ### Outbound Remittance, Outbound Direct Debit
 Перевод с внутреннего счёта во внешнюю систему.
-[![Outbound Remittance, Outbound Direct Debit](assets/Finance-service Outbound Remittance, Outbound Direct Debit Physical Diagram.png)](https://raw.githubusercontent.com/DarthanHawke/finance-system/refs/heads/develop/assets/Finance-service Outbound Remittance, Outbound Direct Debit Physical Diagram.png)
+[![Outbound Remittance, Outbound Direct Debit](assets/Finance-service_Outbound_Remittance-Outbound_Direct_Debit_Physical_Diagram.png)](https://raw.githubusercontent.com/DarthanHawke/finance-system/refs/heads/develop/assets/Finance-service_Outbound_Remittance-Outbound_Direct_Debit_Physical_Diagram.png)
 1. Заморозка средств отправителя
 2. Запрос во внешний шлюз (через Switch Service)
 3. Списание замороженных средств отправителя
@@ -85,13 +83,13 @@ Outbox-процессор гарантирует, что ни одно собы�
 При отказе на шаге 1 - отмена. На шаге 2 - разморозка. На шаге 3 - откат внешнего платежа и разморозка. Если компенсация падает - блокировка счёта отправителя.
 ### Inbound Remittance, Inbound Direct Debit
 Пополнение внутреннего счёта из внешней системы.
-[![Inbound Remittance, Inbound Direct Debit](assets/Finance-service Inbound Remittance, Inbound Direct Debit Physical Diagram.png)](https://raw.githubusercontent.com/DarthanHawke/finance-system/refs/heads/develop/assets/Finance-service Inbound Remittance, Inbound Direct Debit Physical Diagram.png)
+[![Inbound Remittance, Inbound Direct Debit](assets/Finance-service_Inbound_Remittance-Inbound_Direct_Debit_Physical_Diagram.png)](https://raw.githubusercontent.com/DarthanHawke/finance-system/refs/heads/develop/assets/Finance-service_Inbound_Remittance-Inbound_Direct_Debit_Physical_Diagram.png)
 1. Пополнение счёта получателя
 2. Завершение
 При отказе - блокировка счёта получателя (Технически, отказ не возможен, если счет разблокирован. Но при пополнении при невозомжности начислить средства, счет временно блокируется и операция направляется к администраторам для ручного расследования/проведения возврата).
 ### Top-Up Request
 Запрос на входящее пополнение с внешнего источника (me-to-me).
-[![Top-Up Request](assets/Finance-service Top-Up Request Physical Diagram.png)](https://raw.githubusercontent.com/DarthanHawke/finance-system/refs/heads/develop/assets/Finance-service Top-Up Request Physical Diagram.png)
+[![Top-Up Request](assets/Finance-service_Top_Up_Request_Physical_Diagram.png)](https://raw.githubusercontent.com/DarthanHawke/finance-system/refs/heads/develop/assets/Finance-service_Top_Up_Request_Physical_Diagram.png)
 1. Запрос во внешний шлюз на пополнение
 2. Ожидание подтверждения от внешней системы
 3. Завершение
