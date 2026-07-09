@@ -15,12 +15,18 @@ func accountPayload(transaction *models.Transaction, role string, stepName strin
 		}
 	}
 	code := identifiers["ACCOUNT_CODE"]
+	currency := transaction.SourceCurrency
+	if role == models.PartyRoleRecipient {
+		currency = transaction.TargetCurrency
+	}
 	return models.AccountCommandPayload{
 		TransactionID: transaction.ID.String(),
 		StepName:      stepName,
 		AccountCode:   code,
 		Amount:        transaction.Amount,
-		Currency:      transaction.Currency,
+		Currency:      currency,
+		FeeAmount:     transaction.FeeAmount,
+		FeeCurrency:   transaction.FeeCurrency,
 	}, nil
 }
 
@@ -40,14 +46,56 @@ func switchPayload(transaction *models.Transaction, stepName string) (any, error
 		}
 	}
 	return models.SwitchCommandPayload{
+		TransactionID:  transaction.ID.String(),
+		StepName:       stepName,
+		Amount:         transaction.Amount,
+		SourceCurrency: transaction.SourceCurrency,
+		TargetCurrency: transaction.TargetCurrency,
+		Sender:         senderIdentifiers,
+		Recipient:      recipientIdentifiers,
+		Description:    transaction.Description,
+	}, nil
+}
+
+func currencyPayload(transaction *models.Transaction, stepName string) (any, error) {
+	return models.CurrencyCommandPayload{
 		TransactionID: transaction.ID.String(),
 		StepName:      stepName,
-		Amount:        transaction.Amount,
-		Currency:      transaction.Currency,
-		Sender:        senderIdentifiers,
-		Recipient:     recipientIdentifiers,
-		Description:   transaction.Description,
+		FXDealID:      transaction.FXDealID.String(),
 	}, nil
+}
+
+func activateFXCmd() Command {
+	return Command{
+		EventType: models.EventFXActivateRequest,
+		StepName:  StepActivateFX,
+		StepKind:  models.StepKindAction,
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
+			return currencyPayload(transaction, StepActivateFX)
+		},
+	}
+}
+
+func commitFXCmd() Command {
+	return Command{
+		EventType: models.EventFXCommitRequest,
+		StepName:  StepCommitFX,
+		StepKind:  models.StepKindAction,
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
+			return currencyPayload(transaction, StepCommitFX)
+		},
+	}
+}
+
+func cancelFXCmd() Command {
+	return Command{
+		EventType: models.EventFXCancelRequest,
+		StepName:  StepCancelFX,
+		StepKind:  models.StepKindCompensation,
+		BuildPayload: func(transaction *models.Transaction) (any, error) {
+			return currencyPayload(transaction, StepCancelFX)
+		},
+	}
 }
 
 func freezeSenderCmd() Command {

@@ -8,6 +8,9 @@ const (
 	StateInit                  = "INIT"
 	StateSenderFreezing        = "SENDER_FREEZING"
 	StateExternalPayment       = "EXTERNAL_PAYMENT"
+	StateActivatingFX          = "ACTIVATING_FX"
+	StateCommittingFX          = "COMMITTING_FX"
+	StateCancellingFX          = "CANCELLING_FX"
 	StateCreditingRecipient    = "CREDITING_RECIPIENT"
 	StateCreditingSender       = "CREDITING_SENDER"
 	StateDebitingRecipient     = "DEBITING_RECIPIENT"
@@ -27,6 +30,9 @@ const (
 	StepCreditRecipient = "credit_recipient"
 	StepCaptureSender   = "capture_sender"
 	StepDebitRecipient  = "debit_recipient"
+	StepActivateFX      = "activate_fx"
+	StepCommitFX        = "commit_fx"
+	StepCancelFX        = "cancel_fx"
 
 	StepTopupRequest      = "topup_request"
 	StepOutboundPayment   = "outbound_payment"
@@ -49,15 +55,18 @@ const (
 func Register() map[string]Definition {
 	return map[string]Definition{
 		models.SagaOnUsTransfer:       buildOnUsTransfer(),
+		models.SagaOnUsFXTransfer:     buildOnUsFXTransfer(),
 		models.SagaOutboundRemittance: buildOutboundRemittance(),
 		models.SagaInboundRemittance:  buildInboundRemittance(),
 		models.SagaTopUpRequest:       buildTopUpRequest(),
 		models.SagaRefundInternal:     buildRefundInternal(),
 		models.SagaRefundOutbound:     buildRefundOutbound(),
 		models.SagaRefundInbound:      buildRefundInbound(),
+		models.SagaRefundOnUsFX:       buildRefundOnUsFX(),
 		models.SagaChargebackInternal: buildChargebackInternal(),
 		models.SagaChargebackOutbound: buildChargebackOutbound(),
 		models.SagaChargebackInbound:  buildChargebackInbound(),
+		models.SagaChargebackOnUsFX:   buildChargebackOnUsFX(),
 		models.SagaAdjustmentCredit:   buildAdjustmentCredit(),
 		models.SagaAdjustmentDebit:    buildAdjustmentDebit(),
 	}
@@ -138,6 +147,142 @@ func buildOnUsTransfer() Definition {
 
 	return Definition{
 		SagaType: models.SagaOnUsTransfer, InitState: StateInit, Transitions: transaction,
+	}
+}
+
+func buildOnUsFXTransfer() Definition {
+	t := map[string]map[int]Transition{}
+
+	t[StateInit] = map[int]Transition{
+		OutcomeSuccess: {
+			From:          StateInit,
+			NewState:      StateSenderFreezing,
+			Commands:      []Command{freezeSenderCmd()},
+			Notifications: []Notification{transactionCreatedNotif()},
+		},
+	}
+
+	t[StateSenderFreezing] = map[int]Transition{
+		OutcomeSuccess: {
+			From:     StateSenderFreezing,
+			NewState: StateActivatingFX,
+			Commands: []Command{activateFXCmd()},
+		},
+		OutcomeFailed: {
+			From:          StateSenderFreezing,
+			NewState:      StateCancelled,
+			NewStatus:     models.TransactionStatusCancelled,
+			Notifications: []Notification{transactionCancelledNotif(models.ReasonSenderFreezeRejected)},
+		},
+	}
+
+	t[StateActivatingFX] = map[int]Transition{
+		OutcomeSuccess: {
+			From:     StateActivatingFX,
+			NewState: StateCreditingRecipient,
+			Commands: []Command{creditRecipientCmd()},
+		},
+		OutcomeFailed: {
+			From:     StateActivatingFX,
+			NewState: StateCompensatingSender,
+			Commands: []Command{unfreezeSenderCmd()},
+		},
+	}
+
+	t[StateCreditingRecipient] = map[int]Transition{
+		OutcomeSuccess: {
+			From:     StateCreditingRecipient,
+			NewState: StateSenderCapturing,
+			Commands: []Command{captureSenderCmd()},
+		},
+		OutcomeFailed: {
+			From:     StateCreditingRecipient,
+			NewState: StateCancellingFX,
+			Commands: []Command{cancelFXCmd()},
+		},
+	}
+
+	t[StateSenderCapturing] = map[int]Transition{
+		OutcomeSuccess: {
+			From:     StateSenderCapturing,
+			NewState: StateCommittingFX,
+			Commands: []Command{commitFXCmd()},
+		},
+		OutcomeFailed: {
+			From:     StateSenderCapturing,
+			NewState: StateCompensatingRecipient,
+			Commands: []Command{reversingRecipientCmd()},
+		},
+	}
+
+	t[StateCommittingFX] = map[int]Transition{
+		OutcomeSuccess: {
+			From:          StateCommittingFX,
+			NewState:      StateCompleted,
+			NewStatus:     models.TransactionStatusCompleted,
+			Notifications: []Notification{transactionCompletedNotif()},
+		},
+		OutcomeFailed: {
+			From:          StateCommittingFX,
+			NewState:      StateBlocked,
+			NewStatus:     models.TransactionStatusBlocked,
+			Terminal:      true,
+			Commands:      []Command{blockSenderCmd(), blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
+		},
+	}
+
+	t[StateCompensatingRecipient] = map[int]Transition{
+		OutcomeSuccess: {
+			From:     StateCompensatingRecipient,
+			NewState: StateCancellingFX,
+			Commands: []Command{cancelFXCmd()},
+		},
+		OutcomeFailed: {
+			From:          StateCompensatingRecipient,
+			NewState:      StateBlocked,
+			NewStatus:     models.TransactionStatusBlocked,
+			Terminal:      true,
+			Commands:      []Command{blockSenderCmd(), blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
+		},
+	}
+
+	t[StateCancellingFX] = map[int]Transition{
+		OutcomeSuccess: {
+			From:     StateCancellingFX,
+			NewState: StateCompensatingSender,
+			Commands: []Command{unfreezeSenderCmd()},
+		},
+		OutcomeFailed: {
+			From:          StateCancellingFX,
+			NewState:      StateBlocked,
+			NewStatus:     models.TransactionStatusBlocked,
+			Terminal:      true,
+			Commands:      []Command{blockSenderCmd(), blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
+		},
+	}
+
+	t[StateCompensatingSender] = map[int]Transition{
+		OutcomeSuccess: {
+			From:          StateCompensatingSender,
+			NewState:      StateCancelled,
+			NewStatus:     models.TransactionStatusCancelled,
+			Notifications: []Notification{transactionCancelledNotif(models.ReasonCompensated)},
+		},
+		OutcomeFailed: {
+			From:          StateCompensatingSender,
+			NewState:      StateBlocked,
+			NewStatus:     models.TransactionStatusBlocked,
+			Terminal:      true,
+			Commands:      []Command{blockSenderCmd(), blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
+		},
+	}
+
+	return Definition{
+		SagaType: models.SagaOnUsFXTransfer, InitState: StateInit, Transitions: t,
 	}
 }
 
@@ -397,6 +542,88 @@ func buildRefundInbound() Definition {
 	}
 }
 
+func buildRefundOnUsFX() Definition {
+	t := map[string]map[int]Transition{}
+
+	t[StateInit] = map[int]Transition{
+		OutcomeSuccess: {
+			From:          StateInit,
+			NewState:      StateDebitingRecipient,
+			Commands:      []Command{debitRecipientCmd()},
+			Notifications: []Notification{transactionCreatedNotif()},
+		},
+	}
+
+	t[StateDebitingRecipient] = map[int]Transition{
+		OutcomeSuccess: {
+			From:     StateDebitingRecipient,
+			NewState: StateActivatingFX,
+			Commands: []Command{activateFXCmd()},
+		},
+		OutcomeFailed: {
+			From:          StateDebitingRecipient,
+			NewState:      StateBlocked,
+			NewStatus:     models.TransactionStatusBlocked,
+			Terminal:      true,
+			Commands:      []Command{blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
+		},
+	}
+
+	t[StateActivatingFX] = map[int]Transition{
+		OutcomeSuccess: {
+			From:     StateActivatingFX,
+			NewState: StateCreditingSender,
+			Commands: []Command{creditSenderCmd()},
+		},
+		OutcomeFailed: {
+			From:          StateActivatingFX,
+			NewState:      StateBlocked,
+			NewStatus:     models.TransactionStatusBlocked,
+			Terminal:      true,
+			Commands:      []Command{blockRecipientCmd(), blockSenderCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
+		},
+	}
+
+	t[StateCreditingSender] = map[int]Transition{
+		OutcomeSuccess: {
+			From:     StateCreditingSender,
+			NewState: StateCommittingFX,
+			Commands: []Command{commitFXCmd()},
+		},
+		OutcomeFailed: {
+			From:          StateCreditingSender,
+			NewState:      StateBlocked,
+			NewStatus:     models.TransactionStatusBlocked,
+			Terminal:      true,
+			Commands:      []Command{blockSenderCmd(), blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
+		},
+	}
+
+	t[StateCommittingFX] = map[int]Transition{
+		OutcomeSuccess: {
+			From:          StateCommittingFX,
+			NewState:      StateCompleted,
+			NewStatus:     models.TransactionStatusCompleted,
+			Notifications: []Notification{transactionCompletedNotif()},
+		},
+		OutcomeFailed: {
+			From:          StateCommittingFX,
+			NewState:      StateBlocked,
+			NewStatus:     models.TransactionStatusBlocked,
+			Terminal:      true,
+			Commands:      []Command{blockSenderCmd(), blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
+		},
+	}
+
+	return Definition{
+		SagaType: models.SagaRefundOnUsFX, InitState: StateInit, Transitions: t,
+	}
+}
+
 func buildChargebackInternal() Definition {
 	t := map[string]map[int]Transition{}
 
@@ -510,6 +737,88 @@ func buildChargebackInbound() Definition {
 
 	return Definition{
 		SagaType: models.SagaChargebackInbound, InitState: StateInit, Transitions: t,
+	}
+}
+
+func buildChargebackOnUsFX() Definition {
+	t := map[string]map[int]Transition{}
+
+	t[StateInit] = map[int]Transition{
+		OutcomeSuccess: {
+			From:          StateInit,
+			NewState:      StateDebitingRecipient,
+			Commands:      []Command{debitRecipientCmd()},
+			Notifications: []Notification{transactionCreatedNotif()},
+		},
+	}
+
+	t[StateDebitingRecipient] = map[int]Transition{
+		OutcomeSuccess: {
+			From:     StateDebitingRecipient,
+			NewState: StateActivatingFX,
+			Commands: []Command{activateFXCmd()},
+		},
+		OutcomeFailed: {
+			From:          StateDebitingRecipient,
+			NewState:      StateBlocked,
+			NewStatus:     models.TransactionStatusBlocked,
+			Terminal:      true,
+			Commands:      []Command{blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
+		},
+	}
+
+	t[StateActivatingFX] = map[int]Transition{
+		OutcomeSuccess: {
+			From:     StateActivatingFX,
+			NewState: StateCreditingSender,
+			Commands: []Command{creditSenderCmd()},
+		},
+		OutcomeFailed: {
+			From:          StateActivatingFX,
+			NewState:      StateBlocked,
+			NewStatus:     models.TransactionStatusBlocked,
+			Terminal:      true,
+			Commands:      []Command{blockRecipientCmd(), blockSenderCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
+		},
+	}
+
+	t[StateCreditingSender] = map[int]Transition{
+		OutcomeSuccess: {
+			From:     StateCreditingSender,
+			NewState: StateCommittingFX,
+			Commands: []Command{commitFXCmd()},
+		},
+		OutcomeFailed: {
+			From:          StateCreditingSender,
+			NewState:      StateBlocked,
+			NewStatus:     models.TransactionStatusBlocked,
+			Terminal:      true,
+			Commands:      []Command{blockSenderCmd(), blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
+		},
+	}
+
+	t[StateCommittingFX] = map[int]Transition{
+		OutcomeSuccess: {
+			From:          StateCommittingFX,
+			NewState:      StateCompleted,
+			NewStatus:     models.TransactionStatusCompleted,
+			Notifications: []Notification{transactionCompletedNotif()},
+		},
+		OutcomeFailed: {
+			From:          StateCommittingFX,
+			NewState:      StateBlocked,
+			NewStatus:     models.TransactionStatusBlocked,
+			Terminal:      true,
+			Commands:      []Command{blockSenderCmd(), blockRecipientCmd()},
+			Notifications: []Notification{transactionBlockedNotif(models.ReasonTransactionCannotBeComplited)},
+		},
+	}
+
+	return Definition{
+		SagaType: models.SagaChargebackOnUsFX, InitState: StateInit, Transitions: t,
 	}
 }
 

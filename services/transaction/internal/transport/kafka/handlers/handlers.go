@@ -61,9 +61,9 @@ func (h *Handlers) HandleTransactionCreate(ctx context.Context, event *models.Ev
 	}
 
 	var transactionParent *models.Transaction
-	if transaction.ParentTransactionID != uuid.Nil {
+	if transaction.ParentTransactionID != nil {
 		parentResp, err := h.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{
-			ID: transaction.ParentTransactionID,
+			ID: *transaction.ParentTransactionID,
 		})
 		if err != nil {
 			return err
@@ -91,155 +91,8 @@ func (h *Handlers) HandleTransactionCreate(ctx context.Context, event *models.Ev
 	)
 }
 
-// HandleFreezeResponse получает результат заморозки средств и вызывает State Machine
-func (h *Handlers) HandleFreezeResponse(ctx context.Context, event *models.Event) error {
-	outcome, err := outcomeFromResponse(event)
-	if err != nil {
-		return err
-	}
-	resp, err := h.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: event.TransactionID})
-	if err != nil {
-		return err
-	}
-	transaction := resp.Transaction
-	transaction.UpdatedAt = time.Now()
-
-	return h.orchestratorManager.Apply(ctx, transaction, saga.Apply{
-		TransactionID: event.TransactionID,
-		Outcome:       outcome,
-		TraceID:       event.TraceID,
-		SpanID:        event.SpanID,
-	})
-}
-
-// HandleCaptureResponse получает результат заморозки средств и вызывает State Machine
-func (h *Handlers) HandleCaptureResponse(ctx context.Context, event *models.Event) error {
-	outcome, err := outcomeFromResponse(event)
-	if err != nil {
-		return err
-	}
-	resp, err := h.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: event.TransactionID})
-	if err != nil {
-		return err
-	}
-	transaction := resp.Transaction
-	transaction.UpdatedAt = time.Now()
-
-	return h.orchestratorManager.Apply(ctx, transaction, saga.Apply{
-		TransactionID: event.TransactionID,
-		Outcome:       outcome,
-		TraceID:       event.TraceID,
-		SpanID:        event.SpanID,
-	})
-}
-
-// HandleCreditResponse получает результат заморозки средств и вызывает State Machine
-func (h *Handlers) HandleCreditResponse(ctx context.Context, event *models.Event) error {
-	outcome, err := outcomeFromResponse(event)
-	if err != nil {
-		return err
-	}
-	resp, err := h.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: event.TransactionID})
-	if err != nil {
-		return err
-	}
-	transaction := resp.Transaction
-	transaction.UpdatedAt = time.Now()
-
-	return h.orchestratorManager.Apply(ctx, transaction, saga.Apply{
-		TransactionID: event.TransactionID,
-		Outcome:       outcome,
-		TraceID:       event.TraceID,
-		SpanID:        event.SpanID,
-	})
-}
-
-// HandleDebitResponse получает результат заморозки средств и вызывает State Machine
-func (h *Handlers) HandleDebitResponse(ctx context.Context, event *models.Event) error {
-	outcome, err := outcomeFromResponse(event)
-	if err != nil {
-		return err
-	}
-	resp, err := h.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: event.TransactionID})
-	if err != nil {
-		return err
-	}
-	transaction := resp.Transaction
-	transaction.UpdatedAt = time.Now()
-
-	return h.orchestratorManager.Apply(ctx, transaction, saga.Apply{
-		TransactionID: event.TransactionID,
-		Outcome:       outcome,
-		TraceID:       event.TraceID,
-		SpanID:        event.SpanID,
-	})
-}
-
-// HandleUnfreezeResponse получает результат заморозки средств и вызывает State Machine
-func (h *Handlers) HandleUnfreezeResponse(ctx context.Context, event *models.Event) error {
-	outcome, err := outcomeFromResponse(event)
-	if err != nil {
-		return err
-	}
-	resp, err := h.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: event.TransactionID})
-	if err != nil {
-		return err
-	}
-	transaction := resp.Transaction
-	transaction.UpdatedAt = time.Now()
-
-	return h.orchestratorManager.Apply(ctx, transaction, saga.Apply{
-		TransactionID: event.TransactionID,
-		Outcome:       outcome,
-		TraceID:       event.TraceID,
-		SpanID:        event.SpanID,
-	})
-}
-
-// HandleExternalPaymentResponse получает результат заморозки средств и вызывает State Machine
-func (h *Handlers) HandleExternalPaymentResponse(ctx context.Context, event *models.Event) error {
-	outcome, err := outcomeFromResponse(event)
-	if err != nil {
-		return err
-	}
-	resp, err := h.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: event.TransactionID})
-	if err != nil {
-		return err
-	}
-	transaction := resp.Transaction
-	transaction.UpdatedAt = time.Now()
-
-	return h.orchestratorManager.Apply(ctx, transaction, saga.Apply{
-		TransactionID: event.TransactionID,
-		Outcome:       outcome,
-		TraceID:       event.TraceID,
-		SpanID:        event.SpanID,
-	})
-}
-
-// HandleExternalCommitResponse получает результат заморозки средств и вызывает State Machine
-func (h *Handlers) HandleExternalCommitResponse(ctx context.Context, event *models.Event) error {
-	outcome, err := outcomeFromResponse(event)
-	if err != nil {
-		return err
-	}
-	resp, err := h.transactionManager.GetTransaction(ctx, &models.GetTransactionRequest{ID: event.TransactionID})
-	if err != nil {
-		return err
-	}
-	transaction := resp.Transaction
-	transaction.UpdatedAt = time.Now()
-
-	return h.orchestratorManager.Apply(ctx, transaction, saga.Apply{
-		TransactionID: event.TransactionID,
-		Outcome:       outcome,
-		TraceID:       event.TraceID,
-		SpanID:        event.SpanID,
-	})
-}
-
-// HandleExternalRollbackResponse получает результат заморозки средств и вызывает State Machine
-func (h *Handlers) HandleExternalRollbackResponse(ctx context.Context, event *models.Event) error {
+// HandleResponse обрабатывает событие-ответ от внешних сервисов
+func (h *Handlers) HandleResponse(ctx context.Context, event *models.Event) error {
 	outcome, err := outcomeFromResponse(event)
 	if err != nil {
 		return err
@@ -286,17 +139,30 @@ func (h *Handlers) createTransaciton(
 		Type:           transactionPayload.Type,
 		Status:         models.TransactionStatusProcessing,
 		Amount:         transactionPayload.Amount,
-		Currency:       transactionPayload.Currency,
+		SourceCurrency: transactionPayload.SourceCurrency,
+		TargetCurrency: transactionPayload.TargetCurrency,
 		Description:    transactionPayload.Description,
+		FeeAmount:      transactionPayload.FeeAmount,
+		FeeCurrency:    transactionPayload.FeeCurrency,
+	}
+	if transaction.FeeCurrency == "" {
+		transaction.FeeCurrency = transaction.SourceCurrency
 	}
 
-	transaction.ParentTransactionID = uuid.Nil
 	if transactionPayload.ParentTransactionID != "" {
 		parentID, err := uuid.Parse(transactionPayload.ParentTransactionID)
 		if err != nil {
 			return nil, &apperr.WrappedError{Op: op, Err: apperr.ErrInvalidParentTransactionID}
 		}
-		transaction.ParentTransactionID = parentID
+		transaction.ParentTransactionID = &parentID
+	}
+
+	if transactionPayload.FXDealID != "" {
+		fxDealID, err := uuid.Parse(transactionPayload.FXDealID)
+		if err != nil {
+			return nil, &apperr.WrappedError{Op: op, Err: apperr.ErrInvalidFXDealID}
+		}
+		transaction.FXDealID = &fxDealID
 	}
 
 	transaction.Parties = []models.TransactionParty{

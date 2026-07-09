@@ -51,14 +51,7 @@ type Config struct {
 // EventHandler определяет интерфейс для обработки событий
 type EventHandler interface {
 	HandleTransactionCreate(ctx context.Context, event *models.Event) error
-	HandleFreezeResponse(ctx context.Context, event *models.Event) error
-	HandleExternalPaymentResponse(ctx context.Context, event *models.Event) error
-	HandleCaptureResponse(ctx context.Context, event *models.Event) error
-	HandleCreditResponse(ctx context.Context, event *models.Event) error
-	HandleDebitResponse(ctx context.Context, event *models.Event) error
-	HandleUnfreezeResponse(ctx context.Context, event *models.Event) error
-	HandleExternalCommitResponse(ctx context.Context, event *models.Event) error
-	HandleExternalRollbackResponse(ctx context.Context, event *models.Event) error
+	HandleResponse(ctx context.Context, event *models.Event) error
 	HandleBlockAccountResponse(ctx context.Context, event *models.Event) error
 }
 
@@ -378,24 +371,20 @@ func (c *Consumer) routeEvent(ctx context.Context, event *models.Event) error {
 	switch event.Type {
 	case models.EventTransactionCreate:
 		return c.handler.HandleTransactionCreate(ctx, event)
-	case models.EventFreezeResponse:
-		return c.handler.HandleFreezeResponse(ctx, event)
-	case models.EventPaymentResponse:
-		return c.handler.HandleExternalPaymentResponse(ctx, event)
-	case models.EventCaptureResponse:
-		return c.handler.HandleCaptureResponse(ctx, event)
-	case models.EventCreditResponse:
-		return c.handler.HandleCreditResponse(ctx, event)
-	case models.EventDebitResponse:
-		return c.handler.HandleDebitResponse(ctx, event)
-	case models.EventUnfreezeResponse:
-		return c.handler.HandleUnfreezeResponse(ctx, event)
-	case models.EventCommitResponse:
-		return c.handler.HandleExternalCommitResponse(ctx, event)
-	case models.EventRollbackResponse:
-		return c.handler.HandleExternalRollbackResponse(ctx, event)
 	case models.EventBlockResponse:
 		return c.handler.HandleBlockAccountResponse(ctx, event)
+	case models.EventFreezeResponse,
+		models.EventCaptureResponse,
+		models.EventCreditResponse,
+		models.EventDebitResponse,
+		models.EventUnfreezeResponse,
+		models.EventPaymentResponse,
+		models.EventCommitResponse,
+		models.EventRollbackResponse,
+		models.EventFXActivateResponse,
+		models.EventFXCommitResponse,
+		models.EventFXCancelResponse:
+		return c.handler.HandleResponse(ctx, event)
 	default:
 		return apperr.ErrUnknownEventType
 	}

@@ -35,10 +35,12 @@ func (r *TransactionRepository) InsertTransaction(
 	const op = "transaction.InsertTransaction"
 
 	const queryTransaction = `
-		INSERT INTO transactions (id, idempotency_key, parent_transaction_id, transaction_type, transaction_status, 
-		amount, currency, transaction_description, created_at, updated_at)
-		VALUES (:id, :idempotency_key, :parent_transaction_id, :transaction_type, :transaction_status, 
-		:amount, :currency, :transaction_description, :created_at, :updated_at)
+		INSERT INTO transactions (id, idempotency_key, parent_transaction_id, fx_deal_id,
+		transaction_type, transaction_status, amount, currency, fee_amount, fee_currency, 
+		transaction_description, created_at, updated_at)
+		VALUES (:id, :idempotency_key, :parent_transaction_id, :fx_deal_id,
+		:transaction_type, :transaction_status, :amount, :currency, :fee_amount, :fee_currency, 
+		:transaction_description, :created_at, :updated_at)
 	`
 
 	_, err := tx.NamedExecContext(ctx, queryTransaction, req)

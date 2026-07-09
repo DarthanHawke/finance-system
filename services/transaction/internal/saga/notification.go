@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"transaction-service/internal/lib/errors/apperr"
 	"transaction-service/internal/models"
-
-	"github.com/google/uuid"
 )
 
 func AnalyticCreatePayload(transaction *models.Transaction) (any, error) {
@@ -24,7 +22,7 @@ func AnalyticCreatePayload(transaction *models.Transaction) (any, error) {
 		}
 	}
 	var parentID string
-	if transaction.ParentTransactionID != uuid.Nil {
+	if transaction.ParentTransactionID != nil {
 		parentID = transaction.ParentTransactionID.String()
 	}
 	return models.TransactionCreatedPayload{
@@ -33,7 +31,8 @@ func AnalyticCreatePayload(transaction *models.Transaction) (any, error) {
 		Type:                transaction.Type,
 		Status:              transaction.Status,
 		Amount:              transaction.Amount,
-		Currency:            transaction.Currency,
+		SourceCurrency:      transaction.SourceCurrency,
+		TargetCurrency:      transaction.TargetCurrency,
 		Sender:              sender,
 		Recipient:           recipient,
 		Description:         transaction.Description,

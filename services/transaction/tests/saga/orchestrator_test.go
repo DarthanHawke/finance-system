@@ -30,11 +30,12 @@ func (m *MockSagaManager) AdvanceWithFirstStep(ctx context.Context, req *models.
 
 func newTestTransaction(txnType string) *models.Transaction {
 	return &models.Transaction{
-		ID:       uuid.New(),
-		Type:     txnType,
-		Status:   models.TransactionStatusProcessing,
-		Amount:   1500.00,
-		Currency: "RUB",
+		ID:             uuid.New(),
+		Type:           txnType,
+		Status:         models.TransactionStatusProcessing,
+		Amount:         1500.00,
+		SourceCurrency: "RUB",
+		TargetCurrency: "RUB",
 		Parties: []models.TransactionParty{
 			{
 				PartyRole: models.PartyRoleSender,
@@ -163,6 +164,123 @@ func TestOrchestrator_OnUsTransfer_HappyPath(t *testing.T) {
 	assert.Empty(t, req4.Steps)
 	assert.Equal(t, saga.StateCompleted, req4.UpdateSagaStateRequest.SagaState)
 	assert.Equal(t, models.TransactionStatusCompleted, *req4.UpdateSagaStateRequest.Status)
+
+	mockSM.AssertExpectations(t)
+}
+
+func TestOrchestrator_OnUsFXTransfer_HappyPath(t *testing.T) {
+	mockSM := new(MockSagaManager)
+	defs := saga.Register()
+	orch := saga.NewOrchestrator(mockSM, defs)
+
+	tx := newTestTransaction(models.TransactionTypeOnUsFXTransfer)
+	fxDealID := uuid.New()
+	tx.FXDealID = &fxDealID
+
+	var calls []any
+
+	mockSM.On("AdvanceWithFirstStep", mock.Anything, mock.Anything).
+		Return(nil).Run(func(args mock.Arguments) {
+		calls = append(calls, args.Get(1))
+	}).Once()
+
+	mockSM.On("Advance", mock.Anything, mock.Anything).
+		Return(nil).Run(func(args mock.Arguments) {
+		calls = append(calls, args.Get(1))
+	}).Times(5)
+
+	// 1. INIT → SENDER_FREEZING
+	err := orch.ApplyWithFirstStep(context.Background(), tx, nil, saga.Apply{
+		Outcome: saga.OutcomeSuccess,
+		TraceID: "trace-1",
+		SpanID:  "span-1",
+	})
+	require.NoError(t, err)
+	tx.SagaType = models.SagaOnUsFXTransfer
+	tx.SagaState = saga.StateSenderFreezing
+
+	// 2. SENDER_FREEZING → ACTIVATING_FX
+	tx.UpdatedAt = time.Now()
+	err = orch.Apply(context.Background(), tx, saga.Apply{
+		TransactionID: tx.ID,
+		Outcome:       saga.OutcomeSuccess,
+	})
+	require.NoError(t, err)
+	tx.SagaState = saga.StateActivatingFX
+
+	// 3. ACTIVATING_FX → CREDITING_RECIPIENT
+	tx.UpdatedAt = time.Now()
+	err = orch.Apply(context.Background(), tx, saga.Apply{
+		TransactionID: tx.ID,
+		Outcome:       saga.OutcomeSuccess,
+	})
+	require.NoError(t, err)
+	tx.SagaState = saga.StateCreditingRecipient
+
+	// 4. CREDITING_RECIPIENT → SENDER_CAPTURING
+	tx.UpdatedAt = time.Now()
+	err = orch.Apply(context.Background(), tx, saga.Apply{
+		TransactionID: tx.ID,
+		Outcome:       saga.OutcomeSuccess,
+	})
+	require.NoError(t, err)
+	tx.SagaState = saga.StateSenderCapturing
+
+	// 5. SENDER_CAPTURING → COMMITTING_FX
+	tx.UpdatedAt = time.Now()
+	err = orch.Apply(context.Background(), tx, saga.Apply{
+		TransactionID: tx.ID,
+		Outcome:       saga.OutcomeSuccess,
+	})
+	require.NoError(t, err)
+	tx.SagaState = saga.StateCommittingFX
+
+	// 6. COMMITTING_FX → COMPLETED
+	tx.UpdatedAt = time.Now()
+	err = orch.Apply(context.Background(), tx, saga.Apply{
+		TransactionID: tx.ID,
+		Outcome:       saga.OutcomeSuccess,
+	})
+	require.NoError(t, err)
+
+	require.Len(t, calls, 6)
+
+	// Init
+	req1 := calls[0].(*models.AdvanceWithFirstStepRequest)
+	assertEvents(t, req1.Events, models.EventFreezeRequest, models.EventTransactionCreated)
+	assertSteps(t, req1.Steps, "freeze_sender")
+	assert.Equal(t, saga.StateSenderFreezing, req1.UpdateSagaStateRequest.SagaState)
+
+	// Activate FX
+	req2 := calls[1].(*models.AdvanceRequest)
+	assertEvents(t, req2.Events, models.EventFXActivateRequest)
+	assertSteps(t, req2.Steps, "activate_fx")
+	assert.Equal(t, saga.StateActivatingFX, req2.UpdateSagaStateRequest.SagaState)
+
+	// Credit Recipient
+	req3 := calls[2].(*models.AdvanceRequest)
+	assertEvents(t, req3.Events, models.EventCreditRequest)
+	assertSteps(t, req3.Steps, "credit_recipient")
+	assert.Equal(t, saga.StateCreditingRecipient, req3.UpdateSagaStateRequest.SagaState)
+
+	// Capture Sender
+	req4 := calls[3].(*models.AdvanceRequest)
+	assertEvents(t, req4.Events, models.EventCaptureRequest)
+	assertSteps(t, req4.Steps, "capture_sender")
+	assert.Equal(t, saga.StateSenderCapturing, req4.UpdateSagaStateRequest.SagaState)
+
+	// Commit FX
+	req5 := calls[4].(*models.AdvanceRequest)
+	assertEvents(t, req5.Events, models.EventFXCommitRequest)
+	assertSteps(t, req5.Steps, "commit_fx")
+	assert.Equal(t, saga.StateCommittingFX, req5.UpdateSagaStateRequest.SagaState)
+
+	// Completed
+	req6 := calls[5].(*models.AdvanceRequest)
+	assertEvents(t, req6.Events, models.EventTransactionCompleted)
+	assert.Empty(t, req6.Steps)
+	assert.Equal(t, saga.StateCompleted, req6.UpdateSagaStateRequest.SagaState)
+	assert.Equal(t, models.TransactionStatusCompleted, *req6.UpdateSagaStateRequest.Status)
 
 	mockSM.AssertExpectations(t)
 }
@@ -667,7 +785,8 @@ func TestOrchestrator_RefundInternal_HappyPath(t *testing.T) {
 	orch := saga.NewOrchestrator(mockSM, defs)
 
 	tx := newTestTransaction(models.TransactionTypeRefund)
-	tx.ParentTransactionID = uuid.New()
+	parentID := uuid.New()
+	tx.ParentTransactionID = &parentID
 	parent := newParentTransaction(models.TransactionTypeOnUsTransfer)
 
 	var calls []any
@@ -721,7 +840,8 @@ func TestOrchestrator_RefundOutbound_HappyPath(t *testing.T) {
 	orch := saga.NewOrchestrator(mockSM, defs)
 
 	tx := newTestTransaction(models.TransactionTypeRefund)
-	tx.ParentTransactionID = uuid.New()
+	parentID := uuid.New()
+	tx.ParentTransactionID = &parentID
 	parent := newParentTransaction(models.TransactionTypeOutboundRemittance)
 
 	var calls []any
@@ -765,7 +885,8 @@ func TestOrchestrator_RefundInbound_HappyPath(t *testing.T) {
 	orch := saga.NewOrchestrator(mockSM, defs)
 
 	tx := newTestTransaction(models.TransactionTypeRefund)
-	tx.ParentTransactionID = uuid.New()
+	parentID := uuid.New()
+	tx.ParentTransactionID = &parentID
 	parent := newParentTransaction(models.TransactionTypeInboundRemittance)
 
 	var calls []any
@@ -819,7 +940,8 @@ func TestOrchestrator_ChargebackInternal_HappyPath(t *testing.T) {
 	orch := saga.NewOrchestrator(mockSM, defs)
 
 	tx := newTestTransaction(models.TransactionTypeChargeback)
-	tx.ParentTransactionID = uuid.New()
+	parentID := uuid.New()
+	tx.ParentTransactionID = &parentID
 	parent := newParentTransaction(models.TransactionTypeOnUsTransfer)
 
 	var calls []any
@@ -873,7 +995,8 @@ func TestOrchestrator_ChargebackOutbound_HappyPath(t *testing.T) {
 	orch := saga.NewOrchestrator(mockSM, defs)
 
 	tx := newTestTransaction(models.TransactionTypeChargeback)
-	tx.ParentTransactionID = uuid.New()
+	parentID := uuid.New()
+	tx.ParentTransactionID = &parentID
 	parent := newParentTransaction(models.TransactionTypeOutboundRemittance)
 
 	var calls []any
@@ -917,7 +1040,8 @@ func TestOrchestrator_ChargebackInbound_HappyPath(t *testing.T) {
 	orch := saga.NewOrchestrator(mockSM, defs)
 
 	tx := newTestTransaction(models.TransactionTypeChargeback)
-	tx.ParentTransactionID = uuid.New()
+	parentID := uuid.New()
+	tx.ParentTransactionID = &parentID
 	parent := newParentTransaction(models.TransactionTypeInboundRemittance)
 
 	var calls []any
@@ -961,6 +1085,164 @@ func TestOrchestrator_ChargebackInbound_HappyPath(t *testing.T) {
 	assert.Empty(t, req3.Steps)
 	assert.Equal(t, saga.StateCompleted, req3.UpdateSagaStateRequest.SagaState)
 	assert.Equal(t, models.TransactionStatusCompleted, *req3.UpdateSagaStateRequest.Status)
+
+	mockSM.AssertExpectations(t)
+}
+
+func TestOrchestrator_RefundOnUsFX_HappyPath(t *testing.T) {
+	mockSM := new(MockSagaManager)
+	defs := saga.Register()
+	orch := saga.NewOrchestrator(mockSM, defs)
+
+	tx := newTestTransaction(models.TransactionTypeRefund)
+	parentID := uuid.New()
+	tx.ParentTransactionID = &parentID
+	parent := newParentTransaction(models.TransactionTypeOnUsFXTransfer)
+
+	var calls []any
+
+	mockSM.On("AdvanceWithFirstStep", mock.Anything, mock.Anything).
+		Return(nil).Run(func(args mock.Arguments) {
+		calls = append(calls, args.Get(1))
+	}).Once()
+
+	mockSM.On("Advance", mock.Anything, mock.Anything).
+		Return(nil).Run(func(args mock.Arguments) {
+		calls = append(calls, args.Get(1))
+	}).Times(4)
+
+	// 1. INIT → DEBITING_RECIPIENT
+	orch.ApplyWithFirstStep(context.Background(), tx, parent, saga.Apply{Outcome: saga.OutcomeSuccess})
+	tx.SagaState = saga.StateDebitingRecipient
+
+	fxDealID := uuid.New()
+	tx.FXDealID = &fxDealID
+
+	// 2. DEBITING_RECIPIENT → ACTIVATING_FX
+	tx.UpdatedAt = time.Now()
+	orch.Apply(context.Background(), tx, saga.Apply{TransactionID: tx.ID, Outcome: saga.OutcomeSuccess})
+	tx.SagaState = saga.StateActivatingFX
+
+	// 3. ACTIVATING_FX → CREDITING_SENDER
+	tx.UpdatedAt = time.Now()
+	orch.Apply(context.Background(), tx, saga.Apply{TransactionID: tx.ID, Outcome: saga.OutcomeSuccess})
+	tx.SagaState = saga.StateCreditingSender
+
+	// 4. CREDITING_SENDER → COMMITTING_FX
+	tx.UpdatedAt = time.Now()
+	orch.Apply(context.Background(), tx, saga.Apply{TransactionID: tx.ID, Outcome: saga.OutcomeSuccess})
+	tx.SagaState = saga.StateCommittingFX
+
+	// 5. COMMITTING_FX → COMPLETED
+	tx.UpdatedAt = time.Now()
+	orch.Apply(context.Background(), tx, saga.Apply{TransactionID: tx.ID, Outcome: saga.OutcomeSuccess})
+
+	require.Len(t, calls, 5)
+
+	req1 := calls[0].(*models.AdvanceWithFirstStepRequest)
+	assertEvents(t, req1.Events, models.EventDebitRequest, models.EventTransactionCreated)
+	assertSteps(t, req1.Steps, "debit_recipient")
+	assert.Equal(t, saga.StateDebitingRecipient, req1.UpdateSagaStateRequest.SagaState)
+
+	req2 := calls[1].(*models.AdvanceRequest)
+	assertEvents(t, req2.Events, models.EventFXActivateRequest)
+	assertSteps(t, req2.Steps, "activate_fx")
+	assert.Equal(t, saga.StateActivatingFX, req2.UpdateSagaStateRequest.SagaState)
+
+	req3 := calls[2].(*models.AdvanceRequest)
+	assertEvents(t, req3.Events, models.EventCreditRequest)
+	assertSteps(t, req3.Steps, "credit_sender")
+	assert.Equal(t, saga.StateCreditingSender, req3.UpdateSagaStateRequest.SagaState)
+
+	req4 := calls[3].(*models.AdvanceRequest)
+	assertEvents(t, req4.Events, models.EventFXCommitRequest)
+	assertSteps(t, req4.Steps, "commit_fx")
+	assert.Equal(t, saga.StateCommittingFX, req4.UpdateSagaStateRequest.SagaState)
+
+	req5 := calls[4].(*models.AdvanceRequest)
+	assertEvents(t, req5.Events, models.EventTransactionCompleted)
+	assert.Empty(t, req5.Steps)
+	assert.Equal(t, saga.StateCompleted, req5.UpdateSagaStateRequest.SagaState)
+	assert.Equal(t, models.TransactionStatusCompleted, *req5.UpdateSagaStateRequest.Status)
+
+	mockSM.AssertExpectations(t)
+}
+
+func TestOrchestrator_ChargebackOnUsFX_HappyPath(t *testing.T) {
+	mockSM := new(MockSagaManager)
+	defs := saga.Register()
+	orch := saga.NewOrchestrator(mockSM, defs)
+
+	tx := newTestTransaction(models.TransactionTypeChargeback)
+	parentID := uuid.New()
+	tx.ParentTransactionID = &parentID
+	parent := newParentTransaction(models.TransactionTypeOnUsFXTransfer)
+
+	var calls []any
+
+	mockSM.On("AdvanceWithFirstStep", mock.Anything, mock.Anything).
+		Return(nil).Run(func(args mock.Arguments) {
+		calls = append(calls, args.Get(1))
+	}).Once()
+
+	mockSM.On("Advance", mock.Anything, mock.Anything).
+		Return(nil).Run(func(args mock.Arguments) {
+		calls = append(calls, args.Get(1))
+	}).Times(4)
+
+	// 1. INIT → DEBITING_RECIPIENT
+	orch.ApplyWithFirstStep(context.Background(), tx, parent, saga.Apply{Outcome: saga.OutcomeSuccess})
+	tx.SagaState = saga.StateDebitingRecipient
+
+	fxDealID := uuid.New()
+	tx.FXDealID = &fxDealID
+
+	// 2. DEBITING_RECIPIENT → ACTIVATING_FX
+	tx.UpdatedAt = time.Now()
+	orch.Apply(context.Background(), tx, saga.Apply{TransactionID: tx.ID, Outcome: saga.OutcomeSuccess})
+	tx.SagaState = saga.StateActivatingFX
+
+	// 3. ACTIVATING_FX → CREDITING_SENDER
+	tx.UpdatedAt = time.Now()
+	orch.Apply(context.Background(), tx, saga.Apply{TransactionID: tx.ID, Outcome: saga.OutcomeSuccess})
+	tx.SagaState = saga.StateCreditingSender
+
+	// 4. CREDITING_SENDER → COMMITTING_FX
+	tx.UpdatedAt = time.Now()
+	orch.Apply(context.Background(), tx, saga.Apply{TransactionID: tx.ID, Outcome: saga.OutcomeSuccess})
+	tx.SagaState = saga.StateCommittingFX
+
+	// 5. COMMITTING_FX → COMPLETED
+	tx.UpdatedAt = time.Now()
+	orch.Apply(context.Background(), tx, saga.Apply{TransactionID: tx.ID, Outcome: saga.OutcomeSuccess})
+
+	require.Len(t, calls, 5)
+
+	req1 := calls[0].(*models.AdvanceWithFirstStepRequest)
+	assertEvents(t, req1.Events, models.EventDebitRequest, models.EventTransactionCreated)
+	assertSteps(t, req1.Steps, "debit_recipient")
+	assert.Equal(t, saga.StateDebitingRecipient, req1.UpdateSagaStateRequest.SagaState)
+
+	req2 := calls[1].(*models.AdvanceRequest)
+	assertEvents(t, req2.Events, models.EventFXActivateRequest)
+	assertSteps(t, req2.Steps, "activate_fx")
+	assert.Equal(t, saga.StateActivatingFX, req2.UpdateSagaStateRequest.SagaState)
+
+	req3 := calls[2].(*models.AdvanceRequest)
+	assertEvents(t, req3.Events, models.EventCreditRequest)
+	assertSteps(t, req3.Steps, "credit_sender")
+	assert.Equal(t, saga.StateCreditingSender, req3.UpdateSagaStateRequest.SagaState)
+
+	req4 := calls[3].(*models.AdvanceRequest)
+	assertEvents(t, req4.Events, models.EventFXCommitRequest)
+	assertSteps(t, req4.Steps, "commit_fx")
+	assert.Equal(t, saga.StateCommittingFX, req4.UpdateSagaStateRequest.SagaState)
+
+	req5 := calls[4].(*models.AdvanceRequest)
+	assertEvents(t, req5.Events, models.EventTransactionCompleted)
+	assert.Empty(t, req5.Steps)
+	assert.Equal(t, saga.StateCompleted, req5.UpdateSagaStateRequest.SagaState)
+	assert.Equal(t, models.TransactionStatusCompleted, *req5.UpdateSagaStateRequest.Status)
 
 	mockSM.AssertExpectations(t)
 }

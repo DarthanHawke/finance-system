@@ -158,7 +158,8 @@ func (o *Orchestrator) ResolveSagaType(transactionType string, parentType *strin
 	case models.TransactionTypeOnUsTransfer,
 		models.TransactionTypeDirectDebit:
 		return models.SagaOnUsTransfer, nil
-
+	case models.TransactionTypeOnUsFXTransfer:
+		return models.SagaOnUsFXTransfer, nil
 	case models.TransactionTypeOutboundRemittance,
 		models.TransactionTypeOutboundDirectDebit:
 		return models.SagaOutboundRemittance, nil
@@ -187,6 +188,8 @@ func (o *Orchestrator) ResolveSagaType(transactionType string, parentType *strin
 		case models.TransactionTypeInboundRemittance,
 			models.TransactionTypeInboundDirectDebit:
 			return models.SagaRefundInbound, nil
+		case models.TransactionTypeOnUsFXTransfer:
+			return models.SagaRefundOnUsFX, nil
 		default:
 			return "", &apperr.WrappedError{
 				Op:  op,
@@ -211,6 +214,8 @@ func (o *Orchestrator) ResolveSagaType(transactionType string, parentType *strin
 		case models.TransactionTypeInboundRemittance,
 			models.TransactionTypeInboundDirectDebit:
 			return models.SagaChargebackInbound, nil
+		case models.TransactionTypeOnUsFXTransfer:
+			return models.SagaChargebackOnUsFX, nil
 		default:
 			return "", &apperr.WrappedError{
 				Op:  op,
