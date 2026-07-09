@@ -29,6 +29,9 @@ const (
 	// TransactionTypeOnUsTransfer - перевод между счетами внутри системы
 	TransactionTypeOnUsTransfer string = "ON_US_TRANSFER"
 
+	// TransactionTypeOnUsTransfer - перевод между счетами внутри системы с валютным обменом
+	TransactionTypeOnUsFXTransfer string = "ON_US_FX_TRANSFER"
+
 	// TransactionTypeInboundRemittance - входящий перевод из внешней системы
 	TransactionTypeInboundRemittance string = "INBOUND_REMITTANCE"
 
@@ -63,15 +66,18 @@ const (
 // Типы саг
 const (
 	SagaOnUsTransfer       string = "ON_US_TRANSFER"
+	SagaOnUsFXTransfer     string = "ON_US_FX_TRANSFER"
 	SagaOutboundRemittance string = "OUTBOUND_REMITTANCE"
 	SagaInboundRemittance  string = "INBOUND_REMITTANCE"
 	SagaTopUpRequest       string = "TOPUP_REQUEST"
 	SagaRefundInternal     string = "REFUND_INTERNAL"
 	SagaRefundOutbound     string = "REFUND_OUTBOUND"
 	SagaRefundInbound      string = "REFUND_INBOUND"
+	SagaRefundOnUsFX       string = "REFUND_ON_US_FX"
 	SagaChargebackInternal string = "CHARGEBACK_INTERNAL"
 	SagaChargebackOutbound string = "CHARGEBACK_OUTBOUND"
 	SagaChargebackInbound  string = "CHARGEBACK_INBOUND"
+	SagaChargebackOnUsFX   string = "CHARGEBACK_ON_US_FX"
 	SagaAdjustmentCredit   string = "ADJUSTMENT_CREDIT"
 	SagaAdjustmentDebit    string = "ADJUSTMENT_DEBIT"
 )
@@ -113,13 +119,15 @@ const (
 type Transaction struct {
 	ID                  uuid.UUID          `db:"id" json:"id"`
 	IdempotencyKey      string             `db:"idempotency_key" json:"idempotency_key"`
-	ParentTransactionID uuid.UUID          `db:"parent_transaction_id" json:"parent_transaction_id,omitempty"`
+	ParentTransactionID *uuid.UUID         `db:"parent_transaction_id" json:"parent_transaction_id,omitempty"`
+	FXDealID            *uuid.UUID         `db:"fx_deal_id" json:"fx_deal_id,omitempty"`
 	Type                string             `db:"transaction_type" json:"transaction_type" validate:"required"`
 	SagaType            string             `db:"saga_type" json:"saga_type"`
 	SagaState           string             `db:"saga_state" json:"saga_state"`
 	Status              string             `db:"transaction_status" json:"transaction_status"`
 	Amount              float64            `db:"amount" json:"amount" validate:"required"`
-	Currency            string             `db:"currency" json:"currency" validate:"required"`
+	SourceCurrency      string             `db:"source_currency" json:"source_currency" validate:"required"`
+	TargetCurrency      string             `db:"target_currency" json:"target_currency" validate:"required"`
 	Description         string             `db:"transaction_description" json:"transaction_description,omitempty"`
 	CreatedAt           time.Time          `db:"created_at" json:"created_at"`
 	UpdatedAt           time.Time          `db:"updated_at" json:"updated_at"`
@@ -184,8 +192,10 @@ type UpdateTransactionStatusRequest struct {
 type TransactionPayload struct {
 	Type           string  `json:"transaction_type" validate:"required"`
 	Amount         float64 `json:"amount" validate:"required"`
-	Currency       string  `json:"currency" validate:"required"`
+	SourceCurrency string  `json:"source_currency" validate:"required"`
+	TargetCurrency string  `json:"target_currency" validate:"required"`
 	IdempotencyKey string  `json:"idempotency_key" validate:"required"`
+	FXDealID       string  `json:"fx_deal_id,omitempty"`
 
 	ParentTransactionID string `json:"parent_transaction_id,omitempty"`
 	ExternalReference   string `json:"external_reference,omitempty"`

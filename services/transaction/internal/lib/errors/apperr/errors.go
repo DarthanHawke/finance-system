@@ -84,6 +84,11 @@ var (
 		Code:    "INVALID_PARENT_TRANSACTION_ID",
 		Message: "parent_transaction_id is not a valid uuid",
 	}
+	// ErrInvalidFXDealID - FX Deal uuid не валиден
+	ErrInvalidFXDealID = &Error{
+		Code:    "INVALID_FX_DEAL_ID",
+		Message: "fx_deal_id is not a valid uuid",
+	}
 )
 
 // Ошибки событий

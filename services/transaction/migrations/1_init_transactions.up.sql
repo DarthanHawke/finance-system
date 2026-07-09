@@ -6,6 +6,7 @@
 -- Типы транзакций
 CREATE TYPE transaction_type AS ENUM (
     'ON_US_TRANSFER',            -- Перевод между счетами внутри системы
+    'ON_US_FX_TRANSFER',         -- Перевод между счетами внутри системы с валютным обменом
     'INBOUND_REMITTANCE',        -- Входящий перевод из внешней системы
     'OUTBOUND_REMITTANCE',       -- Исходящий перевод во внешнюю систему
     'DIRECT_DEBIT',              -- Списание по требованию получателя внутри системы
@@ -20,6 +21,7 @@ CREATE TYPE transaction_type AS ENUM (
 -- Типы саг
 CREATE TYPE saga_type AS ENUM (
     'ON_US_TRANSFER',
+    'ON_US_FX_TRANSFER',
     'OUTBOUND_REMITTANCE',
     'INBOUND_REMITTANCE',
     'TOPUP_REQUEST',
@@ -56,6 +58,8 @@ CREATE TABLE transactions (
     idempotency_key             VARCHAR(64) UNIQUE,
     -- Исходная операция(при возврате)
     parent_transaction_id       UUID,
+    -- ID котриовки на обмен валюты
+    fx_deal_id                  UUID,
 
     -- Тип транзакции: transaction_type
     transaction_type            transaction_type NOT NULL,
@@ -68,8 +72,10 @@ CREATE TABLE transactions (
 
     -- Сумма транзакции
     amount                      DECIMAL(12, 2) NOT NULL CHECK (amount > 0),
-    -- Валюта транзакции в формате ISO 4217
-    currency                    VARCHAR(3) NOT NULL,
+    -- Исходная валюта транзакции
+    source_currency             VARCHAR(3) NOT NULL,
+    -- Целевая валюта транзакции
+    target_currency             VARCHAR(3) NOT NULL,
 
     -- Описание платежа
     transaction_description     TEXT,

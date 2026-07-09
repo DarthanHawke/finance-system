@@ -15,6 +15,8 @@ const (
 	TopicAccountEvents       string = "account.events"       // Account-service → Transaction-service
 	TopicSwitchCommands      string = "switch.commands"      // Transaction-service → Payment-Switch-service
 	TopicSwitchEvents        string = "switch.events"        // Payment-Switch-service → Transaction-service
+	TopicCurrencyCommands    string = "currency.commands"    // Transaction-service → Currency-service
+	TopicCurrencyEvents      string = "currency.events"      // Currency-service → Transaction-service
 )
 
 // Статусы событий:
@@ -38,6 +40,19 @@ const (
 	EventTransactionCancelled string = "transaction.cancelled"
 	// EventTransactionBlocked - событие: транзакция заблокирована, требуется ручное вмешательство
 	EventTransactionBlocked string = "transaction.blocked"
+
+	// EventFXRequest - событие: запрос на обмен валюты
+	EventFXActivateRequest = "fx.activate.request"
+	// EventFXResponse - событие: ответ на запрос об обмене валюты
+	EventFXActivateResponse = "fx.activate.response"
+	// EventFXRequest - событие: подтверждение обмена валюты
+	EventFXCommitRequest = "fx.commit.request"
+	// EventFXRequest - событие: ответ на подтверждение обмена валюты
+	EventFXCommitResponse = "fx.commit.response"
+	// EventFXRequest - событие: запрос на отмену обмена валюты
+	EventFXCancelRequest = "fx.cancel.request"
+	// EventFXRequest - событие: ответ на отмену обмена валюты
+	EventFXCancelResponse = "fx.cancel.response"
 
 	// EventFreezeRequest - событие: запрос на заморозку сердтв для списания
 	EventFreezeRequest string = "freeze.request"
@@ -108,13 +123,21 @@ type AccountCommandPayload struct {
 
 // SwitchCommandPayload тело сообщения для сервиса Switch
 type SwitchCommandPayload struct {
-	TransactionID string            `json:"transaction_id"`
-	StepName      string            `json:"step_name"`
-	Amount        float64           `json:"amount"`
-	Currency      string            `json:"currency"`
-	Sender        map[string]string `json:"sender"`
-	Recipient     map[string]string `json:"recipient"`
-	Description   string            `json:"description,omitempty"`
+	TransactionID  string            `json:"transaction_id"`
+	StepName       string            `json:"step_name"`
+	Amount         float64           `json:"amount"`
+	SourceCurrency string            `json:"source_currency"`
+	TargetCurrency string            `json:"target_currency"`
+	Sender         map[string]string `json:"sender"`
+	Recipient      map[string]string `json:"recipient"`
+	Description    string            `json:"description,omitempty"`
+}
+
+// CurrencyCommandPayload тело сообщения для сервиса Currency
+type CurrencyCommandPayload struct {
+	TransactionID string `json:"transaction_id"`
+	StepName      string `json:"step_name"`
+	FXDealID      string `json:"fx_deal_id"`
 }
 
 // TransactionCreatedPayload тело сообщения с инфой о транзакции для сервиса аналитики
@@ -124,7 +147,8 @@ type TransactionCreatedPayload struct {
 	Type                string            `json:"transaction_type" validate:"required"`
 	Status              string            `json:"transaction_status" validate:"required"`
 	Amount              float64           `json:"amount" validate:"required"`
-	Currency            string            `json:"currency" validate:"required"`
+	SourceCurrency      string            `json:"source_currency" validate:"required"`
+	TargetCurrency      string            `json:"target_currency" validate:"required"`
 	Sender              map[string]string `json:"sender"`
 	Recipient           map[string]string `json:"recipient"`
 	Description         string            `json:"description,omitempty"`
@@ -181,6 +205,13 @@ var TopicMap = map[string]string{
 	EventTransactionCompleted: TopicTransactionEvents,
 	EventTransactionCancelled: TopicTransactionEvents,
 	EventTransactionBlocked:   TopicTransactionEvents,
+
+	EventFXActivateRequest:  TopicCurrencyCommands,
+	EventFXActivateResponse: TopicCurrencyEvents,
+	EventFXCommitRequest:    TopicCurrencyCommands,
+	EventFXCommitResponse:   TopicCurrencyEvents,
+	EventFXCancelRequest:    TopicCurrencyCommands,
+	EventFXCancelResponse:   TopicCurrencyEvents,
 
 	EventFreezeRequest:    TopicAccountCommands,
 	EventFreezeResponse:   TopicAccountEvents,
