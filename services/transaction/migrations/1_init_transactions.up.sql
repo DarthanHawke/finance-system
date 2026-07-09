@@ -76,6 +76,10 @@ CREATE TABLE transactions (
     source_currency             VARCHAR(3) NOT NULL,
     -- Целевая валюта транзакции
     target_currency             VARCHAR(3) NOT NULL,
+    -- Сумма комиссии
+    fee_amount                  DECIMAL(12, 2) NOT NULL DEFAULT 0,
+    -- Валюта комиссии
+    fee_currency                VARCHAR(3) NOT NULL,
 
     -- Описание платежа
     transaction_description     TEXT,

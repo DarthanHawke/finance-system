@@ -119,6 +119,8 @@ type AccountCommandPayload struct {
 	AccountCode   string  `json:"code"`
 	Amount        float64 `json:"amount"`
 	Currency      string  `json:"currency"`
+	FeeAmount     float64 `json:"fee_amount,omitempty"`
+	FeeCurrency   string  `json:"fee_currency,omitempty"`
 }
 
 // SwitchCommandPayload тело сообщения для сервиса Switch
@@ -149,6 +151,8 @@ type TransactionCreatedPayload struct {
 	Amount              float64           `json:"amount" validate:"required"`
 	SourceCurrency      string            `json:"source_currency" validate:"required"`
 	TargetCurrency      string            `json:"target_currency" validate:"required"`
+	FeeAmount           float64           `json:"fee_amount,omitempty"`
+	FeeCurrency         string            `json:"fee_currency,omitempty"`
 	Sender              map[string]string `json:"sender"`
 	Recipient           map[string]string `json:"recipient"`
 	Description         string            `json:"description,omitempty"`

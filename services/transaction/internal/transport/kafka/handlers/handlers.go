@@ -142,6 +142,11 @@ func (h *Handlers) createTransaciton(
 		SourceCurrency: transactionPayload.SourceCurrency,
 		TargetCurrency: transactionPayload.TargetCurrency,
 		Description:    transactionPayload.Description,
+		FeeAmount:      transactionPayload.FeeAmount,
+		FeeCurrency:    transactionPayload.FeeCurrency,
+	}
+	if transaction.FeeCurrency == "" {
+		transaction.FeeCurrency = transaction.SourceCurrency
 	}
 
 	if transactionPayload.ParentTransactionID != "" {

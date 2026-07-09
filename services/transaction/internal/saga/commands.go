@@ -25,6 +25,8 @@ func accountPayload(transaction *models.Transaction, role string, stepName strin
 		AccountCode:   code,
 		Amount:        transaction.Amount,
 		Currency:      currency,
+		FeeAmount:     transaction.FeeAmount,
+		FeeCurrency:   transaction.FeeCurrency,
 	}, nil
 }
 

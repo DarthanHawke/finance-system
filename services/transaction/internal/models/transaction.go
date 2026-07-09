@@ -128,6 +128,8 @@ type Transaction struct {
 	Amount              float64            `db:"amount" json:"amount" validate:"required"`
 	SourceCurrency      string             `db:"source_currency" json:"source_currency" validate:"required"`
 	TargetCurrency      string             `db:"target_currency" json:"target_currency" validate:"required"`
+	FeeAmount           float64            `db:"fee_amount" json:"fee_amount,omitempty"`
+	FeeCurrency         string             `db:"fee_currency" json:"fee_currency,omitempty"`
 	Description         string             `db:"transaction_description" json:"transaction_description,omitempty"`
 	CreatedAt           time.Time          `db:"created_at" json:"created_at"`
 	UpdatedAt           time.Time          `db:"updated_at" json:"updated_at"`
@@ -194,8 +196,11 @@ type TransactionPayload struct {
 	Amount         float64 `json:"amount" validate:"required"`
 	SourceCurrency string  `json:"source_currency" validate:"required"`
 	TargetCurrency string  `json:"target_currency" validate:"required"`
-	IdempotencyKey string  `json:"idempotency_key" validate:"required"`
-	FXDealID       string  `json:"fx_deal_id,omitempty"`
+	FeeAmount      float64 `json:"fee_amount,omitempty"`
+	FeeCurrency    string  `json:"fee_currency,omitempty"`
+
+	IdempotencyKey string `json:"idempotency_key" validate:"required"`
+	FXDealID       string `json:"fx_deal_id,omitempty"`
 
 	ParentTransactionID string `json:"parent_transaction_id,omitempty"`
 	ExternalReference   string `json:"external_reference,omitempty"`
